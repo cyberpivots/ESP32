@@ -4,7 +4,7 @@
 
 - ID: 0008-github-pages-workbench-build-guide
 - Owner role: Release, QA
-- Status: In progress
+- Status: Complete
 - Created: 2026-05-18
 - Updated: 2026-05-18
 
@@ -71,8 +71,25 @@ vendor PDF publishing, and any mains wiring procedure.
   cards and four label inputs render, edited labels persist across reload,
   reset returns `Output A`, zero console errors, zero page errors, and zero
   `/api/` requests in static mode.
-- GitHub Actions deployment and live Pages smoke checks are pending after the
-  content commit is pushed.
+- Content deployment commit: `26f74f9`.
+- GitHub Actions deployment run `26063620266`: PASS.
+- `curl -fsSIL https://cyberpivots.github.io/ESP32/`: PASS, HTTP 200.
+- `curl -fsSIL https://cyberpivots.github.io/ESP32/public-file-manifest.json`:
+  PASS, HTTP 200.
+- `curl -fsSIL https://cyberpivots.github.io/ESP32/bundle/docs/projects/four-relay-xbee-wifi/build-guide.md`:
+  PASS, HTTP 200.
+- `curl -fsSIL https://cyberpivots.github.io/ESP32/demos/admin-hmi/`: PASS,
+  HTTP 200.
+- Live Playwright landing smoke: PASS on desktop and mobile, no horizontal
+  overflow, manifest contains 39 files and the new build guide, label edit
+  persists across reload, reset returns `Output B`, zero console errors, and
+  zero page errors.
+- Live Playwright admin HMI smoke: PASS on desktop and mobile, four relay
+  cards and four label inputs render, edited labels persist across reload,
+  reset returns `Output A` through `Output D`, zero console errors, zero page
+  errors, and zero `/api/` requests.
+- GitHub Actions still reports the existing Node.js 20 deprecation warning for
+  current Pages actions; deployment passed.
 
 ## Handoff
 

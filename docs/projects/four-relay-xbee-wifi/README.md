@@ -9,6 +9,7 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
 
 ## Package map
 
+- [Build guide](build-guide.md)
 - [Architecture](architecture.md)
 - [Prototype blueprint](prototype-blueprint.md)
 - [Bench bring-up runbook](bench-bring-up-runbook.md)

@@ -9,6 +9,31 @@ const endpoints = {
     `/api/logs/recent?limit=${encodeURIComponent(limit)}&type=${encodeURIComponent(type)}`,
 };
 
+const relayLabelStorageKey = "esp32.relayLabels.v1";
+const maxRelayLabelLength = 32;
+const defaultRelayChannels = [
+  {
+    channel: 1,
+    label: "Output A",
+    pin: "GPIO25",
+  },
+  {
+    channel: 2,
+    label: "Output B",
+    pin: "GPIO26",
+  },
+  {
+    channel: 3,
+    label: "Output C",
+    pin: "GPIO27",
+  },
+  {
+    channel: 4,
+    label: "Output D",
+    pin: "GPIO33",
+  },
+];
+
 const assetManifest = {
   name: "four-relay-admin-hmi",
   version: "2026-05-18-admin-hmi",
@@ -46,10 +71,10 @@ const baseState = {
     fallbackActive: false,
   },
   relays: [
-    { channel: 1, state: false, enabled: false },
-    { channel: 2, state: false, enabled: false },
-    { channel: 3, state: false, enabled: false },
-    { channel: 4, state: false, enabled: false },
+    { channel: 1, label: "Output A", pin: "GPIO25", state: false, enabled: false },
+    { channel: 2, label: "Output B", pin: "GPIO26", state: false, enabled: false },
+    { channel: 3, label: "Output C", pin: "GPIO27", state: false, enabled: false },
+    { channel: 4, label: "Output D", pin: "GPIO33", state: false, enabled: false },
   ],
   lastCommand: {
     source: "boot",
@@ -228,6 +253,7 @@ let readOnlyApiStatus = {
   manifest: "ok",
   logs: "ok",
 };
+let savedRelayLabels = readSavedRelayLabels();
 
 const els = {
   deviceId: document.querySelector("#deviceId"),
@@ -247,12 +273,97 @@ const els = {
   configSummary: document.querySelector("#configSummary"),
   message: document.querySelector("#message"),
   logList: document.querySelector("#logList"),
+  relayLabelEditor: document.querySelector("#relayLabelEditor"),
+  resetLabelsButton: document.querySelector("#resetLabelsButton"),
   scenarioControl: document.querySelector("#scenarioControl"),
   mockScenarioSelect: document.querySelector("#mockScenarioSelect"),
 };
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeRelayLabel(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxRelayLabelLength);
+}
+
+function readSavedRelayLabels() {
+  try {
+    const raw = window.localStorage.getItem(relayLabelStorageKey);
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .map(([channel, label]) => [String(Number(channel)), normalizeRelayLabel(label)])
+        .filter(([channel, label]) => channel !== "NaN" && label)
+    );
+  } catch (_error) {
+    return {};
+  }
+}
+
+function writeSavedRelayLabels() {
+  try {
+    window.localStorage.setItem(
+      relayLabelStorageKey,
+      JSON.stringify(savedRelayLabels),
+    );
+  } catch (_error) {
+    return;
+  }
+}
+
+function defaultRelayForChannel(channel) {
+  return (
+    defaultRelayChannels.find((item) => Number(item.channel) === Number(channel)) ||
+    { channel, label: `Output ${channel}`, pin: "GPIO unresolved" }
+  );
+}
+
+function relayLabel(relay) {
+  const fallback = defaultRelayForChannel(relay.channel);
+  const channel = String(Number(relay.channel));
+  const apiLabel = normalizeRelayLabel(relay.label);
+  const savedLabel = savedRelayLabels[channel] || "";
+  if (prototypeMode) {
+    return savedLabel || apiLabel || fallback.label;
+  }
+  return apiLabel || savedLabel || fallback.label;
+}
+
+function relayPin(relay) {
+  return relay.pin || defaultRelayForChannel(relay.channel).pin;
+}
+
+function saveRelayLabel(channel, label) {
+  const key = String(Number(channel));
+  const nextLabel = normalizeRelayLabel(label);
+  if (!key || key === "NaN") {
+    return;
+  }
+  if (nextLabel) {
+    savedRelayLabels[key] = nextLabel;
+  } else {
+    delete savedRelayLabels[key];
+  }
+  writeSavedRelayLabels();
+  renderRelays();
+}
+
+function resetRelayLabels() {
+  savedRelayLabels = {};
+  try {
+    window.localStorage.removeItem(relayLabelStorageKey);
+  } catch (_error) {
+    // Keep the in-memory reset even if browser storage is unavailable.
+  }
+  renderRelays();
+  renderRelayLabelEditor(true);
 }
 
 function text(id, value) {
@@ -330,6 +441,17 @@ function normalizeState(nextState) {
   if (!Array.isArray(normalized.relays) || normalized.relays.length === 0) {
     normalized.relays = clone(baseState.relays);
   }
+  normalized.relays = normalized.relays.map((relay, index) => {
+    const channel = relay.channel || index + 1;
+    const fallback = defaultRelayForChannel(channel);
+    const label = normalizeRelayLabel(relay.label);
+    return {
+      ...relay,
+      channel,
+      label,
+      pin: relay.pin || fallback.pin,
+    };
+  });
 
   return normalized;
 }
@@ -365,6 +487,7 @@ function render(nextState = state) {
   );
 
   renderRelays();
+  renderRelayLabelEditor();
   renderSafety();
   renderStorage();
   renderXbee();
@@ -389,11 +512,15 @@ function renderRelays() {
 
     const header = document.createElement("header");
     const title = document.createElement("h3");
-    title.textContent = `Relay ${relay.channel}`;
+    title.textContent = relayLabel(relay);
     const badge = document.createElement("span");
     badge.className = relay.enabled ? "mini-badge ok" : "mini-badge bad";
     badge.textContent = relay.enabled ? "enabled" : "blocked";
     header.append(title, badge);
+
+    const pinLabel = document.createElement("span");
+    pinLabel.className = "relay-pin";
+    pinLabel.textContent = `CH ${relay.channel} / ${relayPin(relay)}`;
 
     const stateLabel = document.createElement("strong");
     stateLabel.className = "relay-state";
@@ -413,9 +540,44 @@ function renderRelays() {
       });
     });
 
-    card.append(header, stateLabel, reason, button);
+    card.append(header, pinLabel, stateLabel, reason, button);
     els.relayGrid.appendChild(card);
   });
+}
+
+function renderRelayLabelEditor(force = false) {
+  if (!els.relayLabelEditor) {
+    return;
+  }
+  if (!force && els.relayLabelEditor.contains(document.activeElement)) {
+    return;
+  }
+
+  els.relayLabelEditor.replaceChildren(
+    ...state.relays.map((relay) => {
+      const label = document.createElement("label");
+      const title = document.createElement("span");
+      const input = document.createElement("input");
+      const detail = document.createElement("small");
+      const channel = String(Number(relay.channel));
+
+      title.textContent = `Channel ${channel}`;
+      input.type = "text";
+      input.maxLength = maxRelayLabelLength;
+      input.autocomplete = "off";
+      input.value = relayLabel(relay);
+      input.dataset.relayLabelInput = channel;
+      input.addEventListener("input", () => {
+        if (input.value.length > maxRelayLabelLength) {
+          input.value = input.value.slice(0, maxRelayLabelLength);
+        }
+        saveRelayLabel(channel, input.value);
+      });
+      detail.textContent = `${relayPin(relay)} provisional`;
+      label.append(title, input, detail);
+      return label;
+    })
+  );
 }
 
 function renderSafety() {
@@ -733,6 +895,14 @@ document.querySelectorAll("[data-log-filter]").forEach((button) => {
   });
 });
 
+window.addEventListener("storage", (event) => {
+  if (event.key === relayLabelStorageKey) {
+    savedRelayLabels = readSavedRelayLabels();
+    renderRelays();
+    renderRelayLabelEditor(true);
+  }
+});
+
 els.allOffButton.addEventListener("click", () => {
   sendCommand(endpoints.allOff, { sequence: sequence++ });
 });
@@ -743,6 +913,10 @@ els.lockButton.addEventListener("click", () => {
     sequence: sequence++,
   });
 });
+
+if (els.resetLabelsButton) {
+  els.resetLabelsButton.addEventListener("click", resetRelayLabels);
+}
 
 if (prototypeMode) {
   els.scenarioControl.hidden = false;
@@ -772,6 +946,11 @@ window.__fourRelayHmi = {
   getState() {
     return clone(state);
   },
+  setRelayLabel(channel, label) {
+    saveRelayLabel(channel, label);
+    renderRelayLabelEditor(true);
+  },
+  resetRelayLabels,
 };
 
 refresh();

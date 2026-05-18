@@ -252,7 +252,7 @@ h3 {
   min-height: 226px;
   padding: 15px;
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto auto 1fr auto;
   gap: 12px;
 }
 
@@ -276,6 +276,13 @@ h3 {
 .relay-card p {
   color: var(--muted);
   font-weight: 650;
+}
+
+.relay-pin {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 850;
+  text-transform: uppercase;
 }
 
 .relay-card button {
@@ -418,6 +425,62 @@ h3 {
   margin-top: 16px;
 }
 
+.label-config {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 14px;
+}
+
+.label-config-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.label-config-heading button {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.relay-label-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.relay-label-editor label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.relay-label-editor span,
+.relay-label-editor small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.relay-label-editor input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+.relay-label-editor input:focus-visible {
+  outline: 3px solid #9ed3e3;
+  outline-offset: 2px;
+}
+
 .scenario-control span {
   color: var(--muted);
   font-weight: 800;
@@ -475,6 +538,7 @@ h3 {
   .relay-grid,
   .metric-grid,
   .path-list,
+  .relay-label-editor,
   .scenario-control {
     grid-template-columns: 1fr;
   }

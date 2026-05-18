@@ -32,6 +32,7 @@ PUBLIC_BUNDLE_FILES = [
     ("docs/architecture/board-contract.md", "architecture"),
     ("docs/architecture/protocol-contract.md", "architecture"),
     ("docs/projects/four-relay-xbee-wifi/README.md", "four-relay"),
+    ("docs/projects/four-relay-xbee-wifi/build-guide.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/architecture.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/prototype-blueprint.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md", "four-relay"),

@@ -20,6 +20,7 @@
 ## Projects
 
 - [Four relay XBee Wi-Fi controller](projects/four-relay-xbee-wifi/README.md)
+- [Four relay build guide](projects/four-relay-xbee-wifi/build-guide.md)
 - [Four relay architecture](projects/four-relay-xbee-wifi/architecture.md)
 - [Four relay prototype blueprint](projects/four-relay-xbee-wifi/prototype-blueprint.md)
 - [Four relay bench bring-up runbook](projects/four-relay-xbee-wifi/bench-bring-up-runbook.md)

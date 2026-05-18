@@ -52,6 +52,10 @@ The build script copies:
   `build/github-pages/demos/admin-hmi/`;
 - a generated `public-file-manifest.json` with paths, byte counts, and hashes.
 
+The landing page and the static admin HMI both use checked-in relay-channel
+defaults. Browser-side label edits are stored only in local browser storage
+under `esp32.relayLabels.v1` and do not become hardware facts.
+
 GitHub Actions deploys only `build/github-pages` through
 `.github/workflows/pages.yml`.
 

@@ -20,6 +20,7 @@ REQUIRED_PATHS = [
     ".agents/TASK_LOG/0004-diy-bench-hardware-blueprint.md",
     ".agents/TASK_LOG/0005-admin-hmi-microsd-assets-logs.md",
     ".agents/TASK_LOG/0006-github-pages-public-diy-site.md",
+    ".agents/TASK_LOG/0008-github-pages-workbench-build-guide.md",
     ".agents/DECISIONS/ADR-0001-framework-choice.md",
     ".agents/DECISIONS/ADR-0002-four-relay-xbee-wifi-framework.md",
     ".agents/handoffs/0002-design-to-hardware-firmware-qa.md",
@@ -39,6 +40,7 @@ REQUIRED_PATHS = [
     "docs/architecture/board-contract.md",
     "docs/architecture/protocol-contract.md",
     "docs/projects/four-relay-xbee-wifi/README.md",
+    "docs/projects/four-relay-xbee-wifi/build-guide.md",
     "docs/projects/four-relay-xbee-wifi/architecture.md",
     "docs/projects/four-relay-xbee-wifi/prototype-blueprint.md",
     "docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md",
@@ -102,6 +104,7 @@ PROHIBITED_FRAMEWORK_FILES = [
 
 PROJECT_FACT_PATHS = [
     "docs/projects/four-relay-xbee-wifi/README.md",
+    "docs/projects/four-relay-xbee-wifi/build-guide.md",
     "docs/projects/four-relay-xbee-wifi/architecture.md",
     "docs/projects/four-relay-xbee-wifi/prototype-blueprint.md",
     "docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md",
@@ -299,6 +302,22 @@ def main() -> int:
         if marker not in prototype_blueprint:
             failures.append(f"prototype blueprint missing marker: {marker}")
 
+    build_guide = (
+        ROOT / "docs/projects/four-relay-xbee-wifi/build-guide.md"
+    ).read_text(encoding="utf-8")
+    for marker in [
+        "## Verified facts",
+        "## Assumptions",
+        "## Unknowns",
+        "Output A",
+        "GPIO25",
+        "Low-voltage construction order",
+        "Qualified load review",
+        "Stop if any step requires mains wiring",
+    ]:
+        if marker not in build_guide:
+            failures.append(f"build guide missing marker: {marker}")
+
     mains_gate = (
         ROOT / "docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md"
     ).read_text(encoding="utf-8")
@@ -352,6 +371,7 @@ def main() -> int:
         if blocked_marker not in pages_build:
             failures.append(f"Pages build script missing exclusion marker: {blocked_marker}")
     for public_marker in [
+        "docs/projects/four-relay-xbee-wifi/build-guide.md",
         "docs/projects/four-relay-xbee-wifi/README.md",
         "hardware-profiles/relays/four-channel/README.md",
         "hardware-profiles/xbee/xbp9b-dput-001/README.md",
@@ -363,11 +383,11 @@ def main() -> int:
 
     pages_index = (ROOT / "site/github-pages/index.html").read_text(encoding="utf-8")
     for marker in [
-        "ESP32 DIY Control Prototypes",
-        "Open DIY package",
+        "ESP32 four-relay build guide",
+        "Open build guide",
         "Launch admin HMI demo",
-        "Review safety gates",
-        "DIY concept/prototype documentation only",
+        "Relay Labels",
+        "Qualified review gate stays closed",
     ]:
         if marker not in pages_index:
             failures.append(f"Pages index missing marker: {marker}")

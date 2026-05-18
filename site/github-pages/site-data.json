@@ -9,6 +9,10 @@
       "href": "bundle/docs/projects/four-relay-xbee-wifi/README.md"
     },
     {
+      "label": "Build guide",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/build-guide.md"
+    },
+    {
       "label": "Prototype blueprint",
       "href": "bundle/docs/projects/four-relay-xbee-wifi/prototype-blueprint.md"
     },
@@ -31,6 +35,76 @@
     {
       "label": "Source index",
       "href": "bundle/knowledge-base/source-index.md"
+    }
+  ],
+  "buildStatus": [
+    {
+      "label": "Artifact",
+      "value": "Static",
+      "state": "ok"
+    },
+    {
+      "label": "Framework",
+      "value": "ESP-IDF accepted",
+      "state": "review"
+    },
+    {
+      "label": "Relay GPIO",
+      "value": "Provisional",
+      "state": "warn"
+    },
+    {
+      "label": "Load wiring",
+      "value": "Blocked",
+      "state": "stop"
+    }
+  ],
+  "relayChannels": [
+    {
+      "channel": 1,
+      "label": "Output A",
+      "pin": "GPIO25",
+      "status": "Blocked",
+      "gate": "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring."
+    },
+    {
+      "channel": 2,
+      "label": "Output B",
+      "pin": "GPIO26",
+      "status": "Blocked",
+      "gate": "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring."
+    },
+    {
+      "channel": 3,
+      "label": "Output C",
+      "pin": "GPIO27",
+      "status": "Blocked",
+      "gate": "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring."
+    },
+    {
+      "channel": 4,
+      "label": "Output D",
+      "pin": "GPIO33",
+      "status": "Blocked",
+      "gate": "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring."
+    }
+  ],
+  "constructionSequence": [
+    {
+      "title": "Board and shield inspection",
+      "summary": "Record the active single power source, jumper state, rail checks, and shield continuity before any external module is connected."
+    },
+    {
+      "title": "Relay input proof",
+      "summary": "Keep contacts disconnected while trigger polarity, input current, 3.3 V behavior, and JD-VCC/VCC behavior are verified."
+    },
+    {
+      "title": "XBee read-only discovery",
+      "summary": "Use the USB adapter as a PC dock for identity and serial discovery only; setting writes and ESP32 wiring remain gated."
+    },
+    {
+      "title": "Qualified load review",
+      "summary": "Treat load or mains work as a review package, not a public wiring procedure."
     }
   ],
   "safetyGates": [

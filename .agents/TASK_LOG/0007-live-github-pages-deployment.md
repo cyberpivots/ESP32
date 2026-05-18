@@ -4,7 +4,7 @@
 
 - ID: 0007-live-github-pages-deployment
 - Owner role: Release, QA
-- Status: In Progress
+- Status: Complete
 - Created: 2026-05-18
 - Updated: 2026-05-18
 
@@ -39,6 +39,12 @@ tracking, and any bench or electrical action.
 - `python3 scripts/verify_scaffold.py`: PASS.
 - `git status --ignored --short` reports `build/`, `scripts/__pycache__/`,
   and `user_uploads/` as ignored.
+- Public repository created: `https://github.com/cyberpivots/ESP32`.
+- Pages API reports `build_type` as `workflow` and `html_url` as
+  `https://cyberpivots.github.io/ESP32/`.
+- Initial deployment run `26058438714`: PASS.
+- Admin HMI static-demo path fix committed as `4f11d3e`.
+- Post-fix deployment run `26058571425`: PASS.
 
 ## Assumptions
 
@@ -49,13 +55,28 @@ tracking, and any bench or electrical action.
 
 ## Unknowns
 
-- Final live Pages URL and deployment run ID are unknown until the first
-  remote workflow completes.
-- Browser smoke status for the live Pages URL is unknown until the site is
-  published.
+- GitHub Actions reports a Node.js 20 deprecation warning for current Pages
+  actions. The workflow passed, but the warning should be reviewed before
+  GitHub's 2026 runner cutoff dates.
 
 ## Validation
 
 - Local validation is complete and passing.
-- Remote deployment validation is pending.
-
+- `gh run watch --repo cyberpivots/ESP32 26058438714 --exit-status`: PASS.
+- `gh run watch --repo cyberpivots/ESP32 26058571425 --exit-status`: PASS.
+- `curl -fsSIL https://cyberpivots.github.io/ESP32/`: PASS, HTTP 200.
+- `curl -fsSI https://cyberpivots.github.io/ESP32/public-file-manifest.json`:
+  PASS, HTTP 200.
+- `curl -fsSI https://cyberpivots.github.io/ESP32/demos/admin-hmi/`: PASS,
+  HTTP 200.
+- `curl -fsSI https://cyberpivots.github.io/ESP32/user_uploads/`: PASS, HTTP
+  404 expected.
+- `curl -fsSI https://cyberpivots.github.io/ESP32/build/github-pages/`: PASS,
+  HTTP 404 expected.
+- Playwright live landing smoke with cache disabled: PASS, title and H1 loaded,
+  safety text present, manifest count 38, and 17 same-site public links checked
+  with no failures.
+- Playwright live admin HMI smoke with cache disabled: PASS, title and H1
+  loaded, prototype-mode message present, four relay records loaded, scenario
+  control visible, zero console errors, zero page errors, and zero `/api/`
+  requests.

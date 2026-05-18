@@ -211,9 +211,11 @@ const mockScenarios = {
   },
 };
 
+const staticDemoMode = window.location.hostname.endsWith(".github.io");
 const prototypeMode =
   window.location.protocol === "file:" ||
-  ["127.0.0.1", "localhost", "::1", ""].includes(window.location.hostname);
+  ["127.0.0.1", "localhost", "::1", ""].includes(window.location.hostname) ||
+  staticDemoMode;
 
 let currentScenario = "mounted";
 let state = clone(mockScenarios[currentScenario].state);

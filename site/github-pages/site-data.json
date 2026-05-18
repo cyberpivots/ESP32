@@ -1,0 +1,62 @@
+{
+  "bundleLinks": [
+    {
+      "label": "Workspace overview",
+      "href": "bundle/README.md"
+    },
+    {
+      "label": "Four-relay project overview",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/README.md"
+    },
+    {
+      "label": "Prototype blueprint",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/prototype-blueprint.md"
+    },
+    {
+      "label": "Bench bring-up runbook",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md"
+    },
+    {
+      "label": "Power and safety gates",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/power-and-safety.md"
+    },
+    {
+      "label": "Mains readiness gate",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md"
+    },
+    {
+      "label": "Hardware device matrix",
+      "href": "bundle/hardware-profiles/device-matrix.md"
+    },
+    {
+      "label": "Source index",
+      "href": "bundle/knowledge-base/source-index.md"
+    }
+  ],
+  "safetyGates": [
+    {
+      "title": "Mains work blocked",
+      "summary": "No step-by-step mains wiring instructions are published, and the public materials are not a qualified electrical review.",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md",
+      "linkText": "Read mains gate"
+    },
+    {
+      "title": "Relay contacts blocked",
+      "summary": "Relay load wiring waits for trigger polarity, input current, voltage compatibility, and isolation verification.",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/power-and-safety.md",
+      "linkText": "Read power gates"
+    },
+    {
+      "title": "XBee writes blocked",
+      "summary": "The radio path starts with read-only discovery; setting writes require later owner review and explicit approval.",
+      "href": "bundle/comm-protocols/wireless/xbee-api-four-relay.md",
+      "linkText": "Read protocol notes"
+    }
+  ],
+  "futureTracks": [
+    "Confirm repository Pages source is set to GitHub Actions before public deployment.",
+    "Review the build-script allowlist before adding any file to the public artifact.",
+    "Close hardware blockers before firmware flashing, relay switching, XBee setting writes, or mains/load wiring.",
+    "Keep future generated screenshots, raw uploads, vendor PDFs, and bulky binaries out of the public Pages artifact."
+  ]
+}

@@ -1,0 +1,27 @@
+# Build and cache outputs
+build/
+dist/
+out/
+.cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Firmware/toolchain generated state
+sdkconfig
+sdkconfig.*
+.pio/
+.vscode/
+
+# Local environment and secrets
+.env
+.env.*
+*.local
+secrets/
+user_uploads/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

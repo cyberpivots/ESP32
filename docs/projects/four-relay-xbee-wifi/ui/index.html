@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Four Relay Admin HMI</title>
+    <link rel="icon" href="data:,">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="identity">
+          <p id="deviceId" class="eyebrow">bench-four-relay-01</p>
+          <h1>Four Relay Admin HMI</h1>
+        </div>
+        <div class="actions" aria-label="Primary relay commands">
+          <button id="allOffButton" class="danger action-button" type="button">
+            <span aria-hidden="true">STOP</span>
+            All off
+          </button>
+          <button id="lockButton" class="action-button" type="button">
+            <span aria-hidden="true">LOCK</span>
+            Toggle lock
+          </button>
+        </div>
+      </header>
+
+      <section id="statusRail" class="status-rail" aria-label="System status" aria-live="polite">
+        <article>
+          <span>Safety</span>
+          <strong id="safetyBadge">Locked</strong>
+        </article>
+        <article>
+          <span>Gate</span>
+          <strong id="gateBadge">Open</strong>
+        </article>
+        <article>
+          <span>MicroSD</span>
+          <strong id="storageBadge">Fallback</strong>
+        </article>
+        <article>
+          <span>XBee</span>
+          <strong id="xbeeBadge">Unknown</strong>
+        </article>
+        <article>
+          <span>Admin</span>
+          <strong id="adminBadge">Missing</strong>
+        </article>
+      </section>
+
+      <nav class="tabs" role="tablist" aria-label="Admin sections">
+        <button id="tab-control" class="tab is-active" type="button" role="tab" aria-selected="true" aria-controls="panel-control" data-tab-target="control">Control</button>
+        <button id="tab-safety" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-safety" data-tab-target="safety">Safety</button>
+        <button id="tab-storage" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-storage" data-tab-target="storage">Storage</button>
+        <button id="tab-xbee" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-xbee" data-tab-target="xbee">XBee</button>
+        <button id="tab-logs" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-logs" data-tab-target="logs">Logs</button>
+        <button id="tab-config" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-config" data-tab-target="config">Config</button>
+      </nav>
+
+      <section id="panel-control" class="panel is-active" role="tabpanel" aria-labelledby="tab-control">
+        <div class="section-heading">
+          <h2>Control</h2>
+          <p id="controlGateText">Relay commands blocked</p>
+        </div>
+        <div id="relayGrid" class="relay-grid" aria-label="Relay channels"></div>
+      </section>
+
+      <section id="panel-safety" class="panel" role="tabpanel" aria-labelledby="tab-safety" hidden>
+        <div class="section-heading">
+          <h2>Safety</h2>
+          <p id="safetySummary">Waiting for state</p>
+        </div>
+        <div class="metric-grid">
+          <article><span>Safety lock</span><strong id="safetyLockValue">locked</strong></article>
+          <article><span>Hardware gate</span><strong id="hardwareGateValue">open</strong></article>
+          <article><span>Last command</span><strong id="lastCommandValue">boot</strong></article>
+          <article><span>Reject result</span><strong id="rejectValue">safe_default</strong></article>
+          <article><span>Uptime</span><strong id="uptimeValue">0s</strong></article>
+          <article><span>Sequence</span><strong id="sequenceValue">0</strong></article>
+        </div>
+      </section>
+
+      <section id="panel-storage" class="panel" role="tabpanel" aria-labelledby="tab-storage" hidden>
+        <div class="section-heading">
+          <h2>Storage</h2>
+          <p id="storageSummary">Waiting for storage</p>
+        </div>
+        <div class="metric-grid">
+          <article><span>Mount</span><strong id="storageMountValue">unknown</strong></article>
+          <article><span>Card</span><strong id="storageCardValue">unknown</strong></article>
+          <article><span>Capacity</span><strong id="storageCapacityValue">0 B</strong></article>
+          <article><span>Free</span><strong id="storageFreeValue">0 B</strong></article>
+          <article><span>Asset mode</span><strong id="assetModeValue">fallback</strong></article>
+          <article><span>Manifest</span><strong id="manifestVersionValue">fallback</strong></article>
+          <article><span>Logs</span><strong id="logStatusValue">disabled</strong></article>
+          <article><span>Fallback</span><strong id="fallbackValue">active</strong></article>
+        </div>
+        <div class="path-list">
+          <div><span>Asset root</span><code id="assetRootValue">/sdcard/www</code></div>
+          <div><span>Log root</span><code id="logRootValue">/sdcard/logs</code></div>
+        </div>
+      </section>
+
+      <section id="panel-xbee" class="panel" role="tabpanel" aria-labelledby="tab-xbee" hidden>
+        <div class="section-heading">
+          <h2>XBee</h2>
+          <p id="xbeeSummary">Waiting for radio state</p>
+        </div>
+        <div class="metric-grid">
+          <article><span>Configured</span><strong id="xbeeConfiguredValue">false</strong></article>
+          <article><span>Link</span><strong id="xbeeLinkValue">unknown</strong></article>
+          <article><span>Last status</span><strong id="xbeeLastStatusValue">none</strong></article>
+          <article><span>Allowlist</span><strong id="xbeeAllowlistValue">missing</strong></article>
+          <article><span>Last frame</span><strong id="xbeeLastFrameValue">none</strong></article>
+          <article><span>Telemetry</span><strong id="xbeeTelemetryValue">idle</strong></article>
+        </div>
+      </section>
+
+      <section id="panel-logs" class="panel" role="tabpanel" aria-labelledby="tab-logs" hidden>
+        <div class="section-heading">
+          <h2>Logs</h2>
+          <p id="logsSummary">Waiting for log records</p>
+        </div>
+        <div class="filter-row" role="group" aria-label="Log filters">
+          <button class="filter is-active" type="button" data-log-filter="all">All</button>
+          <button class="filter" type="button" data-log-filter="relay">Relay</button>
+          <button class="filter" type="button" data-log-filter="safety">Safety</button>
+          <button class="filter" type="button" data-log-filter="xbee">XBee</button>
+          <button class="filter" type="button" data-log-filter="storage">Storage</button>
+          <button class="filter" type="button" data-log-filter="rejected">Rejected</button>
+        </div>
+        <div id="logList" class="log-list" aria-live="polite"></div>
+      </section>
+
+      <section id="panel-config" class="panel" role="tabpanel" aria-labelledby="tab-config" hidden>
+        <div class="section-heading">
+          <h2>Config</h2>
+          <p id="configSummary">Read only</p>
+        </div>
+        <div class="metric-grid">
+          <article><span>Admin provisioned</span><strong id="configAdminValue">false</strong></article>
+          <article><span>Safety config</span><strong id="configSafetyValue">pending</strong></article>
+          <article><span>Relay polarity</span><strong id="configRelayValue">unverified</strong></article>
+          <article><span>XBee allowlist</span><strong id="configAllowlistValue">missing</strong></article>
+          <article><span>Asset bundle</span><strong id="configAssetValue">fallback</strong></article>
+          <article><span>Fallback page</span><strong id="configFallbackValue">active</strong></article>
+        </div>
+        <label id="scenarioControl" class="scenario-control" hidden>
+          <span>Mock state</span>
+          <select id="mockScenarioSelect">
+            <option value="mounted">SD mounted</option>
+            <option value="missing">SD missing</option>
+            <option value="readonly">SD read-only</option>
+            <option value="empty">Empty logs</option>
+            <option value="lowspace">Low space</option>
+          </select>
+        </label>
+      </section>
+
+      <p id="message" class="message" role="status"></p>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

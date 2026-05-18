@@ -1,0 +1,13 @@
+{
+  "name": "four-relay-admin-hmi",
+  "version": "2026-05-18-admin-hmi",
+  "generatedAt": "2026-05-18",
+  "assetRoot": "/sdcard/www",
+  "files": [
+    "index.html",
+    "styles.css",
+    "app.js",
+    "manifest.json"
+  ],
+  "assets": []
+}

@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ESP32 Four-Relay Workbench</title>
-    <meta name="description" content="Workbench-style public build guide for the ESP32 four-relay XBee Wi-Fi controller prototype.">
+    <title>ESP32 Four-Relay Premium Workbench</title>
+    <meta name="description" content="Premium technical workbench for the ESP32 four-relay XBee Wi-Fi controller prototype, with source-backed public docs and locked hardware gates.">
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -24,56 +24,43 @@
     </header>
 
     <main id="top">
-      <section class="hero">
+      <section class="hero premium-hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Workbench Technical</p>
-          <h1>ESP32 four-relay build guide</h1>
+          <p class="eyebrow">Premium Workbench</p>
+          <h1 id="hero-title">ESP32 four-relay workbench</h1>
           <p class="lede">
-            A public, source-backed guide for the low-voltage construction path,
-            relay-channel labeling, static admin HMI review, and hard safety
-            gates for the XBee Wi-Fi controller prototype.
+            A public, source-backed technical package for the low-voltage
+            controller path, static admin HMI, read-only XBee discovery,
+            MicroSD assets/logs planning, and the hard stop before any
+            relay/load wiring.
           </p>
           <div class="hero-actions" aria-label="Primary actions">
             <a class="button primary" href="blueprints.html">Open visual blueprint</a>
-            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/build-guide.md">Open build guide</a>
-            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md">Open XBee proof</a>
+            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/rd-loop.md">Open R&amp;D loop</a>
             <a class="button" href="demos/admin-hmi/">Launch admin HMI demo</a>
             <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md">Review mains gate</a>
           </div>
         </div>
 
-        <figure class="blueprint-figure hero-blueprint" aria-labelledby="diagram-title">
-          <div class="blueprint-stage">
-            <img
-              src="assets/blueprints/system-overview.webp"
-              alt="Conceptual workbench overview with an ESP32 controller, surrounding interface blocks, and a blocked load side."
-              width="1600"
-              height="1000"
-            >
-            <div class="diagram-labels" aria-label="Blueprint labels">
-              <span class="diagram-label label-browser"><strong>Browser HMI</strong><small>static review only</small></span>
-              <span class="diagram-label label-controller"><strong>ESP32 controller</strong><small>low-voltage target</small></span>
-              <span class="diagram-label label-xbee"><strong>XBee 900HP</strong><small>read-only discovery</small></span>
-              <span class="diagram-label label-tft"><strong>TFT branch</strong><small>wiring blocked</small></span>
-              <span class="diagram-label label-microsd"><strong>MicroSD</strong><small>assets and logs</small></span>
-              <span class="diagram-label label-expander"><strong>Relay expander</strong><small>LED proof first</small></span>
-              <span class="diagram-label label-relay"><strong>Relay module</strong><small>inputs not wired yet</small></span>
-              <span class="diagram-label label-load"><strong>Load side</strong><small>qualified review gate</small></span>
-            </div>
-          </div>
-          <figcaption>
-            Conceptual blueprint only. Relay/load wiring, mains wiring, TFT
-            wiring, and expander-to-relay wiring remain blocked until the
-            documented gates close.
-          </figcaption>
-        </figure>
+        <aside class="hero-gate-rail" aria-label="Public safety gates">
+          <article data-state="ok"><span>Published</span><strong>Curated static artifact</strong></article>
+          <article data-state="review"><span>R&amp;D loop</span><strong>Role-lane review path</strong></article>
+          <article data-state="warn"><span>XBee</span><strong>Read-only discovery only</strong></article>
+          <article data-state="stop"><span>Load side</span><strong>Qualified review gate</strong></article>
+        </aside>
       </section>
 
-      <section class="status-rail" id="buildStatusRail" aria-label="Build status">
+      <section class="next-hint" aria-label="Artifact status preview">
+        <span>Artifact model</span>
+        <strong>Allowlisted public bundle, generated demo, and blocked hardware paths are visible below.</strong>
+      </section>
+
+      <section class="status-rail premium-status" id="buildStatusRail" aria-label="Build status">
         <article data-state="ok"><span>Artifact</span><strong>Static</strong></article>
-        <article data-state="review"><span>Framework</span><strong>ESP-IDF accepted</strong></article>
+        <article data-state="review"><span>R&amp;D loop</span><strong>Open</strong></article>
+        <article data-state="review"><span>MicroSD</span><strong>Assets + logs</strong></article>
+        <article data-state="warn"><span>XBee</span><strong>Read-only</strong></article>
         <article data-state="warn"><span>Relay GPIO</span><strong>Expander planned</strong></article>
-        <article data-state="warn"><span>TFT</span><strong>Unverified</strong></article>
         <article data-state="stop"><span>Load wiring</span><strong>Blocked</strong></article>
       </section>
 
@@ -90,11 +77,11 @@
           <a class="text-link" href="blueprints.html">Open visual blueprint</a>
           <a class="text-link" href="bundle/docs/projects/four-relay-xbee-wifi/build-guide.md">Open full guide</a>
         </div>
-        <div class="sequence-grid" id="sequenceList">
+        <div class="sequence-grid premium-sequence" id="sequenceList">
           <article>
             <span>01</span>
             <h3>Visual blueprint review</h3>
-            <p>Start with the conceptual map and blocked wiring gates.</p>
+            <p>Start with the conceptual map, R&amp;D loop, and blocked wiring gates.</p>
           </article>
           <article>
             <span>02</span>
@@ -103,8 +90,8 @@
           </article>
           <article>
             <span>03</span>
-            <h3>Relay input proof</h3>
-            <p>Keep contacts disconnected while relay input behavior is verified.</p>
+            <h3>MicroSD asset/log path</h3>
+            <p>Keep static assets and log planning separate from hardware mutation.</p>
           </article>
           <article>
             <span>04</span>
@@ -124,6 +111,29 @@
         </div>
       </section>
 
+      <section class="content-section proof-loop" aria-labelledby="loop-title">
+        <div>
+          <p class="eyebrow">R&amp;D loop</p>
+          <h2 id="loop-title">The workbench advances by gates, not guesses</h2>
+          <p>
+            The public package surfaces the review lanes that must close before
+            any firmware, radio, relay, TFT, or load-side work can move forward.
+          </p>
+          <div class="loop-links">
+            <a class="button primary compact" href="bundle/docs/projects/four-relay-xbee-wifi/rd-loop.md">Open R&amp;D loop</a>
+            <a class="button compact" href="bundle/docs/projects/four-relay-xbee-wifi/hardware-circuit-improvement-research.md">Open hardware research</a>
+          </div>
+        </div>
+        <figure class="art-figure" aria-label="Generated public-safe R and D loop backplate">
+          <img
+            src="assets/workbench/rd-loop-backplate.webp"
+            alt="Label-free technical backplate showing a gated review loop and parallel review lanes."
+            width="1600"
+            height="1000"
+          >
+        </figure>
+      </section>
+
       <section id="relay-labels" class="content-section relay-section" aria-labelledby="relay-title">
         <div class="section-heading">
           <p class="eyebrow">Relay Labels</p>
@@ -135,6 +145,7 @@
             <article>
               <span class="metric">GPIO25</span>
               <h3>Output A</h3>
+              <strong>Blocked</strong>
               <p>Shield routing and relay input behavior remain blocked.</p>
             </article>
           </div>
@@ -142,34 +153,25 @@
         </div>
       </section>
 
-      <section id="demo" class="content-section split-section" aria-labelledby="demo-title">
+      <section id="demo" class="content-section demo-showcase" aria-labelledby="demo-title">
         <div>
           <p class="eyebrow">Static admin HMI</p>
-          <h2 id="demo-title">Review the control surface without hardware</h2>
+          <h2 id="demo-title">A locked control surface for review</h2>
           <p>
-            The demo publishes the same safety-locked relay states, storage
-            panels, XBee status, logs, and locally saved relay labels without a
-            backend requirement.
+            The demo publishes safety-locked relay states, storage panels,
+            XBee status, logs, and locally saved relay labels without a backend
+            requirement or hardware-control claim.
           </p>
           <a class="button primary compact" href="demos/admin-hmi/">Launch demo</a>
         </div>
-        <div class="demo-frame" aria-label="Admin HMI preview">
-          <div class="demo-topbar">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <div class="demo-body">
-            <div class="demo-status">Safety locked</div>
-            <div class="demo-grid">
-              <span><strong data-relay-preview="1">Output A</strong><small data-relay-pin="1">GPIO25</small></span>
-              <span><strong data-relay-preview="2">Output B</strong><small data-relay-pin="2">GPIO26</small></span>
-              <span><strong data-relay-preview="3">Output C</strong><small data-relay-pin="3">GPIO27</small></span>
-              <span><strong data-relay-preview="4">Output D</strong><small data-relay-pin="4">GPIO33</small></span>
-            </div>
-            <div class="demo-warning">All load contacts blocked</div>
-          </div>
-        </div>
+        <figure class="admin-art" aria-label="Admin HMI technical backplate">
+          <img
+            src="assets/workbench/admin-hmi-backplate.webp"
+            alt="Label-free static admin interface backplate with disabled control cards and status rails."
+            width="1600"
+            height="1000"
+          >
+        </figure>
       </section>
 
       <section id="safety" class="content-section" aria-labelledby="safety-title">
@@ -177,7 +179,7 @@
           <p class="eyebrow">Source-backed safety gates</p>
           <h2 id="safety-title">Review gates before load work</h2>
         </div>
-        <div class="gate-grid" id="gateList">
+        <div class="gate-grid premium-gates" id="gateList">
           <article>
             <h3>Mains work blocked</h3>
             <p>No step-by-step mains wiring instructions are published.</p>
@@ -201,7 +203,7 @@
         </div>
       </section>
 
-      <section id="package" class="content-section split-section reverse" aria-labelledby="package-title">
+      <section id="package" class="content-section package-section" aria-labelledby="package-title">
         <div>
           <p class="eyebrow">Public file bundle</p>
           <h2 id="package-title">Allowlisted technical package</h2>
@@ -209,17 +211,21 @@
             GitHub Pages publishes a generated artifact assembled by
             <code>scripts/build_github_pages.py</code>. The public bundle keeps
             source-backed docs and excludes agent records, private uploads,
-            vendor PDFs, bulky binaries, raw photos, and generated screenshots.
+            vendor PDFs, bulky binaries, raw photos, generated screenshots, and
+            private bench records.
           </p>
-          <a class="text-link" href="public-file-manifest.json">Open generated manifest</a>
+          <div class="artifact-card">
+            <span>Manifest</span>
+            <strong id="manifestCount">Generated artifact only</strong>
+            <a class="text-link" href="public-file-manifest.json">Open generated manifest</a>
+          </div>
         </div>
         <div class="link-panel" id="bundleList">
           <a href="blueprints.html">Visual blueprint page</a>
           <a href="bundle/docs/projects/four-relay-xbee-wifi/build-guide.md">Build guide</a>
-          <a href="bundle/docs/projects/four-relay-xbee-wifi/README.md">Four-relay project overview</a>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/rd-loop.md">R&amp;D loop</a>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/hardware-circuit-improvement-research.md">Hardware and circuit research</a>
           <a href="bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md">XBee read-only proof</a>
-          <a href="bundle/docs/projects/four-relay-xbee-wifi/tft-relay-expansion.md">TFT and relay expansion</a>
-          <a href="bundle/docs/projects/four-relay-xbee-wifi/pin-plan.md">Pin plan</a>
           <a href="bundle/knowledge-base/source-index.md">Source index</a>
         </div>
       </section>

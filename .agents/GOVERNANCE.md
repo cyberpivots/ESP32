@@ -21,7 +21,9 @@
   `docs/index.md`.
 - Source gate: hardware claims must have source coverage in
   `knowledge-base/source-index.md`.
-- Framework gate: no framework files may appear until ADR-0001 is accepted.
+- Framework gate: no framework files may appear until ADR-0001 is accepted,
+  except project-local framework files explicitly authorized by an accepted
+  project ADR.
 - Handoff gate: non-trivial work must leave a task record.
 
 ## Current status

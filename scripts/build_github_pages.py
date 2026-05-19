@@ -27,6 +27,9 @@ SITE_FILES = [
 SITE_ASSET_FILES = [
     "assets/blueprints/system-overview.webp",
     "assets/blueprints/safety-proof-ladder.webp",
+    "assets/workbench/hero-workbench.webp",
+    "assets/workbench/rd-loop-backplate.webp",
+    "assets/workbench/admin-hmi-backplate.webp",
 ]
 
 PUBLIC_BUNDLE_FILES = [
@@ -43,6 +46,11 @@ PUBLIC_BUNDLE_FILES = [
     ("docs/projects/four-relay-xbee-wifi/prototype-blueprint.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md", "four-relay"),
+    (
+        "docs/projects/four-relay-xbee-wifi/hardware-circuit-improvement-research.md",
+        "four-relay",
+    ),
+    ("docs/projects/four-relay-xbee-wifi/rd-loop.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/power-and-safety.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/pin-plan.md", "four-relay"),
@@ -95,6 +103,10 @@ PUBLIC_BUNDLE_FILES = [
     ),
     (
         "knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md",
+        "source-ledger",
+    ),
+    (
+        "knowledge-base/source-ledger/2026-05-19-four-relay-hardware-circuit-improvement.md",
         "source-ledger",
     ),
 ]
@@ -217,11 +229,11 @@ def build(out_dir: Path) -> dict[str, object]:
                 ".agents/",
                 "user_uploads/",
                 "raw photos",
-                "generated screenshots except allowlisted blueprint backplates",
+                "generated screenshots except allowlisted technical backplates",
                 "vendor PDFs",
                 "bulky binaries",
                 "private bench notes",
-                "image binaries except named site/github-pages/assets/blueprints/*.webp",
+                "image binaries except named site/github-pages/assets/**/*.webp",
             ],
         },
         "files": sorted(manifest_files, key=lambda item: str(item["path"])),

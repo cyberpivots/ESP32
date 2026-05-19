@@ -10,41 +10,49 @@
   </head>
   <body>
     <main class="shell">
-      <header class="topbar">
+      <header class="topbar product-topbar">
         <div class="identity">
           <p id="deviceId" class="eyebrow">bench-four-relay-01</p>
           <h1>Four Relay Admin HMI</h1>
         </div>
         <div class="actions" aria-label="Primary relay commands">
-          <button id="allOffButton" class="danger action-button" type="button">
+          <button id="allOffButton" class="danger action-button" type="button" disabled>
             <span aria-hidden="true">STOP</span>
             All off
           </button>
-          <button id="lockButton" class="action-button" type="button">
+          <button id="lockButton" class="action-button" type="button" disabled>
             <span aria-hidden="true">LOCK</span>
             Toggle lock
           </button>
         </div>
       </header>
 
+      <section class="lock-banner" aria-label="Static demo safety state">
+        <div>
+          <span>Static artifact</span>
+          <strong>Commands are safety-locked by default</strong>
+        </div>
+        <p>No live hardware session, relay-contact enablement, XBee setting write, flash, or monitor action is implied.</p>
+      </section>
+
       <section id="statusRail" class="status-rail" aria-label="System status" aria-live="polite">
-        <article>
+        <article data-state="bad">
           <span>Safety</span>
           <strong id="safetyBadge">Locked</strong>
         </article>
-        <article>
+        <article data-state="bad">
           <span>Gate</span>
           <strong id="gateBadge">Open</strong>
         </article>
-        <article>
+        <article data-state="warn">
           <span>MicroSD</span>
           <strong id="storageBadge">Fallback</strong>
         </article>
-        <article>
+        <article data-state="warn">
           <span>XBee</span>
           <strong id="xbeeBadge">Unknown</strong>
         </article>
-        <article>
+        <article data-state="bad">
           <span>Admin</span>
           <strong id="adminBadge">Missing</strong>
         </article>

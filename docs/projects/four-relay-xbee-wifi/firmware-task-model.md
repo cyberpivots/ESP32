@@ -19,6 +19,8 @@
 
 - Relay state is owned by one internal relay manager rather than directly by
   HTTP handlers or XBee handlers.
+- HTTP and XBee commands expose public relay channels `1..4`; internal arrays
+  stay zero-based behind the safe-core relay manager boundary.
 - Runtime state is small enough to publish through `/api/state` and periodic
   XBee telemetry without external storage.
 - All state-changing paths use a queue or equivalent synchronization boundary in

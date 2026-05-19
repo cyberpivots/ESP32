@@ -9,6 +9,10 @@
 - Identify exact photographed ESP32 development board vendor/revision, USB-UART
   bridge, regulator, expansion-shield schematic, jumper position, and GPIO
   continuity for `four-relay-xbee-wifi`.
+- Define source-backed power-entry/protection requirements for
+  `four-relay-xbee-wifi`: single selected input source, rail budget, current
+  limit, brownout behavior, reverse-protection need, overcurrent protection,
+  TVS/ESD placement, and test points.
 - Identify exact four-channel relay module manufacturer/model, input voltage,
   trigger polarity, 3.3 V compatibility, `JD-VCC`/`VCC` behavior, isolation
   method, coil/load ratings, and current requirements.
@@ -35,6 +39,9 @@
 - Define MicroSD card capacity, FAT preparation process, low-space behavior,
   log rotation, and fallback web-serving behavior for
   `four-relay-xbee-wifi`.
+- Inventory required bench instruments and fixtures for `four-relay-xbee-wifi`:
+  DMM, current-limited supply, logic analyzer or LED proof fixture, USB serial
+  tools, labeled harnesses, low-voltage dummy loads, and test-record template.
 - Create a separate qualified-review package before any mains switching design:
   load type, enclosure, overcurrent protection, grounding/bonding, strain
   relief, GFCI/de-energization, separation, labels/disconnect, and test record.
@@ -44,7 +51,11 @@
 
 - Select first protocol to implement.
 - Add XBee API parser test vectors for escaped API frames, status frames, and
-  reject reasons.
+- Add XBee API parser test vectors for AT response and receive-packet payload
+  validation beyond the current escaped-frame, bad-length, truncated-escape,
+  checksum, and transmit-status host vectors.
+- Refactor `scripts/verify_scaffold.py` into smaller check modules after the
+  M0/M1 research cycle settles stable validation categories.
 - Define CI matrix after the firmware framework is selected.
 
 ## Closure criteria

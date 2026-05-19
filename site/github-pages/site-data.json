@@ -13,6 +13,14 @@
       "href": "bundle/docs/projects/four-relay-xbee-wifi/README.md"
     },
     {
+      "label": "R&D loop",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/rd-loop.md"
+    },
+    {
+      "label": "Hardware and circuit improvement research",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/hardware-circuit-improvement-research.md"
+    },
+    {
       "label": "Build guide",
       "href": "bundle/docs/projects/four-relay-xbee-wifi/build-guide.md"
     },
@@ -27,6 +35,10 @@
     {
       "label": "XBee read-only proof",
       "href": "bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md"
+    },
+    {
+      "label": "MicroSD assets/logs profile",
+      "href": "bundle/hardware-profiles/storage/spi-microsd-reader/README.md"
     },
     {
       "label": "TFT and relay expansion",
@@ -47,10 +59,6 @@
     {
       "label": "Source index",
       "href": "bundle/knowledge-base/source-index.md"
-    },
-    {
-      "label": "TFT expansion ledger",
-      "href": "bundle/knowledge-base/source-ledger/2026-05-18-tft-relay-expansion.md"
     }
   ],
   "buildStatus": [
@@ -60,18 +68,23 @@
       "state": "ok"
     },
     {
-      "label": "Framework",
-      "value": "ESP-IDF accepted",
+      "label": "R&D loop",
+      "value": "Open",
       "state": "review"
+    },
+    {
+      "label": "MicroSD",
+      "value": "Assets + logs",
+      "state": "review"
+    },
+    {
+      "label": "XBee",
+      "value": "Read-only",
+      "state": "warn"
     },
     {
       "label": "Relay GPIO",
       "value": "Expander planned",
-      "state": "warn"
-    },
-    {
-      "label": "TFT",
-      "value": "Unverified",
       "state": "warn"
     },
     {
@@ -113,23 +126,23 @@
   "constructionSequence": [
     {
       "title": "Visual blueprint review",
-      "summary": "Start with the conceptual system map and safety proof ladder before any low-voltage bench action."
+      "summary": "Start with the conceptual system map, R&D loop, and safety proof ladder before any low-voltage bench action."
     },
     {
       "title": "Board and shield inspection",
       "summary": "Record the active single power source, jumper state, rail checks, and shield continuity before any external module is connected."
     },
     {
-      "title": "Relay input proof",
-      "summary": "Keep contacts disconnected while trigger polarity, input current, 3.3 V behavior, and JD-VCC/VCC behavior are verified."
-    },
-    {
-      "title": "Expansion dry proof",
-      "summary": "Use CD74HC4067 for ADC test inputs only and prove MCP23017/TCA9555 latch behavior on LEDs or a logic analyzer before relay inputs."
+      "title": "MicroSD asset and log review",
+      "summary": "Keep static assets and log paths source-backed while treating storage behavior as a verification gate."
     },
     {
       "title": "XBee read-only discovery",
       "summary": "Use the USB adapter as a PC dock for passive discovery first, then explicitly confirmed AT read queries only."
+    },
+    {
+      "title": "Expansion dry proof",
+      "summary": "Use CD74HC4067 for ADC test inputs only and prove MCP23017/TCA9555 latch behavior on LEDs or a logic analyzer before relay inputs."
     },
     {
       "title": "Qualified load review",
@@ -150,24 +163,36 @@
       "linkText": "Read power gates"
     },
     {
-      "title": "Mux relay outputs rejected",
-      "summary": "The CD74HC4067 path is limited to slow inputs; relay pin relief moves to a latched expander plus verified driver stage.",
-      "href": "bundle/docs/projects/four-relay-xbee-wifi/tft-relay-expansion.md",
-      "linkText": "Read expansion plan"
-    },
-    {
       "title": "XBee writes blocked",
       "summary": "The radio path starts with passive discovery and fixed AT read queries; setting writes require later owner review and explicit approval.",
       "href": "bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md",
       "linkText": "Read XBee proof"
+    },
+    {
+      "title": "MicroSD behavior gated",
+      "summary": "Assets and logs are planned for the static HMI path, but card behavior and bus details remain evidence-gated.",
+      "href": "bundle/hardware-profiles/storage/spi-microsd-reader/README.md",
+      "linkText": "Read storage profile"
+    },
+    {
+      "title": "R&D loop controls scope",
+      "summary": "Role-lane review keeps framework, firmware, hardware, communications, QA, and release work separated by gates.",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/rd-loop.md",
+      "linkText": "Read R&D loop"
+    },
+    {
+      "title": "Mux relay outputs rejected",
+      "summary": "The CD74HC4067 path is limited to slow inputs; relay pin relief moves to a latched expander plus verified driver stage.",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/tft-relay-expansion.md",
+      "linkText": "Read expansion plan"
     }
   ],
   "futureTracks": [
     "Confirm repository Pages source is set to GitHub Actions before public deployment.",
     "Review the build-script allowlist before adding any file to the public artifact.",
     "Close hardware blockers before firmware flashing, relay switching, XBee setting writes, or mains/load wiring.",
-    "Verify the exact TFT, mux breakout, expander board, and driver stage before wiring.",
+    "Verify the exact TFT, mux breakout, expander board, driver stage, and MicroSD module behavior before wiring.",
     "Keep future generated screenshots, raw uploads, vendor PDFs, and bulky binaries out of the public Pages artifact.",
-    "Permit only the named generated blueprint backplates under site/github-pages/assets/blueprints/."
+    "Permit only the named generated technical backplates under site/github-pages/assets/."
   ]
 }

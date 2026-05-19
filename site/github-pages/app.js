@@ -37,8 +37,11 @@
 
   const byId = (id) => document.getElementById(id);
 
-  async function readJson(path) {
+  async function readJson(path, options = {}) {
     const response = await fetch(path, { cache: "no-store" });
+    if (options.optional && response.status === 404) {
+      return null;
+    }
     if (!response.ok) {
       throw new Error(`${path} returned ${response.status}`);
     }
@@ -260,8 +263,10 @@
 
   function updateManifestCount(manifest) {
     const manifestCount = byId("manifestCount");
-    if (manifestCount && Array.isArray(manifest.files)) {
+    if (manifestCount && manifest && Array.isArray(manifest.files)) {
       manifestCount.textContent = `${manifest.files.length} public files`;
+    } else if (manifestCount) {
+      manifestCount.textContent = "Generated artifact only";
     }
   }
 
@@ -286,9 +291,10 @@
     }
 
     try {
-      updateManifestCount(await readJson("public-file-manifest.json"));
+      const manifest = await readJson("public-file-manifest.json", { optional: true });
+      updateManifestCount(manifest);
     } catch (error) {
-      console.info("Public manifest count skipped:", error.message);
+      updateManifestCount(null);
     }
   }
 

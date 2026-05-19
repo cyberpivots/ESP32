@@ -24,18 +24,19 @@
     </header>
 
     <main id="top">
-      <section class="blueprint-page-hero">
+      <section class="blueprint-page-hero premium-blueprint-hero">
         <div>
           <p class="eyebrow">Visual blueprint</p>
           <h1>Conceptual system map, not wiring instructions</h1>
           <p class="lede">
-            This page explains the workbench in plain English first, then keeps
-            the technical names visible for reviewers. The images are label-free
-            backplates; every factual label is HTML text.
+            The visuals are public-safe review backplates. Exact labels stay in
+            HTML text so the page can be audited without encoding unverified
+            pinouts, wire colors, terminal order, serial IDs, or load-side
+            procedures into an image.
           </p>
           <div class="hero-actions" aria-label="Blueprint actions">
             <a class="button primary" href="bundle/docs/projects/four-relay-xbee-wifi/prototype-blueprint.md">Open text blueprint</a>
-            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/build-guide.md">Open build guide</a>
+            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/rd-loop.md">Open R&amp;D loop</a>
             <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md">Review mains gate</a>
           </div>
         </div>
@@ -49,37 +50,36 @@
         </aside>
       </section>
 
-      <section class="content-section plain-language" aria-labelledby="plain-title">
+      <section class="content-section visual-story-grid" aria-labelledby="story-title">
         <div class="section-heading">
-          <p class="eyebrow">Plain English</p>
-          <h2 id="plain-title">What this does</h2>
+          <p class="eyebrow">Storyboard</p>
+          <h2 id="story-title">What reviewers should see first</h2>
         </div>
-        <div class="plain-grid">
-          <article>
-            <h3>One controller, several review surfaces</h3>
-            <p>
-              The ESP32 is the planned low-voltage controller. A browser page,
-              MicroSD storage, XBee radio discovery, TFT planning, and relay
-              expansion are reviewed around it.
-            </p>
-          </article>
-          <article>
-            <h3>The relay side is intentionally fenced off</h3>
-            <p>
-              The public package shows where relay inputs may eventually fit,
-              but it does not authorize load terminals, relay contacts, or
-              mains wiring.
-            </p>
-          </article>
-          <article>
-            <h3>The diagrams show gates, not pinouts</h3>
-            <p>
-              The shapes are a review map. They do not claim exact wires,
-              colors, pin numbers, terminal order, current ratings, or safe
-              bench actions.
-            </p>
-          </article>
-        </div>
+        <article>
+          <span>01</span>
+          <h3>R&amp;D loop</h3>
+          <p>Role lanes and milestone gates define the next action before implementation work advances.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Hardware gates</h3>
+          <p>Power, voltage, boot-pin, isolation, relay trigger, and load-side checks stay explicit.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Read-only XBee</h3>
+          <p>Passive discovery and allowed AT reads are separated from setting writes.</p>
+        </article>
+        <article>
+          <span>04</span>
+          <h3>MicroSD assets/logs</h3>
+          <p>Static assets and logs are shown as a storage path, not proof of a live board.</p>
+        </article>
+        <article>
+          <span>05</span>
+          <h3>Blocked load side</h3>
+          <p>Load or mains work stays outside the public guide until qualified review closes.</p>
+        </article>
       </section>
 
       <section class="content-section schematic-panel" aria-labelledby="system-title">
@@ -111,6 +111,26 @@
             Conceptual schematic, not a wiring diagram. Relay/load wiring,
             mains wiring, TFT wiring, and expander-to-relay wiring remain
             blocked until the documented gates close.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="content-section loop-visual-section" aria-labelledby="loop-visual-title">
+        <div class="section-heading">
+          <p class="eyebrow">R&amp;D loop</p>
+          <h2 id="loop-visual-title">Milestones before mutation</h2>
+          <a class="text-link" href="bundle/docs/projects/four-relay-xbee-wifi/rd-loop.md">Open loop document</a>
+        </div>
+        <figure class="art-figure wide-art">
+          <img
+            src="assets/workbench/rd-loop-backplate.webp"
+            alt="Label-free technical backplate showing milestone rings and review lanes."
+            width="1600"
+            height="1000"
+          >
+          <figcaption>
+            Generated public-safe artwork. It is a review surface only and does
+            not encode exact wiring, radio IDs, pin order, or load-side detail.
           </figcaption>
         </figure>
       </section>

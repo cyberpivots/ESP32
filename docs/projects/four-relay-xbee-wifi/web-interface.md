@@ -166,6 +166,10 @@ object so the HMI can render even when storage-specific endpoints fail:
 {"state": true, "sequence": 1}
 ```
 
+The public `channel` path value is `1` through `4`. Channel `0` and values
+above `4` are invalid public API routes; firmware may use zero-based internal
+indexes only behind the API contract.
+
 `POST /api/all-off` accepts:
 
 ```json

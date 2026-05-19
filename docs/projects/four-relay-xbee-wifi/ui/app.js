@@ -551,7 +551,7 @@ function renderRelays() {
     relayExpanderReady(state) &&
     !state.safetyLocked;
   els.controlGateText.textContent = relaysReady
-    ? "Relay commands available for enabled channels"
+    ? "Relay commands available only for a validated live session"
     : "Relay commands blocked";
   els.relayGrid.replaceChildren();
 
@@ -794,7 +794,7 @@ async function refresh() {
     manifest = clone(scenario.manifest);
     logs = clone(scenario.logs);
     readOnlyApiStatus = { storage: "ok", manifest: "ok", logs: "ok" };
-    els.message.textContent = "Prototype mode: mock device API active.";
+    els.message.textContent = "Static demo mode: mock state active.";
     render(state);
     return;
   }

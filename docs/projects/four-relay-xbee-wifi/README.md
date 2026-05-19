@@ -13,14 +13,20 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
 - [Architecture](architecture.md)
 - [Prototype blueprint](prototype-blueprint.md)
 - [Bench bring-up runbook](bench-bring-up-runbook.md)
+- [XBee read-only bench proof](xbee-read-only-bench-proof.md)
 - [Mains readiness gate](mains-readiness-gate.md)
 - [Power and safety gates](power-and-safety.md)
 - [Pin plan](pin-plan.md)
+- [TFT and relay expansion](tft-relay-expansion.md)
 - [Firmware task model](firmware-task-model.md)
 - [Web interface](web-interface.md)
 - [Static admin HMI](ui/index.html)
 - [SPI MicroSD reader profile](../../../hardware-profiles/storage/spi-microsd-reader/README.md)
 - [SPI MicroSD assets and logs ledger](../../../knowledge-base/source-ledger/2026-05-18-spi-microsd-assets-logs.md)
+- [Open-Smart R61509V TFT planning profile](../../../hardware-profiles/displays/open-smart-r61509v/README.md)
+- [CD74HC4067 analog mux profile](../../../hardware-profiles/interface-expansion/cd74hc4067/README.md)
+- [TCA9555/MCP23017 GPIO expander profile](../../../hardware-profiles/interface-expansion/tca9555-mcp23017/README.md)
+- [TPIC6B595 relay driver reference profile](../../../hardware-profiles/interface-expansion/tpic6b595/README.md)
 
 ## Verified facts
 
@@ -60,6 +66,15 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
   `SRC-NIOSH-ELECTRICAL-SAFETY`, `SRC-OSHA-DEENERGIZED-WORK`,
   `SRC-OSHA-GFCI`, `SRC-OSHA-AEGCP`, `SRC-OSHA-GROUNDING-OVERCURRENT`,
   `SRC-NEMA-ENCLOSURES`.
+- TI and Espressif sources support a revised relay-expansion branch using a
+  latched GPIO expander path, while CD74HC4067 is documented only as an analog
+  mux for input routing. Source IDs: `SRC-TI-CD74HC4067`,
+  `SRC-TI-TCA9555`, `SRC-ESPRESSIF-MCP23017-COMPONENT`,
+  `SRC-TI-TPIC6B595`.
+- External TFT references provide planning context for R61509V parallel-display
+  pin pressure, but they do not verify the user's exact Open-Smart module.
+  Source IDs: `SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`,
+  `SRC-LCDWIKI-R61509V-MRB2802`.
 
 ## Assumptions
 
@@ -77,6 +92,11 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
 - The DIY prototype path starts with board/shield inspection, then relay-module
   verification with relay contacts disconnected, then XBee read-only discovery
   from the PC dock.
+- The Open-Smart R61509V TFT remains a requested planning target, but it must be
+  treated as unverified hardware until exact module, pinout, power, backlight,
+  and touch evidence are recorded.
+- Relay pin relief should use a latched I2C GPIO expander branch, not a
+  CD74HC4067 analog mux.
 
 ## Unknowns
 
@@ -93,6 +113,10 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
 - Load type, load voltage, enclosure, fusing, and isolation design.
 - Exact SPI MicroSD reader module, power path, pull-ups, shield continuity,
   boot-pin effects, card format, and log-retention policy.
+- Exact Open-Smart R61509V TFT module identity, pinout, power/backlight needs,
+  touch behavior, and display-driver path.
+- Exact relay GPIO expander board, I2C address/pullups, inactive defaults,
+  output latch behavior, and driver-stage fit.
 - Installed ESP-IDF and XBee configuration tooling on the target development
   machine.
 - Mains readiness evidence: qualified review, load definition, enclosure,
@@ -101,9 +125,12 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
 
 ## Hard gate
 
-No relay wiring, load switching, XBee configuration writes, or firmware flashing
-is approved by this package. Those steps require physical verification records
-and owner review.
+No relay wiring, relay-expander wiring to relay inputs, load switching, XBee
+configuration writes, XBee API transmit frames, ESP32 DIN/DOUT carrier wiring,
+TFT wiring, or firmware flashing is approved by this package. The XBee bench
+lane is limited to [read-only proof](xbee-read-only-bench-proof.md) Tier A
+passive discovery and explicitly gated Tier B AT read queries. Further steps
+require physical verification records and owner review.
 
 Mains switching remains hard blocked by
 [mains-readiness-gate.md](mains-readiness-gate.md).

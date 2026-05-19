@@ -46,6 +46,21 @@ Adapter PC dock, and a local Wi-Fi HTML control surface.
 - Current shell probe found Python 3.12.3 and Git 2.43.0; `idf.py`,
   `esptool.py`, CMake, Ninja, and XCTU were not found on PATH. Source ID:
   `SRC-LOCAL-TOOLCHAIN-PROBE-2026-05-18`.
+- Current XBee read-only probe tooling is WSL2 with Python 3.12.3,
+  pyserial 3.5, `lsusb` and PowerShell available, no `xctu` on PATH, no
+  `/dev/ttyUSB*` or `/dev/ttyACM*`, and only `/dev/ttyS0`/`/dev/ttyS1`
+  pyserial candidates at probe time. Source ID:
+  `SRC-LOCAL-XBEE-READONLY-PROBE-2026-05-18`.
+- The revised TFT/pin-pressure plan uses CD74HC4067 only for slow input routing,
+  and MCP23017/TCA9555 as the relay expander planning path. Source IDs:
+  `SRC-TI-CD74HC4067`, `SRC-TI-TCA9555`,
+  `SRC-ESPRESSIF-MCP23017-COMPONENT`.
+- TPIC6B595 is retained as a driver-stage reference only, not as a selected
+  relay driver. Source ID: `SRC-TI-TPIC6B595`.
+- External R61509V references provide parallel-TFT planning context but do not
+  verify the user's exact Open-Smart module. Source IDs:
+  `SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`,
+  `SRC-LCDWIKI-R61509V-MRB2802`.
 
 ## Assumptions
 
@@ -60,6 +75,10 @@ Adapter PC dock, and a local Wi-Fi HTML control surface.
   XBee API RF data until parser tests prove a smaller binary encoding is needed.
 - The Waveshare XBee USB Adapter is a PC configuration/debug dock candidate, not
   the final ESP32-mounted XBee carrier.
+- Relay pin relief should be handled through a latched output expander branch,
+  not a CD74HC4067 analog mux.
+- TFT touch controls, if present, remain UI-intent sources and do not bypass
+  `relay_manager` or `safety_supervisor`.
 
 ## Unresolved gaps
 
@@ -71,7 +90,15 @@ Adapter PC dock, and a local Wi-Fi HTML control surface.
 - Whether the Waveshare XBee USB Adapter is only a PC dock or can be used as any
   ESP32-mounted carrier; adapter power feed, reset/sleep pins, DIN/DOUT wiring,
   UART voltage, and optional CTS/RTS wiring.
+- Whether the read-only bench proof can enter command mode and return `VR`,
+  `HV`, `SH`, `SL`, `AP`, `AO`, `BD`, and `NP` without writing settings.
 - Load type, load voltage, enclosure, fusing, snubber/surge suppression,
   earthing/grounding, and mains/inductive-load safety design.
+- Exact Open-Smart R61509V module, pinout, touch interface, power/backlight
+  behavior, and driver path.
+- Exact relay expander board, I2C address/pullups, inactive defaults, output
+  latch behavior, readback policy, and driver-stage fit.
+- Exact CD74HC4067 breakout, address/enable wiring, ADC1 path, input protection,
+  and scan cadence.
 - ESP-IDF, esptool, CMake, Ninja, and Digi XBee tooling installation path on the
   intended development shell.

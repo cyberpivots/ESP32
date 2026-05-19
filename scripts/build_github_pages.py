@@ -16,11 +16,17 @@ DEFAULT_OUTPUT = ROOT / "build" / "github-pages"
 
 SITE_FILES = [
     "index.html",
+    "blueprints.html",
     "styles.css",
     "app.js",
     "site-data.json",
     "404.html",
     ".nojekyll",
+]
+
+SITE_ASSET_FILES = [
+    "assets/blueprints/system-overview.webp",
+    "assets/blueprints/safety-proof-ladder.webp",
 ]
 
 PUBLIC_BUNDLE_FILES = [
@@ -36,9 +42,11 @@ PUBLIC_BUNDLE_FILES = [
     ("docs/projects/four-relay-xbee-wifi/architecture.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/prototype-blueprint.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md", "four-relay"),
+    ("docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/power-and-safety.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/pin-plan.md", "four-relay"),
+    ("docs/projects/four-relay-xbee-wifi/tft-relay-expansion.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/web-interface.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/firmware-task-model.md", "four-relay"),
     ("hardware-profiles/device-matrix.md", "hardware-profile"),
@@ -47,6 +55,19 @@ PUBLIC_BUNDLE_FILES = [
         "hardware-profile",
     ),
     ("hardware-profiles/esp32/devkitc/README.md", "hardware-profile"),
+    ("hardware-profiles/displays/open-smart-r61509v/README.md", "hardware-profile"),
+    (
+        "hardware-profiles/interface-expansion/cd74hc4067/README.md",
+        "hardware-profile",
+    ),
+    (
+        "hardware-profiles/interface-expansion/tca9555-mcp23017/README.md",
+        "hardware-profile",
+    ),
+    (
+        "hardware-profiles/interface-expansion/tpic6b595/README.md",
+        "hardware-profile",
+    ),
     ("hardware-profiles/relays/four-channel/README.md", "hardware-profile"),
     ("hardware-profiles/xbee/xbp9b-dput-001/README.md", "hardware-profile"),
     (
@@ -68,6 +89,14 @@ PUBLIC_BUNDLE_FILES = [
         "knowledge-base/source-ledger/2026-05-18-spi-microsd-assets-logs.md",
         "source-ledger",
     ),
+    (
+        "knowledge-base/source-ledger/2026-05-18-tft-relay-expansion.md",
+        "source-ledger",
+    ),
+    (
+        "knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md",
+        "source-ledger",
+    ),
 ]
 
 ADMIN_HMI_FILES = [
@@ -78,6 +107,9 @@ ADMIN_HMI_FILES = [
 ]
 
 ALLOWED_SUFFIXES = {".css", ".html", ".js", ".json", ".md"}
+ALLOWED_PUBLIC_IMAGE_ASSETS = {
+    f"site/github-pages/{rel}" for rel in SITE_ASSET_FILES
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -111,6 +143,8 @@ def assert_safe_source(path: Path) -> None:
     if any(part in {".git", "user_uploads", ".agents"} for part in path.parts):
         raise ValueError(f"blocked private or bulky source path: {rel}")
     if path.name != ".nojekyll" and path.suffix.lower() not in ALLOWED_SUFFIXES:
+        if rel in ALLOWED_PUBLIC_IMAGE_ASSETS:
+            return
         raise ValueError(f"blocked file type for public artifact: {rel}")
 
 
@@ -155,6 +189,12 @@ def build(out_dir: Path) -> dict[str, object]:
         record["category"] = "site"
         manifest_files.append(record)
 
+    for rel in SITE_ASSET_FILES:
+        source = SITE_SOURCE / rel
+        record = copy_file(source, out_dir / rel, out_dir)
+        record["category"] = "site-blueprint-asset"
+        manifest_files.append(record)
+
     for rel, category in PUBLIC_BUNDLE_FILES:
         source = ROOT / rel
         record = copy_file(source, out_dir / "bundle" / rel, out_dir)
@@ -177,10 +217,11 @@ def build(out_dir: Path) -> dict[str, object]:
                 ".agents/",
                 "user_uploads/",
                 "raw photos",
-                "generated screenshots",
+                "generated screenshots except allowlisted blueprint backplates",
                 "vendor PDFs",
                 "bulky binaries",
                 "private bench notes",
+                "image binaries except named site/github-pages/assets/blueprints/*.webp",
             ],
         },
         "files": sorted(manifest_files, key=lambda item: str(item["path"])),

@@ -9,6 +9,11 @@
 - HTTP Server APIs are not thread-safe and require application-layer
   synchronization if multiple tasks interact with server state. Source ID:
   `SRC-ESP-IDF-HTTP-SERVER`.
+- TCA9555 and MCP23017 are documented 16-bit I/O expansion options for a future
+  latched relay-output path. Source IDs: `SRC-TI-TCA9555`,
+  `SRC-ESPRESSIF-MCP23017-COMPONENT`.
+- CD74HC4067 is a one-channel analog mux/demux for input routing, not relay
+  state holding. Source ID: `SRC-TI-CD74HC4067`.
 
 ## Assumptions
 
@@ -21,12 +26,20 @@
 - Static web assets and append-only event logs are SD-card responsibilities
   after `/sdcard` is mounted, while NVS remains the safety-critical config
   store.
+- Relay output writes are performed by a future `relay_expander` task when the
+  expander branch is selected; HTTP, XBee, TFT, and mux input paths never write
+  relay outputs directly.
+- `mux_scan` only publishes filtered input observations or UI intents. It never
+  emits relay state changes directly.
 
 ## Proposed tasks
 
 | Task | Responsibility | Inputs | Outputs |
 | --- | --- | --- | --- |
-| `relay_manager` | Own relay state, safety lock, boot default, all-off, and polarity config. | HTTP commands, XBee commands, watchdog/reset events. | GPIO writes, state snapshot, reject reasons. |
+| `relay_manager` | Own relay state, safety lock, boot default, all-off, and polarity config. | HTTP commands, XBee commands, TFT UI intents, mux-derived UI intents, watchdog/reset events. | Approved relay state snapshot, expander write requests, state snapshot, reject reasons. |
+| `relay_expander` | Initialize expander pins inactive, mirror approved relay states to the latched expander, and fault the hardware gate on init/write/readback failure. | Relay manager state, I2C health, expander config. | Expander output writes, readback status, `relayExpander` health fields. |
+| `mux_scan` | Scan CD74HC4067 channels at low rate for touch/input observations only. | Mux address pins, ADC result, debounce/filter config. | `mux.ready`, input observations, UI-intent events. |
+| `tft_ui` | Present local status and produce UI intents from touch/buttons after display proof. | State snapshots, touch/input observations. | UI-intent messages queued to relay manager; no direct relay writes. |
 | `http_server` | Serve static UI and REST endpoints. | Browser requests. | State responses and queued relay requests. |
 | `storage_manager` | Mount `/sdcard`, expose static asset and log health, and keep storage failures non-fatal for safety state. | SDSPI mount result, FatFS/VFS paths, asset manifest, log append status. | Storage summary for `/api/state`, `/api/storage/status`, asset manifest response, logger availability. |
 | `event_logger` | Append relay, safety, XBee, storage, and rejected-command events when storage is writable. | State transitions, command rejects, XBee link events, storage faults. | JSONL files under `/sdcard/logs/events` and `/sdcard/logs/relay`. |
@@ -38,22 +51,49 @@
 ## Boot sequence
 
 1. Initialize NVS.
-2. Initialize GPIO pins in inactive relay state.
-3. Load relay polarity, admin credential state, XBee allowlist, and safety-lock
+2. Initialize relay expander hardware if selected, with all expander outputs in
+   inactive relay state before relay commands are accepted.
+3. Initialize direct GPIO pins in inactive relay state only if the direct-GPIO
+   fallback is selected and verified.
+4. Load relay polarity, admin credential state, XBee allowlist, and safety-lock
    default.
-4. If configuration is incomplete, keep relay-changing commands disabled.
-5. Start SoftAP and HTTP server.
-6. Attempt SDSPI/FatFS mount at `/sdcard` if the MicroSD hardware gate is
+5. If configuration is incomplete or expander init/readback fails, keep
+   relay-changing commands disabled and report `hardware_gate_open`.
+6. Start SoftAP and HTTP server.
+7. Attempt SDSPI/FatFS mount at `/sdcard` if the MicroSD hardware gate is
    enabled by verified configuration.
-7. Register HTTP file handlers for `/sdcard/www` if the asset manifest is
+8. Register HTTP file handlers for `/sdcard/www` if the asset manifest is
    readable; otherwise serve a tiny embedded fallback page.
-8. Start XBee UART parser only after serial configuration is loaded.
-9. Publish first state snapshot with safety-lock, config-valid, and storage
-   summary fields.
+9. Start XBee UART parser only after serial configuration is loaded.
+10. Start `mux_scan` only after voltage, ADC, and mux-address gates are verified.
+11. Start `tft_ui` only after display power, pin, and driver gates are verified.
+12. Publish first state snapshot with safety-lock, config-valid, storage summary,
+    `relayExpander`, and `mux` fields.
 
 Source IDs: `SRC-ESP-IDF-NVS`, `SRC-ESP-IDF-GPIO`, `SRC-ESP-IDF-WIFI`,
 `SRC-ESP-IDF-HTTP-SERVER`, `SRC-ESP-IDF-UART`, `SRC-ESP-IDF-FATFS`,
 `SRC-ESP-IDF-SDSPI`, `SRC-ESP-IDF-RESTFUL-SERVER-EXAMPLE`.
+Expansion source IDs: `SRC-TI-TCA9555`,
+`SRC-ESPRESSIF-MCP23017-COMPONENT`, `SRC-TI-CD74HC4067`,
+`SRC-TI-TPIC6B595`.
+
+## State Snapshot Health Fields
+
+```json
+{
+  "relayExpander": {
+    "present": false,
+    "ready": false,
+    "lastWrite": "none"
+  },
+  "mux": {
+    "ready": false
+  }
+}
+```
+
+If `relayExpander.ready` is required by the selected hardware profile and is
+false, `hardwareGateClosed` must also be false.
 
 ## Reject reasons
 
@@ -78,3 +118,8 @@ Source IDs: `SRC-ESP-IDF-NVS`, `SRC-ESP-IDF-GPIO`, `SRC-ESP-IDF-WIFI`,
 - Final telemetry cadence and retry/backoff parameters.
 - Final SDSPI bus frequency, card detect/write protect behavior, log rotation,
   low-space response, and fallback-page implementation.
+- Final relay-expander part, I2C address, pullups, reset/default behavior,
+  output readback policy, fault recovery, and driver-stage interface.
+- Final mux scan list, ADC pins, protection network, debounce/filter policy, and
+  whether touch input exists on the exact TFT module.
+- Final TFT UI task shape, display driver, touch driver, and memory budget.

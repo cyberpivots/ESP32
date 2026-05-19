@@ -26,6 +26,12 @@
   Source IDs: `SRC-NIOSH-ELECTRICAL-SAFETY`,
   `SRC-OSHA-DEENERGIZED-WORK`, `SRC-OSHA-GFCI`, `SRC-OSHA-AEGCP`,
   `SRC-OSHA-GROUNDING-OVERCURRENT`, `SRC-NEMA-ENCLOSURES`.
+- CD74HC4067 is an analog mux/demux planning source for slow input routing, not
+  relay state holding. Source ID: `SRC-TI-CD74HC4067`.
+- TCA9555 and MCP23017 are planning sources for a latched relay-expander branch.
+  Source IDs: `SRC-TI-TCA9555`, `SRC-ESPRESSIF-MCP23017-COMPONENT`.
+- TPIC6B595 is a relay-driver reference only until the exact relay module input
+  behavior is verified. Source ID: `SRC-TI-TPIC6B595`.
 
 ## Assumptions
 
@@ -38,6 +44,8 @@
   adapter.
 - Any final load wiring requires a separate source-backed design package and
   qualified review.
+- The Open-Smart R61509V TFT remains a planning target, so relay GPIO relief
+  should prefer the expander branch over direct GPIO.
 
 ## Unknowns
 
@@ -50,6 +58,8 @@
 - Load type, load voltage/current, enclosure, overcurrent protection,
   grounding/bonding, strain relief, GFCI/de-energization process, and qualified
   review outcome.
+- Exact TFT module, expander board, mux breakout, I2C bus, ADC pins, and
+  driver-stage choice.
 
 ## Parts layout
 
@@ -60,6 +70,9 @@
 | XBee-PRO 900HP radio | Read-only discovery target | Digi model identity is source-backed; ESP32 carrier wiring is unresolved. |
 | Waveshare XBee USB Adapter | PC-side radio dock | Source-backed as a USB/XBee UART adapter; not approved as final ESP32 carrier. |
 | Browser/admin HMI | Static review surface | Local UI only until firmware and hardware gates are accepted. |
+| Open-Smart R61509V TFT | Future local display/touch surface | Exact module and pin plan are unverified; relay changes remain UI intents only. |
+| CD74HC4067 mux | Slow input expansion candidate | Input-only; rejected for direct relay state holding. |
+| MCP23017/TCA9555 expander | Relay output state mirror candidate | LED/logic-analyzer proof first; relay inputs remain blocked. |
 
 ## Provisional signal map
 
@@ -69,29 +82,41 @@
 | Output B | GPIO26 | Shield routing plus relay trigger voltage/current/polarity and isolation verification. |
 | Output C | GPIO27 | Shield routing plus relay trigger voltage/current/polarity and isolation verification. |
 | Output D | GPIO33 | Shield routing plus relay trigger voltage/current/polarity and isolation verification. |
+| Relay expander | I2C unassigned | Exact expander board, pullups, address pins, inactive defaults, latch behavior, and driver-stage evidence. |
+| Mux scan | ADC1 and select pins unassigned | Input-only proof for touch/buttons/sensors; no relay outputs. |
+| TFT bus | Unassigned | Exact Open-Smart module, bus width, control pins, power/backlight, and conflict review. |
 
 The public site lets a reviewer rename the labels in browser storage. Those
 labels are not hardware facts and must not be used as wiring evidence.
 
 ## Low-voltage construction order
 
-1. Board and shield inspection:
+1. Visual blueprint review:
+   Open the public `blueprints.html` page or
+   `prototype-blueprint.md` text version first. Treat the system overview and
+   safety proof ladder as conceptual review maps only; they are not wiring
+   instructions.
+2. Board and shield inspection:
    Record the selected single power source, jumper state, visible labels, rail
    resistance checks, and shield continuity for `GPIO25`, `GPIO26`, `GPIO27`,
    and `GPIO33`. Stop on shorts, dual-power ambiguity, unstable rails, heat, or
    unexpected boot behavior.
-2. Relay module inspection with contacts disconnected:
+3. Relay module inspection with contacts disconnected:
    Record input labels, jumper state, visible isolation components, and
    continuity observations. Do not connect any load while identifying trigger
    polarity, input current, 3.3 V behavior, and `JD-VCC`/`VCC` behavior.
-3. XBee read-only discovery:
+4. XBee read-only discovery:
    Use the Waveshare adapter as a PC dock only. Record serial identity and
    read-only radio identity before any setting write is considered.
-4. Static UI review:
+5. Expansion dry proof:
+   Verify CD74HC4067 only with ADC1 test voltages, and verify the selected
+   MCP23017/TCA9555 expander only on LEDs or a logic analyzer. Do not connect
+   relay-module inputs or coils.
+6. Static UI review:
    Review the GitHub Pages site and admin HMI demo for labels, safety locks,
    storage panels, XBee status, and log display. This does not approve relay
    switching or hardware mutation.
-5. Qualified load review:
+7. Qualified load review:
    Prepare only a review package for load or mains work. Do not add a
    relay-terminal wiring procedure to this public guide.
 
@@ -99,10 +124,14 @@ labels are not hardware facts and must not be used as wiring evidence.
 
 - Source index contains every source ID cited by this guide.
 - Build artifact includes this guide and the generated manifest records it.
-- Public links resolve for the build guide, pin plan, power gates, mains gate,
-  source index, and admin HMI demo.
+- Public links resolve for the visual blueprint page, build guide, pin plan,
+  power gates, mains gate, source index, and admin HMI demo.
+- Public blueprint panels say relay/load wiring, mains wiring, TFT wiring, and
+  expander-to-relay wiring remain blocked until the documented gates close.
 - Relay labels render from checked-in defaults, can be changed in browser
   storage, persist across reload, and reset to defaults.
+- Admin HMI state rendering includes `relayExpander.present`,
+  `relayExpander.ready`, `relayExpander.lastWrite`, and `mux.ready`.
 - Admin HMI static mode makes no `/api/` requests on GitHub Pages.
 - No vendor PDFs, raw photo archives, generated screenshots, bulky binaries,
   private bench notes, or `.agents/` records are published in the Pages
@@ -120,3 +149,6 @@ labels are not hardware facts and must not be used as wiring evidence.
   captured.
 - Stop if a label change is treated as evidence that a relay output has been
   wired or qualified.
+- Stop if CD74HC4067 is proposed as direct relay output state holding.
+- Stop if expander outputs are connected to relay-module inputs before the
+  relay input and driver-stage evidence exists.

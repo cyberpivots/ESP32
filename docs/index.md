@@ -24,9 +24,11 @@
 - [Four relay architecture](projects/four-relay-xbee-wifi/architecture.md)
 - [Four relay prototype blueprint](projects/four-relay-xbee-wifi/prototype-blueprint.md)
 - [Four relay bench bring-up runbook](projects/four-relay-xbee-wifi/bench-bring-up-runbook.md)
+- [Four relay XBee read-only bench proof](projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md)
 - [Four relay mains readiness gate](projects/four-relay-xbee-wifi/mains-readiness-gate.md)
 - [Four relay power and safety](projects/four-relay-xbee-wifi/power-and-safety.md)
 - [Four relay pin plan](projects/four-relay-xbee-wifi/pin-plan.md)
+- [Four relay TFT and relay expansion](projects/four-relay-xbee-wifi/tft-relay-expansion.md)
 - [Four relay firmware task model](projects/four-relay-xbee-wifi/firmware-task-model.md)
 - [Four relay web interface](projects/four-relay-xbee-wifi/web-interface.md)
 
@@ -45,6 +47,8 @@
 - [ESP32 project photo-analysis ledger](../knowledge-base/source-ledger/2026-05-18-esp32project-photo-analysis.md)
 - [DIY bench hardware blocker ledger](../knowledge-base/source-ledger/2026-05-18-diy-bench-hardware-blockers.md)
 - [SPI MicroSD assets and logs ledger](../knowledge-base/source-ledger/2026-05-18-spi-microsd-assets-logs.md)
+- [TFT relay expansion ledger](../knowledge-base/source-ledger/2026-05-18-tft-relay-expansion.md)
+- [XBee read-only bench proof ledger](../knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md)
 - [Four relay XBee Wi-Fi toolchain](../knowledge-base/toolchain/four-relay-xbee-wifi-toolchain.md)
 - [SPI MicroSD reader profile](../hardware-profiles/storage/spi-microsd-reader/README.md)
 

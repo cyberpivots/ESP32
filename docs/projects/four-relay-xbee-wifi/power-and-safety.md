@@ -35,6 +35,10 @@
   Source IDs: `SRC-NIOSH-ELECTRICAL-SAFETY`, `SRC-OSHA-DEENERGIZED-WORK`,
   `SRC-OSHA-GFCI`, `SRC-OSHA-AEGCP`, `SRC-OSHA-GROUNDING-OVERCURRENT`,
   `SRC-NEMA-ENCLOSURES`.
+- CD74HC4067 is source-backed as an analog mux/demux, while TCA9555 and
+  MCP23017 are source-backed as GPIO expansion paths. Source IDs:
+  `SRC-TI-CD74HC4067`, `SRC-TI-TCA9555`,
+  `SRC-ESPRESSIF-MCP23017-COMPONENT`.
 
 ## Assumptions
 
@@ -48,6 +52,8 @@
   safe for any ESP32-mounted role.
 - Relay contacts remain disconnected or attached only to a reviewed low-voltage
   dummy load until a mains/load package is separately approved.
+- Relay pin relief uses a latched expander path; CD74HC4067 mux channels are
+  treated only as input observations.
 
 ## Hardware gates before wiring
 
@@ -56,6 +62,9 @@
 | ESP32 board identity | Photo/source/inspection record showing dev-board vendor, revision, USB-UART bridge, regulator, and module variant. | Hardware |
 | Expansion shield power and routing | Jumper position, selected input source, regulator output, current limit, shield-to-board continuity, and no dual-power conflict. | Hardware |
 | Relay board identity | Board manufacturer/model, schematic or product page, input voltage, trigger polarity, input current, isolation design, `JD-VCC`/`VCC` behavior, and channel/load ratings. | Hardware |
+| Relay expander path | Exact expander board, I2C address pins, pullups, power rail, inactive output defaults, latch proof, readback policy, and driver-stage interface. | Hardware + Firmware + QA |
+| CD74HC4067 input path | Exact mux breakout, address/enable wiring, ADC1 pin, voltage protection, source impedance, scan cadence, and proof that scans cannot change relay state. | Hardware + Firmware + QA |
+| R61509V TFT path | Exact display module, data/control bus, touch interface, power/backlight current, and ESP32 pin-conflict review. | Hardware + Firmware + QA |
 | XBee adapter identity and PC dock path | Adapter revision, PC serial port, driver path, power source, DIN/DOUT mapping, reset/sleep pins, optional CTS/RTS mapping, and level compatibility. | Hardware |
 | Final ESP32-to-XBee carrier | Carrier/socket selection, 3.3 V power budget, DIN/DOUT routing, reset/sleep/associate/flow-control handling, and antenna clearance. | Hardware |
 | Power tree | Bench supply limits, shared ground plan, 3.3 V/5 V budget, relay supply path, XBee transmit current budget, and isolation boundary. | Hardware |
@@ -73,6 +82,10 @@
 - Missing admin credential: relay state-changing HTTP endpoints are disabled.
 - Missing XBee allowlist: radio relay commands are rejected.
 - Missing relay polarity config: all relay commands are rejected.
+- Expander init/write/readback failure: `hardwareGateClosed` is false and relay
+  commands are rejected with `hardware_gate_open`.
+- TFT touch buttons, mux inputs, HTTP, and XBee commands all use the same
+  `relay_manager` plus `safety_supervisor` path before outputs change.
 
 ## Bench action status
 
@@ -80,6 +93,11 @@
 | --- | --- | --- |
 | Power ESP32/shield through barrel jack | Blocked | Expansion-shield jumper state, regulator behavior, and active power source are unverified. |
 | Wire ESP32 GPIO to relay inputs | Blocked | Relay trigger voltage/current/polarity and shield routing are unknown. |
+| Use CD74HC4067 as relay outputs | Blocked | Analog mux selects input paths and does not provide independent latched relay states. |
+| Prove CD74HC4067 on ADC1 test voltages | Allowed after low-voltage source review | Input-only proof; no relay module or safety-critical output connection. |
+| Prove relay expander outputs on LEDs or logic analyzer | Allowed after I2C pullup/address/power review | Output-latch proof only; no relay-module inputs or coils. |
+| Wire relay expander or driver to relay module inputs | Blocked | Relay trigger polarity/current/voltage/isolation behavior is unresolved. |
+| Wire Open-Smart R61509V TFT | Blocked | Exact module, pinout, power/backlight, touch, and pin-conflict evidence are missing. |
 | Power relay board from ESP32/shield 5 V | Blocked | Relay module current and `JD-VCC`/`VCC` isolation behavior are unknown. |
 | Switch mains or inductive loads | Blocked | Load safety design is unknown. |
 | Prepare mains switching steps | Blocked | The approved artifact is only `mains-readiness-gate.md`; no mains wiring procedure is allowed in this phase. |
@@ -103,3 +121,9 @@
   UART, or selectable power/logic rails on the photographed headers.
 - Whether any future load design can satisfy the mains-readiness gate in
   `mains-readiness-gate.md`.
+- Exact relay expander board, I2C address/pullups, inactive default behavior,
+  output readback, and driver-stage choice.
+- Exact CD74HC4067 breakout, input voltage path, ADC protection, and scan
+  behavior.
+- Exact Open-Smart R61509V TFT module identity, power/backlight current, touch
+  interface, and bus pin allocation.

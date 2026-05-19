@@ -11,12 +11,18 @@
   `SRC-SONGLE-SRD-05VDC-SL-C`.
 - Waveshare documents the XBee USB Adapter as a USB/XBee UART communication
   board. Source ID: `SRC-WAVESHARE-XBEE-USB-ADAPTER`.
+- CD74HC4067, TCA9555, MCP23017, and TPIC6B595 sources support the revised
+  expansion proof sequence. Source IDs: `SRC-TI-CD74HC4067`,
+  `SRC-TI-TCA9555`, `SRC-ESPRESSIF-MCP23017-COMPONENT`,
+  `SRC-TI-TPIC6B595`.
 
 ## Assumptions
 
 - This runbook is executed only by someone doing low-voltage bench inspection.
 - Mains wiring, relay load wiring, relay switching, ESP32 flashing, and XBee
   setting writes are excluded.
+- TFT wiring and expander-to-relay wiring are excluded until exact module and
+  relay input evidence exists.
 - A multimeter is available and the operator records each result before moving
   to the next stage.
 
@@ -25,6 +31,10 @@
 - Actual board/shield regulator behavior, rail tolerance, and jumper routing.
 - Relay trigger polarity, input current, and 3.3 V compatibility.
 - Waveshare adapter serial-port path, UART voltage, and DIN/DOUT direction.
+- Open-Smart R61509V TFT identity, pinout, power/backlight, and touch behavior.
+- Expander I2C address, pullups, inactive defaults, output latch behavior, and
+  relay driver-stage fit.
+- CD74HC4067 breakout wiring, ADC protection, and input-only scan behavior.
 
 ## Stage 1 - ESP32 board and expansion shield
 
@@ -127,6 +137,8 @@ Tools needed:
 - Serial-port listing tool or Digi read-only discovery tool.
 - Digital multimeter for adapter header voltage checks.
 - Notebook or bench log.
+- Optional local probe script:
+  `python3 scripts/xbee_read_only_probe.py`.
 
 Power-off checks:
 
@@ -142,10 +154,18 @@ Expected measurement:
   headers to the ESP32.
 - Read-only identity confirms or rejects the expected Digi
   `XBP9B-DPUT-001 RevF` target.
+- Tier A passive discovery records serial candidates, adapter inspection, header
+  voltage, and optional read-only byte observation without serial writes.
+- Tier B read-query discovery is run only with
+  `--confirm-sends-read-commands`; it sends the command-mode guard sequence and
+  only fixed reads for `VR`, `HV`, `SH`, `SL`, `AP`, `AO`, `BD`, and `NP`.
 
 Pass result:
 
 - The adapter remains approved only as a PC dock for read-only discovery.
+- Tier B results may be used as a current-settings readback record only; they
+  do not authorize setting writes, API transmit frames, relay commands, or ESP32
+  carrier wiring.
 
 Fail result:
 
@@ -157,6 +177,9 @@ Stop condition:
 - Stop if the tool prompts for setting writes, the serial device is unstable,
   adapter voltage is unclear, the radio heats unexpectedly, or anyone proposes
   ESP32 DIN/DOUT wiring before carrier review.
+- Stop if `WR`, `AC`, parameter writes, firmware updates, API transmit frames,
+  relay commands, adapter/radio setting changes, or unredacted public serial
+  address publication are introduced.
 
 ## Stage 4 - Mains-readiness review only
 
@@ -191,3 +214,56 @@ Stop condition:
 
 - Stop if mains wiring, live-load switching, or relay-contact energization is
   introduced.
+
+## Expansion Proof Addendum - TFT, mux, and relay expander
+
+Tools needed:
+
+- Digital multimeter.
+- Current-limited low-voltage logic supply after the exact expander or mux board
+  power path is known.
+- LEDs with suitable current limiting or a logic analyzer for expander outputs.
+- ADC1 test-voltage source for mux input proof.
+- Notebook or bench log.
+
+Power-off checks:
+
+- Confirm relay module inputs, relay coils, relay contacts, TFT module, and XBee
+  carrier wiring are disconnected from the expansion proof.
+- Record exact CD74HC4067 breakout, address/enable pins, signal pin, and power
+  rail.
+- Record exact MCP23017 or TCA9555 expander board, address pins, pullups, reset
+  pin behavior, and power rail.
+- Record the Open-Smart R61509V module only as an inspection target until exact
+  pinout and power evidence exist.
+
+Expected measurement:
+
+- CD74HC4067 selects one low-voltage input at a time into an ADC1 test path and
+  does not connect to relay outputs.
+- Expander I2C address is detected, all expander outputs default inactive, and
+  commanded output states remain latched on LEDs or a logic analyzer during
+  unrelated mux scans.
+- TFT pin-conflict notes identify bus width, control pins, touch pins, power,
+  backlight, boot-pin, flash-pin, UART0, MicroSD, XBee, and relay conflicts
+  before any wiring.
+
+Pass result:
+
+- The expansion branch may move to firmware-interface planning with
+  `relay_expander` and `mux_scan` tasks. Relay-module input wiring remains
+  blocked.
+
+Fail result:
+
+- Keep `hardwareGateClosed=false`; do not accept relay commands through the
+  expander branch.
+
+Stop condition:
+
+- Stop if the mux is proposed as relay output state holding.
+- Stop if expander outputs are connected to relay-module inputs before exact
+  relay trigger polarity, input current, logic voltage, and isolation behavior
+  are verified.
+- Stop if TFT wiring would consume boot, flash, UART0, XBee, MicroSD, or relay
+  pins before the conflict review is complete.

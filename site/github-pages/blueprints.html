@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ESP32 Four-Relay Visual Blueprints</title>
+    <meta name="description" content="Conceptual visual blueprints for the ESP32 four-relay XBee Wi-Fi controller prototype, with blocked wiring gates called out plainly.">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="ESP32 Four-Relay Workbench home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>ESP32 Workbench</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="index.html#build">Build</a>
+        <a href="blueprints.html" aria-current="page">Blueprints</a>
+        <a href="index.html#relay-labels">Relay Labels</a>
+        <a href="index.html#demo">Demo</a>
+        <a href="index.html#safety">Safety</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="blueprint-page-hero">
+        <div>
+          <p class="eyebrow">Visual blueprint</p>
+          <h1>Conceptual system map, not wiring instructions</h1>
+          <p class="lede">
+            This page explains the workbench in plain English first, then keeps
+            the technical names visible for reviewers. The images are label-free
+            backplates; every factual label is HTML text.
+          </p>
+          <div class="hero-actions" aria-label="Blueprint actions">
+            <a class="button primary" href="bundle/docs/projects/four-relay-xbee-wifi/prototype-blueprint.md">Open text blueprint</a>
+            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/build-guide.md">Open build guide</a>
+            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md">Review mains gate</a>
+          </div>
+        </div>
+        <aside class="blueprint-summary" aria-label="Blueprint safety summary">
+          <strong>Hard boundary</strong>
+          <p>
+            Relay/load wiring, mains wiring, TFT wiring, and
+            expander-to-relay wiring remain blocked until the documented gates
+            close.
+          </p>
+        </aside>
+      </section>
+
+      <section class="content-section plain-language" aria-labelledby="plain-title">
+        <div class="section-heading">
+          <p class="eyebrow">Plain English</p>
+          <h2 id="plain-title">What this does</h2>
+        </div>
+        <div class="plain-grid">
+          <article>
+            <h3>One controller, several review surfaces</h3>
+            <p>
+              The ESP32 is the planned low-voltage controller. A browser page,
+              MicroSD storage, XBee radio discovery, TFT planning, and relay
+              expansion are reviewed around it.
+            </p>
+          </article>
+          <article>
+            <h3>The relay side is intentionally fenced off</h3>
+            <p>
+              The public package shows where relay inputs may eventually fit,
+              but it does not authorize load terminals, relay contacts, or
+              mains wiring.
+            </p>
+          </article>
+          <article>
+            <h3>The diagrams show gates, not pinouts</h3>
+            <p>
+              The shapes are a review map. They do not claim exact wires,
+              colors, pin numbers, terminal order, current ratings, or safe
+              bench actions.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="content-section schematic-panel" aria-labelledby="system-title">
+        <div class="section-heading">
+          <p class="eyebrow">System overview</p>
+          <h2 id="system-title">What each box means</h2>
+          <a class="text-link" href="bundle/docs/projects/four-relay-xbee-wifi/prototype-blueprint.md">Source-backed text version</a>
+        </div>
+        <figure class="blueprint-figure large-blueprint">
+          <div class="blueprint-stage">
+            <img
+              src="assets/blueprints/system-overview.webp"
+              alt="Conceptual system overview with an ESP32 controller, browser HMI, XBee, MicroSD, TFT, relay expansion, relay module, and blocked load side."
+              width="1600"
+              height="1000"
+            >
+            <div class="diagram-labels" aria-label="System overview labels">
+              <span class="diagram-label label-browser"><strong>Browser HMI</strong><small>review interface</small></span>
+              <span class="diagram-label label-controller"><strong>ESP32 controller</strong><small>source-backed low-voltage target</small></span>
+              <span class="diagram-label label-xbee"><strong>XBee 900HP</strong><small>read-only discovery first</small></span>
+              <span class="diagram-label label-tft"><strong>TFT planning branch</strong><small>exact wiring unresolved</small></span>
+              <span class="diagram-label label-microsd"><strong>MicroSD</strong><small>assets and logs</small></span>
+              <span class="diagram-label label-expander"><strong>Relay expander</strong><small>latched output proof first</small></span>
+              <span class="diagram-label label-relay"><strong>Relay module</strong><small>input behavior unverified</small></span>
+              <span class="diagram-label label-load"><strong>Load side</strong><small>not a public wiring step</small></span>
+            </div>
+          </div>
+          <figcaption>
+            Conceptual schematic, not a wiring diagram. Relay/load wiring,
+            mains wiring, TFT wiring, and expander-to-relay wiring remain
+            blocked until the documented gates close.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="content-section schematic-panel" aria-labelledby="ladder-title">
+        <div class="section-heading">
+          <p class="eyebrow">Safety proof ladder</p>
+          <h2 id="ladder-title">What is blocked and why</h2>
+          <a class="text-link" href="bundle/docs/projects/four-relay-xbee-wifi/power-and-safety.md">Open power gates</a>
+        </div>
+        <figure class="blueprint-figure ladder-blueprint">
+          <div class="blueprint-stage">
+            <img
+              src="assets/blueprints/safety-proof-ladder.webp"
+              alt="Conceptual ladder of safety proof stages from board inspection through qualified load review."
+              width="1600"
+              height="1000"
+            >
+            <ol class="ladder-labels" aria-label="Safety proof ladder steps">
+              <li><strong>Inspect board</strong><span>Confirm power source, jumper state, rails, and boot-pin risks.</span></li>
+              <li><strong>Verify mux inputs</strong><span>Use input-only test voltages. Do not route relay outputs through the mux.</span></li>
+              <li><strong>Prove expander outputs</strong><span>Use LEDs or a logic analyzer before any relay input connection.</span></li>
+              <li><strong>Verify relay inputs</strong><span>Measure trigger polarity, input current, voltage behavior, and isolation.</span></li>
+              <li><strong>Qualified load review</strong><span>Load or mains work stays outside this public guide.</span></li>
+            </ol>
+          </div>
+          <figcaption>
+            Relay/load wiring, mains wiring, TFT wiring, and
+            expander-to-relay wiring remain blocked until the documented gates
+            close.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="content-section glossary-section" aria-labelledby="glossary-title">
+        <div class="section-heading">
+          <p class="eyebrow">Glossary</p>
+          <h2 id="glossary-title">Short terms for reviewers</h2>
+        </div>
+        <div class="glossary-grid">
+          <article><h3>GPIO</h3><p>A general-purpose ESP32 signal pin. A label does not prove it is safe to drive a relay.</p></article>
+          <article><h3>Relay</h3><p>An electrically controlled switch. This project has not approved its load side.</p></article>
+          <article><h3>Mux</h3><p>A selector for sharing one input path across many signals. It is not used for relay output holding.</p></article>
+          <article><h3>Expander</h3><p>A chip that adds more low-voltage I/O. It must be proven on LEDs or a logic analyzer first.</p></article>
+          <article><h3>XBee</h3><p>The radio module. Current work starts with read-only identification through a PC adapter.</p></article>
+          <article><h3>TFT</h3><p>The planned local screen. Its exact module, power, and wiring are unresolved.</p></article>
+          <article><h3>MicroSD</h3><p>Storage for static assets and logs. Its bus and pin plan remain part of the low-voltage review.</p></article>
+          <article><h3>Hardware gate</h3><p>A documented stop point that must close before the next bench action is allowed.</p></article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Generated from a curated ESP32 workspace artifact.</span>
+      <a href="index.html">Back to workbench</a>
+    </footer>
+  </body>
+</html>

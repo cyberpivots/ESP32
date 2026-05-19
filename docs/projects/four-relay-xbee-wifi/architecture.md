@@ -27,6 +27,16 @@
 - Espressif's ESP32-WROOM-32 datasheet provides module-level context for the
   photographed ESP-WROOM-32 module family. Source ID:
   `SRC-ESP32-WROOM-32-DATASHEET`.
+- CD74HC4067 is a 16:1, one-channel analog multiplexer/demultiplexer. Source ID:
+  `SRC-TI-CD74HC4067`.
+- TCA9555 and MCP23017 are documented 16-bit I/O expander options for future
+  relay output expansion. Source IDs: `SRC-TI-TCA9555`,
+  `SRC-ESPRESSIF-MCP23017-COMPONENT`.
+- TPIC6B595 is a relay-driver reference with a storage register and open-drain
+  DMOS output context. Source ID: `SRC-TI-TPIC6B595`.
+- External R61509V references show parallel TFT modules can require many
+  data/control pins. Source IDs: `SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`,
+  `SRC-LCDWIKI-R61509V-MRB2802`.
 
 ## Assumptions
 
@@ -37,6 +47,12 @@
   validation, and safety-lock checks all pass.
 - The Waveshare XBee USB Adapter is used first as a PC-side configuration dock;
   final ESP32-to-XBee carrier wiring is not selected.
+- The Open-Smart R61509V TFT is a requested display target, but exact module
+  source, pinout, touch interface, and power behavior remain unresolved.
+- Relay outputs move to a latched I2C GPIO expander branch when TFT pin pressure
+  is in scope.
+- CD74HC4067 is reserved for slow input routing only and does not directly emit
+  relay commands.
 
 ## Hardware target boundary
 
@@ -44,18 +60,28 @@
 | --- | --- | --- |
 | ESP32 controller | Photographed ESP-WROOM-32 development board plus ESP32 I/O expansion shield | Board vendor/revision, shield jumper state, power path, and GPIO continuity verification |
 | Relay module | Photographed four-channel board with Songle `SRD-05VDC-SL-C` relay cans | Trigger polarity, input current, 3.3 V compatibility, `JD-VCC`/`VCC` behavior, and isolation verification |
+| Relay expander | TCA9555 or MCP23017 planning branch | Exact expander board, I2C pins, pullups, address pins, inactive defaults, latch proof, and driver-stage selection |
+| Analog mux | CD74HC4067 planning branch for slow inputs only | Exact breakout, power rail, address pins, ADC protection, and proof that mux scans cannot change relay state |
+| TFT display | User-requested Open-Smart R61509V planning target | Exact module, pinout, power/backlight, touch behavior, and ESP32 pin conflict review |
 | XBee radio | Photographed Digi `XBP9B-DPUT-001 RevF` | Read-only settings discovery, address allowlist, AES setup plan, and antenna/regulatory review |
 | XBee dock | Photographed Waveshare XBee USB Adapter | PC serial detection, adapter voltage, DIN/DOUT routing, reset/sleep/flow-control verification |
 
 Source IDs: `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`,
 `SRC-ESP32-WROOM-32-DATASHEET`, `SRC-SONGLE-SRD-05VDC-SL-C`,
-`SRC-WAVESHARE-XBEE-USB-ADAPTER`, `SRC-DIGI-XBP9B-DPUT-001`.
+`SRC-WAVESHARE-XBEE-USB-ADAPTER`, `SRC-DIGI-XBP9B-DPUT-001`,
+`SRC-TI-CD74HC4067`, `SRC-TI-TCA9555`,
+`SRC-ESPRESSIF-MCP23017-COMPONENT`, `SRC-TI-TPIC6B595`,
+`SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`, `SRC-LCDWIKI-R61509V-MRB2802`.
 
 ## Components
 
 | Component | Responsibility | Source IDs |
 | --- | --- | --- |
 | Relay state manager | Maintains desired relay state, safety lock, boot defaults, and all-off transition. | `SRC-ESP-IDF-GPIO` |
+| Relay expander task | Mirrors approved relay states to a latched I2C expander and faults the hardware gate on init/write/readback failure. | `SRC-TI-TCA9555`, `SRC-ESPRESSIF-MCP23017-COMPONENT` |
+| Relay driver stage | Future driver interface between expander outputs and relay-module inputs after relay input behavior is verified. | `SRC-TI-TPIC6B595`, `SRC-SONGLE-SRD-05VDC-SL-C` |
+| Mux scan task | Reads CD74HC4067 slow input channels and emits filtered input observations or UI intents only. | `SRC-TI-CD74HC4067` |
+| TFT local HMI | Future display/touch surface for local status and UI intents; relay changes still pass through safety-supervised command paths. | `SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`, `SRC-LCDWIKI-R61509V-MRB2802` |
 | HTTP control surface | Serves static UI and REST endpoints for state, relay changes, all-off, and safety lock. | `SRC-ESP-IDF-HTTP-SERVER`, `SRC-ESP-IDF-WIFI` |
 | MicroSD asset store | Provides `/sdcard/www` static assets and `/sdcard/logs` event-log storage after SDSPI and FatFS/VFS mount succeeds. | `SRC-ESP-IDF-FATFS`, `SRC-ESP-IDF-SDSPI`, `SRC-ESP-IDF-SDMMC`, `SRC-ESP-IDF-SDSPI-EXAMPLE` |
 | XBee transport | Encodes/decodes escaped API frames and carries telemetry/control payloads. | `SRC-DIGI-XBEE-900HP-AP`, `SRC-DIGI-XBEE-900HP-AO`, `SRC-DIGI-XBEE-900HP-USER-GUIDE` |
@@ -93,7 +119,7 @@ Source IDs: `SRC-ESP-IDF-FATFS`, `SRC-ESP-IDF-SDSPI`,
 ## XBee telemetry flow
 
 1. Firmware snapshots relay state, safety lock state, uptime, link state, and
-   last command metadata.
+   last command metadata, plus `relayExpander` and `mux` health.
 2. XBee transport serializes the snapshot into the project status message.
 3. Transport sends a Digi API Transmit Request `0x10` to an allowlisted
    destination or hub address.
@@ -126,3 +152,8 @@ Source IDs: `SRC-DIGI-XBEE-900HP-AP`, `SRC-DIGI-XBEE-900HP-AO`,
 - Final telemetry interval and backoff policy.
 - Final MicroSD reader identity, wiring, card preparation, log rotation,
   low-space policy, and embedded fallback-page implementation.
+- Final TFT display module identity, pinout, touch interface, power/backlight
+  behavior, and driver integration path.
+- Final GPIO expander, I2C pins, pullups, address pins, inactive default proof,
+  readback policy, and driver-stage interface.
+- Final CD74HC4067 input list, ADC pins, protection network, and scan cadence.

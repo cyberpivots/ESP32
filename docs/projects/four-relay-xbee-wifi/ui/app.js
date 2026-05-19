@@ -48,6 +48,14 @@ const baseState = {
   safetyLocked: true,
   adminProvisioned: false,
   hardwareGateClosed: false,
+  relayExpander: {
+    present: false,
+    ready: false,
+    lastWrite: "none",
+  },
+  mux: {
+    ready: false,
+  },
   xbee: {
     configured: false,
     link: "unknown",
@@ -84,6 +92,7 @@ const baseState = {
   config: {
     safety: "pending",
     relayPolarity: "unverified",
+    relayOutputPath: "expander_pending",
     allowlist: "missing",
   },
 };
@@ -115,12 +124,28 @@ const commonLogs = [
     result: "admin_required",
   },
   {
+    time: "2026-05-18T12:00:03Z",
+    type: "safety",
+    severity: "warn",
+    source: "relay_expander",
+    message: "Relay expander not ready; hardware gate open",
+    result: "hardware_gate_open",
+  },
+  {
     time: "2026-05-18T12:00:04Z",
     type: "xbee",
     severity: "info",
     source: "xbee",
     message: "Radio link not configured",
     result: "unconfigured",
+  },
+  {
+    time: "2026-05-18T12:00:05Z",
+    type: "safety",
+    severity: "info",
+    source: "mux_scan",
+    message: "Mux scan pending; inputs disabled",
+    result: "mux_not_ready",
   },
 ];
 
@@ -402,9 +427,22 @@ function canChangeRelay(relay, nextState = state) {
   return (
     nextState.adminProvisioned &&
     nextState.hardwareGateClosed &&
+    relayExpanderReady(nextState) &&
     !nextState.safetyLocked &&
     Boolean(relay.enabled)
   );
+}
+
+function relayExpanderRequired(nextState = state) {
+  const path = nextState.config?.relayOutputPath || "";
+  return Boolean(nextState.relayExpander?.present) || path.startsWith("expander");
+}
+
+function relayExpanderReady(nextState = state) {
+  if (!relayExpanderRequired(nextState)) {
+    return true;
+  }
+  return Boolean(nextState.relayExpander?.ready);
 }
 
 function relayGateReason(relay, nextState = state) {
@@ -413,6 +451,9 @@ function relayGateReason(relay, nextState = state) {
   }
   if (!nextState.hardwareGateClosed) {
     return "Hardware gate open";
+  }
+  if (!relayExpanderReady(nextState)) {
+    return "Relay expander not ready";
   }
   if (nextState.safetyLocked) {
     return "Safety lock closed";
@@ -432,6 +473,11 @@ function normalizeState(nextState) {
   const normalized = {
     ...clone(baseState),
     ...nextState,
+    relayExpander: {
+      ...baseState.relayExpander,
+      ...(nextState.relayExpander || {}),
+    },
+    mux: { ...baseState.mux, ...(nextState.mux || {}) },
     xbee: { ...baseState.xbee, ...(nextState.xbee || {}) },
     storage: { ...baseState.storage, ...(nextState.storage || {}) },
     lastCommand: { ...baseState.lastCommand, ...(nextState.lastCommand || {}) },
@@ -500,7 +546,10 @@ function render(nextState = state) {
 
 function renderRelays() {
   const relaysReady =
-    state.adminProvisioned && state.hardwareGateClosed && !state.safetyLocked;
+    state.adminProvisioned &&
+    state.hardwareGateClosed &&
+    relayExpanderReady(state) &&
+    !state.safetyLocked;
   els.controlGateText.textContent = relaysReady
     ? "Relay commands available for enabled channels"
     : "Relay commands blocked";
@@ -582,11 +631,23 @@ function renderRelayLabelEditor(force = false) {
 
 function renderSafety() {
   const lastCommand = state.lastCommand || {};
+  const relayExpander = state.relayExpander || baseState.relayExpander;
+  const mux = state.mux || baseState.mux;
   els.safetySummary.textContent = state.safetyLocked
     ? "Safety lock is closed"
     : "Safety lock is open";
   text("safetyLockValue", state.safetyLocked ? "locked" : "open");
   text("hardwareGateValue", state.hardwareGateClosed ? "closed" : "open");
+  text(
+    "relayExpanderValue",
+    relayExpander.present
+      ? relayExpander.ready
+        ? "ready"
+        : "fault"
+      : "not present",
+  );
+  text("relayExpanderWriteValue", relayExpander.lastWrite || "none");
+  text("muxValue", mux.ready ? "ready" : "not ready");
   text("lastCommandValue", lastCommand.source || "unknown");
   text("rejectValue", lastCommand.result || "none");
   text("uptimeValue", formatUptime(state.uptimeMs));
@@ -694,6 +755,7 @@ function renderConfig() {
   text("configAdminValue", String(Boolean(state.adminProvisioned)));
   text("configSafetyValue", state.config.safety || "pending");
   text("configRelayValue", state.config.relayPolarity || "unverified");
+  text("configRelayPathValue", state.config.relayOutputPath || "unknown");
   text("configAllowlistValue", state.config.allowlist || state.xbee.allowlist || "missing");
   text("configAssetValue", manifest.version || storage.assetVersion || "unknown");
   text("configFallbackValue", storage.fallbackActive ? "active" : "inactive");

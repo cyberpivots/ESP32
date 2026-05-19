@@ -20,6 +20,9 @@
 - Waveshare documents the XBee USB Adapter as a UART communication board with
   XBee and USB interfaces for testing and configuring modules. Source ID:
   `SRC-WAVESHARE-XBEE-USB-ADAPTER`.
+- Relay-expander and mux health fields are part of the project state contract.
+  Source IDs for the underlying hardware planning branch: `SRC-TI-TCA9555`,
+  `SRC-ESPRESSIF-MCP23017-COMPONENT`, `SRC-TI-CD74HC4067`.
 
 ## Assumptions
 
@@ -32,6 +35,12 @@
   before any ESP32-mounted carrier path is selected.
 
 ## XBee module configuration target
+
+The table below is a future configuration target, not an approval to write
+settings during bench discovery. The current bench path is
+[XBee read-only discovery](../../docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md):
+passive discovery first, then explicitly confirmed AT reads for `VR`, `HV`,
+`SH`, `SL`, `AP`, `AO`, `BD`, and `NP`.
 
 | Parameter | Target | Reason |
 | --- | --- | --- |
@@ -62,6 +71,14 @@ Payload:
   "uptime_ms": 120000,
   "safety_locked": true,
   "hardware_gate_closed": false,
+  "relay_expander": {
+    "present": false,
+    "ready": false,
+    "last_write": "none"
+  },
+  "mux": {
+    "ready": false
+  },
   "relays": [false, false, false, false],
   "last_command": {
     "source": "http",
@@ -99,6 +116,8 @@ Validation:
 - AES/security configuration must be complete.
 - Safety lock must be open.
 - Hardware gate must be closed.
+- If the selected relay path requires an expander, relay expander health must be
+  ready.
 - Relay polarity configuration must be valid.
 
 ## All-off command message
@@ -169,6 +188,9 @@ Reject payload:
 - Verify each reject reason maps to an acknowledgement payload.
 - Verify payload length remains under the current `NP` value after security
   settings are applied.
+- Verify `relay_expander` and `mux` health fields remain informational in status
+  messages and never authorize relay state changes by themselves.
+- Verify expander failure maps relay commands to `hardware_gate_open`.
 
 ## Unknowns
 
@@ -177,6 +199,8 @@ Reject payload:
 - PC serial port and read-only discovery procedure for the Waveshare adapter.
 - Whether the Waveshare adapter is usable only as a PC dock or as any final
   ESP32-mounted carrier path.
+- Whether Tier B AT read-query discovery can complete cleanly through the
+  current adapter without any setting writes.
 - Final AES key provisioning process.
 - Final telemetry interval and retry policy.
 - Whether payloads remain JSON or move to a binary schema after parser tests.

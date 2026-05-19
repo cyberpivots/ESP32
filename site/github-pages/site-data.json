@@ -1,6 +1,10 @@
 {
   "bundleLinks": [
     {
+      "label": "Visual blueprint page",
+      "href": "blueprints.html"
+    },
+    {
       "label": "Workspace overview",
       "href": "bundle/README.md"
     },
@@ -21,6 +25,14 @@
       "href": "bundle/docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md"
     },
     {
+      "label": "XBee read-only proof",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md"
+    },
+    {
+      "label": "TFT and relay expansion",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/tft-relay-expansion.md"
+    },
+    {
       "label": "Power and safety gates",
       "href": "bundle/docs/projects/four-relay-xbee-wifi/power-and-safety.md"
     },
@@ -35,6 +47,10 @@
     {
       "label": "Source index",
       "href": "bundle/knowledge-base/source-index.md"
+    },
+    {
+      "label": "TFT expansion ledger",
+      "href": "bundle/knowledge-base/source-ledger/2026-05-18-tft-relay-expansion.md"
     }
   ],
   "buildStatus": [
@@ -50,7 +66,12 @@
     },
     {
       "label": "Relay GPIO",
-      "value": "Provisional",
+      "value": "Expander planned",
+      "state": "warn"
+    },
+    {
+      "label": "TFT",
+      "value": "Unverified",
       "state": "warn"
     },
     {
@@ -91,6 +112,10 @@
   ],
   "constructionSequence": [
     {
+      "title": "Visual blueprint review",
+      "summary": "Start with the conceptual system map and safety proof ladder before any low-voltage bench action."
+    },
+    {
       "title": "Board and shield inspection",
       "summary": "Record the active single power source, jumper state, rail checks, and shield continuity before any external module is connected."
     },
@@ -99,8 +124,12 @@
       "summary": "Keep contacts disconnected while trigger polarity, input current, 3.3 V behavior, and JD-VCC/VCC behavior are verified."
     },
     {
+      "title": "Expansion dry proof",
+      "summary": "Use CD74HC4067 for ADC test inputs only and prove MCP23017/TCA9555 latch behavior on LEDs or a logic analyzer before relay inputs."
+    },
+    {
       "title": "XBee read-only discovery",
-      "summary": "Use the USB adapter as a PC dock for identity and serial discovery only; setting writes and ESP32 wiring remain gated."
+      "summary": "Use the USB adapter as a PC dock for passive discovery first, then explicitly confirmed AT read queries only."
     },
     {
       "title": "Qualified load review",
@@ -121,16 +150,24 @@
       "linkText": "Read power gates"
     },
     {
+      "title": "Mux relay outputs rejected",
+      "summary": "The CD74HC4067 path is limited to slow inputs; relay pin relief moves to a latched expander plus verified driver stage.",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/tft-relay-expansion.md",
+      "linkText": "Read expansion plan"
+    },
+    {
       "title": "XBee writes blocked",
-      "summary": "The radio path starts with read-only discovery; setting writes require later owner review and explicit approval.",
-      "href": "bundle/comm-protocols/wireless/xbee-api-four-relay.md",
-      "linkText": "Read protocol notes"
+      "summary": "The radio path starts with passive discovery and fixed AT read queries; setting writes require later owner review and explicit approval.",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md",
+      "linkText": "Read XBee proof"
     }
   ],
   "futureTracks": [
     "Confirm repository Pages source is set to GitHub Actions before public deployment.",
     "Review the build-script allowlist before adding any file to the public artifact.",
     "Close hardware blockers before firmware flashing, relay switching, XBee setting writes, or mains/load wiring.",
-    "Keep future generated screenshots, raw uploads, vendor PDFs, and bulky binaries out of the public Pages artifact."
+    "Verify the exact TFT, mux breakout, expander board, and driver stage before wiring.",
+    "Keep future generated screenshots, raw uploads, vendor PDFs, and bulky binaries out of the public Pages artifact.",
+    "Permit only the named generated blueprint backplates under site/github-pages/assets/blueprints/."
   ]
 }

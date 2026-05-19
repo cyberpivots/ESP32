@@ -23,8 +23,8 @@ an ADR explicitly chooses one. ADR-0002 accepts ESP-IDF stable v6.0.1 for the
 - `docs/projects/four-relay-xbee-wifi/` contains the first photographed
   ESP-WROOM-32 development board plus ESP32 I/O expansion shield, four-channel
   Songle relay module candidate, XBee-PRO 900HP, Waveshare XBee USB Adapter,
-  local Wi-Fi UI design package, public build guide, and staged DIY
-  bench-readiness documentation.
+  local Wi-Fi UI design package, public build guide, staged DIY
+  bench-readiness documentation, and a read-only XBee bench proof lane.
 
 ## Required workflow
 

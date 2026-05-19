@@ -47,7 +47,10 @@ python3 scripts/build_github_pages.py --out build/github-pages
 The build script copies:
 
 - static site files from `site/github-pages/`;
-- explicitly allowlisted Markdown files into `build/github-pages/bundle/`;
+- the dedicated visual blueprint page and the two named generated blueprint
+  backplates under `site/github-pages/assets/blueprints/`;
+- explicitly allowlisted Markdown files, including the XBee read-only bench
+  proof, into `build/github-pages/bundle/`;
 - the existing static admin HMI demo into
   `build/github-pages/demos/admin-hmi/`;
 - a generated `public-file-manifest.json` with paths, byte counts, and hashes.
@@ -67,27 +70,35 @@ Allowed public content:
   marked as an assumption or unresolved gap;
 - static HTML, CSS, JavaScript, and JSON for the landing page and admin HMI
   demo;
+- the two named generated WebP blueprint backplates used by the public visual
+  blueprint page, with factual labels rendered in HTML instead of inside the
+  image;
 - generated manifest metadata for the allowlisted public files.
 
 Excluded public content:
 
 - `.agents/` records and internal handoffs;
 - `user_uploads/` and raw photo archives;
-- generated screenshots and bulky media;
+- generated screenshots and bulky media except the two named blueprint
+  backplates;
 - copied vendor PDFs or source artifacts;
 - private bench notes or files not listed in `scripts/build_github_pages.py`.
 
 ## Safety Boundary
 
 The public site is DIY concept/prototype documentation only. It does not approve
-mains wiring, relay load wiring, live firmware flashing, relay switching, or
-XBee setting writes.
+mains wiring, relay load wiring, live firmware flashing, relay switching, XBee
+setting writes, XBee API transmit frames, or ESP32 DIN/DOUT carrier wiring.
+
+The visual blueprint page is a conceptual schematic, not a wiring diagram.
+Relay/load wiring, mains wiring, TFT wiring, and expander-to-relay wiring remain
+blocked until the documented gates close.
 
 The public site must keep hardware blockers visible, including power-source
 selection, voltage compatibility, boot-pin effects, relay trigger polarity,
 relay input current, isolation behavior, XBee read/write readiness, enclosure
 selection, overcurrent protection, grounding/bonding, GFCI/de-energization
-process, strain relief, and qualified review.
+process, strain relief, XBee read-only proof status, and qualified review.
 
 ## Manual Repository Setting
 
@@ -108,7 +119,7 @@ Run these checks before handoff:
 
 ```bash
 python3 scripts/build_github_pages.py --out build/github-pages
-python3 -m py_compile scripts/build_github_pages.py scripts/verify_scaffold.py
+python3 -m py_compile scripts/build_github_pages.py scripts/verify_scaffold.py scripts/xbee_read_only_probe.py
 python3 scripts/verify_scaffold.py
 find . -path './.git' -prune -o \( -name 'CMakeLists.txt' -o -name 'sdkconfig*' -o -name 'platformio.ini' -o -name 'idf_component.yml' -o -name 'arduino-cli.yaml' \) -print
 ```

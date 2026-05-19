@@ -21,6 +21,8 @@ REQUIRED_PATHS = [
     ".agents/TASK_LOG/0005-admin-hmi-microsd-assets-logs.md",
     ".agents/TASK_LOG/0006-github-pages-public-diy-site.md",
     ".agents/TASK_LOG/0008-github-pages-workbench-build-guide.md",
+    ".agents/TASK_LOG/0011-github-pages-blueprints-schematics.md",
+    ".agents/TASK_LOG/0012-xbee-read-only-bench-proof.md",
     ".agents/DECISIONS/ADR-0001-framework-choice.md",
     ".agents/DECISIONS/ADR-0002-four-relay-xbee-wifi-framework.md",
     ".agents/handoffs/0002-design-to-hardware-firmware-qa.md",
@@ -28,6 +30,8 @@ REQUIRED_PATHS = [
     ".agents/handoffs/0004-blueprint-to-hardware-qa.md",
     ".agents/handoffs/0005-admin-hmi-to-firmware-hardware-qa.md",
     ".agents/handoffs/0006-github-pages-public-diy-site.md",
+    ".agents/handoffs/0008-github-pages-blueprints-to-release-qa.md",
+    ".agents/handoffs/0009-xbee-read-only-proof-to-hardware-comms-qa.md",
     "docs/index.md",
     "docs/agent-coordination.md",
     "docs/handoff-and-review.md",
@@ -44,6 +48,7 @@ REQUIRED_PATHS = [
     "docs/projects/four-relay-xbee-wifi/architecture.md",
     "docs/projects/four-relay-xbee-wifi/prototype-blueprint.md",
     "docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md",
+    "docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md",
     "docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md",
     "docs/projects/four-relay-xbee-wifi/power-and-safety.md",
     "docs/projects/four-relay-xbee-wifi/pin-plan.md",
@@ -64,6 +69,7 @@ REQUIRED_PATHS = [
     "knowledge-base/source-ledger/2026-05-18-esp32project-photo-analysis.md",
     "knowledge-base/source-ledger/2026-05-18-diy-bench-hardware-blockers.md",
     "knowledge-base/source-ledger/2026-05-18-spi-microsd-assets-logs.md",
+    "knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md",
     "knowledge-base/toolchain/four-relay-xbee-wifi-toolchain.md",
     "research/known-gaps.md",
     "research/triage-status.md",
@@ -84,12 +90,16 @@ REQUIRED_PATHS = [
     "firmware/boards/README.md",
     "firmware/comms/README.md",
     "site/github-pages/index.html",
+    "site/github-pages/blueprints.html",
     "site/github-pages/styles.css",
     "site/github-pages/app.js",
     "site/github-pages/site-data.json",
     "site/github-pages/404.html",
     "site/github-pages/.nojekyll",
+    "site/github-pages/assets/blueprints/system-overview.webp",
+    "site/github-pages/assets/blueprints/safety-proof-ladder.webp",
     "scripts/build_github_pages.py",
+    "scripts/xbee_read_only_probe.py",
     ".github/workflows/README.md",
     ".github/workflows/pages.yml",
 ]
@@ -108,6 +118,7 @@ PROJECT_FACT_PATHS = [
     "docs/projects/four-relay-xbee-wifi/architecture.md",
     "docs/projects/four-relay-xbee-wifi/prototype-blueprint.md",
     "docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md",
+    "docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md",
     "docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md",
     "docs/projects/four-relay-xbee-wifi/power-and-safety.md",
     "docs/projects/four-relay-xbee-wifi/pin-plan.md",
@@ -118,6 +129,7 @@ PROJECT_FACT_PATHS = [
     "knowledge-base/source-ledger/2026-05-18-esp32project-photo-analysis.md",
     "knowledge-base/source-ledger/2026-05-18-diy-bench-hardware-blockers.md",
     "knowledge-base/source-ledger/2026-05-18-spi-microsd-assets-logs.md",
+    "knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md",
     "knowledge-base/toolchain/four-relay-xbee-wifi-toolchain.md",
     "hardware-profiles/device-matrix.md",
     "hardware-profiles/esp32/esp-wroom-32-dev-board/README.md",
@@ -146,6 +158,13 @@ PHOTO_FILENAMES = [
 
 SOURCE_ID_PATTERN = re.compile(r"\bSRC-[A-Z0-9-]+\b")
 
+ALLOWED_IMAGE_BINARY_PATHS = {
+    "site/github-pages/assets/blueprints/system-overview.webp",
+    "site/github-pages/assets/blueprints/safety-proof-ladder.webp",
+    "build/github-pages/assets/blueprints/system-overview.webp",
+    "build/github-pages/assets/blueprints/safety-proof-ladder.webp",
+}
+
 
 def main() -> int:
     failures = []
@@ -166,7 +185,7 @@ def main() -> int:
             )
         if candidate.suffix.lower() in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
             rel = candidate.relative_to(ROOT).as_posix()
-            if not rel.startswith("user_uploads/"):
+            if not rel.startswith("user_uploads/") and rel not in ALLOWED_IMAGE_BINARY_PATHS:
                 failures.append(f"image binary present in source path: {rel}")
 
     source_index = (ROOT / "knowledge-base/source-index.md").read_text(encoding="utf-8")
@@ -203,6 +222,7 @@ def main() -> int:
         "SRC-DIGI-XBEE-900HP-NP",
         "SRC-DIGI-XCTU",
         "SRC-LOCAL-TOOLCHAIN-PROBE-2026-05-18",
+        "SRC-LOCAL-XBEE-READONLY-PROBE-2026-05-18",
         "SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18",
         "SRC-ESP32-IO-SHIELD-CANDIDATE",
         "SRC-HELTEC-WIFI-LORA-32-V2",
@@ -233,6 +253,7 @@ def main() -> int:
         "../knowledge-base/source-ledger/2026-05-18-esp32project-photo-analysis.md",
         "../knowledge-base/source-ledger/2026-05-18-diy-bench-hardware-blockers.md",
         "../knowledge-base/source-ledger/2026-05-18-spi-microsd-assets-logs.md",
+        "../knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md",
         "../research/known-gaps.md",
         "../research/triage-status.md",
         "../research/skills/available-skills.md",
@@ -289,6 +310,40 @@ def main() -> int:
     ]:
         if bench_runbook.count(marker) < 4:
             failures.append(f"bench runbook missing repeated QA marker: {marker}")
+
+    xbee_read_only = (
+        ROOT / "docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md"
+    ).read_text(encoding="utf-8")
+    for marker in [
+        "## Verified facts",
+        "## Assumptions",
+        "## Unknowns",
+        "Tier A passive discovery",
+        "Tier B read-query discovery",
+        "--confirm-sends-read-commands",
+        "Allowed AT read queries:",
+        "| `VR` |",
+        "| `NP` |",
+        "WR",
+        "AC",
+        "ESP32 DIN/DOUT wiring",
+        "SRC-LOCAL-XBEE-READONLY-PROBE-2026-05-18",
+    ]:
+        if marker not in xbee_read_only:
+            failures.append(f"XBee read-only proof missing marker: {marker}")
+
+    xbee_probe = (ROOT / "scripts/xbee_read_only_probe.py").read_text(encoding="utf-8")
+    for marker in [
+        "DEFAULT_AT_QUERIES",
+        '"VR", "HV", "SH", "SL", "AP", "AO", "BD", "NP"',
+        "confirm_sends_read_commands",
+        "at_command_not_allowed",
+        "serialWritesAttempted",
+        "sampleRedacted",
+        "research/bench-records/xbee-readonly",
+    ]:
+        if marker not in xbee_probe:
+            failures.append(f"XBee probe script missing marker: {marker}")
 
     prototype_blueprint = (
         ROOT / "docs/projects/four-relay-xbee-wifi/prototype-blueprint.md"
@@ -371,12 +426,17 @@ def main() -> int:
         if blocked_marker not in pages_build:
             failures.append(f"Pages build script missing exclusion marker: {blocked_marker}")
     for public_marker in [
+        "blueprints.html",
+        "assets/blueprints/system-overview.webp",
+        "assets/blueprints/safety-proof-ladder.webp",
         "docs/projects/four-relay-xbee-wifi/build-guide.md",
         "docs/projects/four-relay-xbee-wifi/README.md",
+        "docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md",
         "hardware-profiles/relays/four-channel/README.md",
         "hardware-profiles/xbee/xbp9b-dput-001/README.md",
         "hardware-profiles/storage/spi-microsd-reader/README.md",
         "comm-protocols/wireless/xbee-api-four-relay.md",
+        "knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md",
     ]:
         if public_marker not in pages_build:
             failures.append(f"Pages build script missing public allowlist marker: {public_marker}")
@@ -384,6 +444,8 @@ def main() -> int:
     pages_index = (ROOT / "site/github-pages/index.html").read_text(encoding="utf-8")
     for marker in [
         "ESP32 four-relay build guide",
+        "Open visual blueprint",
+        "blueprints.html",
         "Open build guide",
         "Launch admin HMI demo",
         "Relay Labels",
@@ -391,6 +453,25 @@ def main() -> int:
     ]:
         if marker not in pages_index:
             failures.append(f"Pages index missing marker: {marker}")
+
+    pages_blueprints = (ROOT / "site/github-pages/blueprints.html").read_text(
+        encoding="utf-8"
+    )
+    for marker in [
+        "Conceptual system map, not wiring instructions",
+        "system-overview.webp",
+        "safety-proof-ladder.webp",
+        "Conceptual schematic, not a wiring diagram",
+        "Relay/load wiring",
+        "mains wiring",
+        "TFT wiring",
+        "expander-to-relay wiring remain",
+        "GPIO",
+        "Expander",
+        "Hardware gate",
+    ]:
+        if marker not in pages_blueprints:
+            failures.append(f"Pages blueprints missing marker: {marker}")
 
     if failures:
         for failure in failures:

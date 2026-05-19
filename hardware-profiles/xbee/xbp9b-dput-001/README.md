@@ -44,9 +44,16 @@
 
 ## Read-only discovery boundary
 
-The next bench step is identity and current-settings discovery only. XBee
-setting writes are blocked until a backup/readback plan, address plan, AES key
-process, and rollback procedure are documented.
+The next bench step is identity and current-settings discovery only through
+the project [XBee read-only bench proof](../../../docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md).
+Tier A is passive discovery. Tier B may send only fixed non-persistent AT read
+queries for `VR`, `HV`, `SH`, `SL`, `AP`, `AO`, `BD`, and `NP` after
+`--confirm-sends-read-commands`.
+
+XBee setting writes, `WR`, `AC`, firmware updates, API transmit frames, relay
+commands, and ESP32 DIN/DOUT carrier wiring are blocked until a
+backup/readback plan, address plan, AES key process, carrier review, and
+rollback procedure are documented.
 
 Source IDs: `SRC-DIGI-XBP9B-DPUT-001`, `SRC-DIGI-XBEE-PRO-900HP`,
 `SRC-DIGI-XBEE-900HP-AP`, `SRC-DIGI-XBEE-900HP-AO`,

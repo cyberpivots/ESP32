@@ -42,6 +42,13 @@ mains switching.
 - NEMA maintains enclosure standards and enclosure type references for
   electrical equipment; no enclosure type is selected for this project. Source
   ID: `SRC-NEMA-ENCLOSURES`.
+- CD74HC4067 is an input-only mux candidate, while TCA9555/MCP23017 provide the
+  relay expander planning path and TPIC6B595 remains a driver-stage reference.
+  Source IDs: `SRC-TI-CD74HC4067`, `SRC-TI-TCA9555`,
+  `SRC-ESPRESSIF-MCP23017-COMPONENT`, `SRC-TI-TPIC6B595`.
+- External R61509V sources provide TFT pin-pressure context only. Source IDs:
+  `SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`,
+  `SRC-LCDWIKI-R61509V-MRB2802`.
 
 ## Assumptions
 
@@ -53,6 +60,7 @@ mains switching.
   this pass, not an ESP32-mounted carrier.
 - Relay GPIO candidates remain `GPIO25`, `GPIO26`, `GPIO27`, and `GPIO33`
   until shield continuity or board fit evidence invalidates them.
+- The relay expansion branch is preferred if TFT pin pressure remains in scope.
 
 ## Unknowns
 
@@ -69,6 +77,11 @@ mains switching.
 - Final load type, load voltage/current, enclosure, overcurrent protection,
   grounding/bonding, strain relief, GFCI/de-energization process, and qualified
   electrical review outcome.
+- Exact Open-Smart R61509V module, pinout, power/backlight, touch interface, and
+  driver path.
+- Exact CD74HC4067 breakout, ADC protection, input list, and scan behavior.
+- Exact relay expander, I2C pullups/address, inactive defaults, output readback,
+  and driver-stage choice.
 
 ## Closure ledger
 
@@ -81,6 +94,10 @@ mains switching.
 | Relay input current | Source or measured result for input current per channel in the actual drive condition. | Unresolved gap |
 | Relay 3.3 V compatibility | Measurement showing direct ESP32 3.3 V GPIO drive is reliable and within a source-backed GPIO current limit; otherwise future driver-stage design is required. | Unresolved gap |
 | Relay `JD-VCC`/`VCC` behavior | Source, schematic, or measured result proving coil/logic supply relationship and whether opto-isolation is preserved or bypassed. | Unresolved gap |
+| TFT module proof | Exact Open-Smart R61509V module source/inspection, power/backlight, bus width, touch path, and pin-conflict review. | Unresolved gap |
+| CD74HC4067 input proof | Exact breakout, select/enable wiring, ADC1 test-voltage proof, voltage protection, and input-only behavior. | Unresolved gap |
+| Relay expander proof | Exact MCP23017/TCA9555 board, I2C address/pullups, inactive defaults, LED/logic-analyzer latch proof, and readback/fault policy. | Unresolved gap |
+| Relay driver-stage proof | Driver selection after exact relay input polarity/current/voltage/isolation evidence. | Blocked until relay input proof |
 | Waveshare PC dock discovery | Host serial-port record, driver/tool record, read-only radio identity, voltage measurement, and no setting-write evidence. | Unresolved gap |
 | Waveshare ESP32-mounted role | Carrier decision, voltage/routing/current evidence, and owner review. | Blocked; out of scope for this pass |
 | Mains readiness | Enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, load type, and qualified review evidence. | Hard blocked |
@@ -91,6 +108,11 @@ mains switching.
 - Do not power the expansion shield from barrel jack and USB at the same time.
 - Do not wire ESP32 GPIO directly to relay inputs until the relay 3.3 V/current
   gate is closed.
+- Do not use CD74HC4067 as direct relay output state holding.
+- Do not connect MCP23017/TCA9555 outputs or any driver-stage output to relay
+  module inputs before relay trigger/current/voltage/isolation evidence exists.
+- Do not wire the Open-Smart R61509V TFT before exact module power/pinout and
+  pin-conflict evidence exists.
 - Do not move the Waveshare adapter from PC dock role to ESP32 carrier role
   without a separate carrier review.
 - Do not write XBee settings during read-only discovery.

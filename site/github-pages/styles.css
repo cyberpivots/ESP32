@@ -213,6 +213,231 @@ h3 {
   box-shadow: 0 10px 24px rgba(23, 107, 101, 0.18);
 }
 
+.site-header nav a[aria-current="page"] {
+  color: var(--teal-dark);
+}
+
+.blueprint-page-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
+  gap: clamp(22px, 5vw, 60px);
+  align-items: end;
+  padding: 70px clamp(18px, 4vw, 56px) 34px;
+}
+
+.blueprint-summary,
+.plain-grid article,
+.glossary-grid article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.blueprint-summary {
+  padding: 22px;
+  border-left: 6px solid var(--red);
+}
+
+.blueprint-summary strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--red);
+  font-size: 0.83rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.blueprint-summary p {
+  color: var(--muted);
+}
+
+.blueprint-figure {
+  min-width: 0;
+}
+
+.blueprint-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #cfd8d5;
+  border-radius: 8px;
+  background: #fefdfa;
+  box-shadow: 0 20px 36px rgba(23, 32, 38, 0.16);
+}
+
+.blueprint-stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.blueprint-figure figcaption {
+  max-width: 760px;
+  margin: 12px auto 0;
+  color: var(--muted);
+  font-size: 0.93rem;
+}
+
+.diagram-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.diagram-label {
+  position: absolute;
+  display: block;
+  max-width: 190px;
+  padding: 9px 11px;
+  border: 1px solid rgba(23, 32, 38, 0.16);
+  border-left: 5px solid var(--teal);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 24px rgba(23, 32, 38, 0.13);
+}
+
+.diagram-label strong,
+.diagram-label small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.diagram-label strong {
+  font-size: 0.87rem;
+  line-height: 1.12;
+}
+
+.diagram-label small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 800;
+  line-height: 1.14;
+}
+
+.label-browser {
+  top: 13%;
+  left: 4%;
+  border-left-color: var(--blue);
+}
+
+.label-controller {
+  top: 37%;
+  left: 40%;
+  border-left-color: var(--teal);
+}
+
+.label-xbee {
+  top: 13%;
+  right: 5%;
+  border-left-color: var(--teal);
+}
+
+.label-tft {
+  top: 40%;
+  left: 11%;
+  border-left-color: #657f91;
+}
+
+.label-microsd {
+  bottom: 16%;
+  left: 4%;
+  border-left-color: var(--green);
+}
+
+.label-expander {
+  top: 41%;
+  right: 12%;
+  border-left-color: #b87333;
+}
+
+.label-relay {
+  right: 12%;
+  bottom: 19%;
+  border-left-color: var(--amber);
+}
+
+.label-load {
+  right: 4%;
+  bottom: 8%;
+  border-left-color: var(--red);
+}
+
+.plain-grid,
+.glossary-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.plain-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.plain-grid article,
+.glossary-grid article {
+  padding: 20px;
+}
+
+.plain-grid p,
+.glossary-grid p {
+  color: var(--muted);
+}
+
+.schematic-panel {
+  padding-top: 44px;
+}
+
+.large-blueprint .blueprint-stage {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.ladder-labels {
+  position: absolute;
+  inset: 17% 15% 18% 25%;
+  display: grid;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: 9px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.ladder-labels li {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(23, 32, 38, 0.15);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: 0 10px 22px rgba(23, 32, 38, 0.11);
+}
+
+.ladder-labels strong,
+.ladder-labels span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.ladder-labels strong {
+  font-size: 0.9rem;
+  line-height: 1.1;
+}
+
+.ladder-labels span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.17;
+}
+
+.glossary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .workbench-diagram svg {
   display: block;
   width: 100%;
@@ -284,7 +509,7 @@ h3 {
 
 .status-rail {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   padding: 0 clamp(18px, 4vw, 56px) 18px;
 }
@@ -630,6 +855,7 @@ h3 {
   }
 
   .hero,
+  .blueprint-page-hero,
   .relay-layout,
   .split-section,
   .split-section.reverse {
@@ -645,7 +871,9 @@ h3 {
   }
 
   .sequence-grid,
-  .status-rail {
+  .status-rail,
+  .plain-grid,
+  .glossary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -676,9 +904,27 @@ h3 {
   .relay-map,
   .gate-grid,
   .demo-grid,
-  .status-rail {
+  .status-rail,
+  .plain-grid,
+  .glossary-grid {
     grid-template-columns: 1fr;
     width: 100%;
+  }
+
+  .diagram-labels,
+  .ladder-labels {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px;
+    margin: 0;
+  }
+
+  .diagram-label,
+  .ladder-labels li {
+    position: static;
+    max-width: none;
   }
 
   .label-editor label {

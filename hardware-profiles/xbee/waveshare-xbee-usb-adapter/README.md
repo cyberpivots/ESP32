@@ -43,6 +43,12 @@ DIN/DOUT routing, reset/sleep behavior, power path, and continuity are verified.
 This gate keeps the adapter in PC dock role only. ESP32-mounted use requires a
 separate carrier review.
 
+The project [XBee read-only bench proof](../../../docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md)
+splits this gate into Tier A passive discovery and Tier B explicitly confirmed
+AT read queries. Tier B is limited to `VR`, `HV`, `SH`, `SL`, `AP`, `AO`, `BD`,
+and `NP`; setting writes, `WR`, `AC`, firmware updates, API transmit frames,
+relay commands, and ESP32 DIN/DOUT wiring remain blocked.
+
 ## Assumptions
 
 - The first XBee configuration path uses this adapter from a PC-side tool after

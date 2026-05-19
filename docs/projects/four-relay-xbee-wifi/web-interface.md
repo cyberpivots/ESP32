@@ -21,6 +21,9 @@
   for local credential and safety configuration. Source ID: `SRC-ESP-IDF-NVS`.
 - ESP-IDF Wi-Fi supports AP mode where stations connect to the ESP32. Source ID:
   `SRC-ESP-IDF-WIFI`.
+- Relay-expander and mux health fields are architecture-level planning fields
+  backed by the expander and mux sources. Source IDs: `SRC-TI-TCA9555`,
+  `SRC-ESPRESSIF-MCP23017-COMPONENT`, `SRC-TI-CD74HC4067`.
 
 ## Assumptions
 
@@ -35,6 +38,8 @@
   polarity, and XBee allowlists.
 - If MicroSD is missing or unreadable at runtime, future firmware should serve a
   tiny embedded fallback page from flash while keeping `/api/state` available.
+- A future TFT touch surface or mux-scanned input is a UI intent source only; it
+  does not bypass the relay-manager and safety-supervisor command path.
 
 ## Static asset contract
 
@@ -91,8 +96,9 @@ but the UI expects these fields when available:
 - Tabs: Control, Safety, Storage, XBee, Logs, and Config.
 - Control: four relay cards, per-channel enabled state, per-channel toggle
   action, and the most prominent All-off action.
-- Safety: safety lock status, hardware gate status, admin provisioning status,
-  last command metadata, and reject reason visibility.
+- Safety: safety lock status, hardware gate status, relay-expander health, mux
+  health, admin provisioning status, last command metadata, and reject reason
+  visibility.
 - Storage: MicroSD mount state, card type, capacity, free space, asset serving
   mode, web asset manifest version, log write status, and fallback mode.
 - XBee: configured state, link state, last frame/status, allowlist state, and
@@ -114,6 +120,14 @@ object so the HMI can render even when storage-specific endpoints fail:
   "safetyLocked": true,
   "adminProvisioned": false,
   "hardwareGateClosed": false,
+  "relayExpander": {
+    "present": false,
+    "ready": false,
+    "lastWrite": "none"
+  },
+  "mux": {
+    "ready": false
+  },
   "xbee": {
     "configured": false,
     "link": "unknown",
@@ -216,9 +230,12 @@ object so the HMI can render even when storage-specific endpoints fail:
 ## Interaction rules
 
 - Relay toggles are disabled while `safetyLocked`, `adminProvisioned` is false,
-  `hardwareGateClosed` is false, or a relay card reports `enabled: false`.
+  `hardwareGateClosed` is false, required `relayExpander.ready` is false, or a
+  relay card reports `enabled: false`.
 - All-off remains visually available and is the most prominent state-changing
   action.
+- TFT touch controls and mux-derived buttons can request all-off only through
+  the same authenticated all-off endpoint or internal relay-manager command path.
 - The UI must display reject reasons returned by the device without retrying a
   state-changing command automatically.
 - The UI must remain usable if `/api/storage/status`, `/api/assets/manifest`,
@@ -236,3 +253,6 @@ object so the HMI can render even when storage-specific endpoints fail:
 - Whether WebSocket updates will replace polling after firmware proof.
 - Final MicroSD reader identity, card capacity, filesystem preparation process,
   low-space behavior, log rotation policy, and embedded fallback page content.
+- Final relay-expander readiness semantics, readback timing, fault recovery, and
+  whether a missing mux disables only TFT/touch input or also closes a broader
+  hardware gate.

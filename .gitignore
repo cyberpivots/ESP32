@@ -2,6 +2,7 @@
 build/
 dist/
 out/
+qa-output/
 .cache/
 .pytest_cache/
 __pycache__/
@@ -19,6 +20,11 @@ sdkconfig.*
 *.local
 secrets/
 user_uploads/
+research/bench-records/**/*.json
+research/bench-records/**/*.jsonl
+research/bench-records/**/local-*
+!research/bench-records/
+!research/bench-records/TEMPLATE.md
 
 # OS/editor noise
 .DS_Store

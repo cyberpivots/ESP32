@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""Public Pages and admin-HMI scaffold audits."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from scaffold_audit_data import ROOT
+from scaffold_audit_docs import require_markers
+
+
+def audit_admin_hmi(root: Path = ROOT) -> list[str]:
+    failures: list[str] = []
+    ui_index = (root / "docs/projects/four-relay-xbee-wifi/ui/index.html").read_text(
+        encoding="utf-8"
+    )
+    ui_script = (root / "docs/projects/four-relay-xbee-wifi/ui/app.js").read_text(
+        encoding="utf-8"
+    )
+    failures.extend(require_markers(ui_index, [
+        "styles.css",
+        "app.js",
+        "relayGrid",
+        "allOffButton",
+        "lockButton",
+        "lock-banner",
+        "Static artifact",
+    ], "UI index"))
+    for endpoint in [
+        "/api/state",
+        "/api/relay/",
+        "/api/all-off",
+        "/api/safety-lock",
+        "/api/storage/status",
+        "/api/assets/manifest",
+        "/api/logs/recent",
+    ]:
+        if endpoint not in ui_script:
+            failures.append(f"UI script missing endpoint: {endpoint}")
+    failures.extend(require_markers(ui_script, [
+        "Static demo mode",
+        "Relay commands available only for a validated live session",
+    ], "UI script"))
+    return failures
+
+
+def audit_pages_build(root: Path = ROOT) -> list[str]:
+    failures: list[str] = []
+    pages_workflow = (root / ".github/workflows/pages.yml").read_text(encoding="utf-8")
+    failures.extend(require_markers(pages_workflow, [
+        "actions/checkout@v6",
+        "actions/configure-pages@v5",
+        "actions/upload-pages-artifact@v4",
+        "actions/deploy-pages@v4",
+        "build/github-pages",
+    ], "Pages workflow"))
+
+    pages_build = (root / "scripts/build_github_pages.py").read_text(encoding="utf-8")
+    manifest_audit = (root / "scripts/audit_public_manifest.py").read_text(
+        encoding="utf-8"
+    )
+    smoke_script = (root / "scripts/smoke_github_pages.py").read_text(
+        encoding="utf-8"
+    )
+    for blocked_marker in [
+        ".agents/",
+        "user_uploads/",
+        "vendor PDFs",
+        "bulky binaries",
+        "PRIVATE_BENCH_NOTES",
+    ]:
+        if blocked_marker == "PRIVATE_BENCH_NOTES":
+            if "private bench notes" not in pages_build:
+                failures.append("Pages build script missing private bench notes exclusion")
+            continue
+        if blocked_marker not in pages_build:
+            failures.append(f"Pages build script missing exclusion marker: {blocked_marker}")
+    for public_marker in [
+        "blueprints.html",
+        "assets/blueprints/system-overview.webp",
+        "assets/blueprints/safety-proof-ladder.webp",
+        "assets/workbench/hero-workbench.webp",
+        "assets/workbench/rd-loop-backplate.webp",
+        "assets/workbench/admin-hmi-backplate.webp",
+        "docs/projects/four-relay-xbee-wifi/build-guide.md",
+        "docs/projects/four-relay-xbee-wifi/README.md",
+        "docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md",
+        "docs/projects/four-relay-xbee-wifi/hardware-circuit-improvement-research.md",
+        "docs/projects/four-relay-xbee-wifi/rd-loop.md",
+        "hardware-profiles/relays/four-channel/README.md",
+        "hardware-profiles/xbee/xbp9b-dput-001/README.md",
+        "hardware-profiles/storage/spi-microsd-reader/README.md",
+        "comm-protocols/wireless/xbee-api-four-relay.md",
+        "knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md",
+        "knowledge-base/source-ledger/2026-05-19-four-relay-hardware-circuit-improvement.md",
+    ]:
+        if public_marker not in pages_build:
+            failures.append(f"Pages build script missing public allowlist marker: {public_marker}")
+        if public_marker.endswith(".webp") and public_marker not in manifest_audit:
+            failures.append(f"manifest audit missing image allowlist marker: {public_marker}")
+    for marker in [
+        "public-file-manifest.json",
+        "research/bench-records/",
+        "user_uploads",
+        ".agents",
+        "ALLOWED_IMAGE_SOURCES",
+        "audit_links_and_assets",
+        "sha256 mismatch",
+    ]:
+        if marker not in manifest_audit:
+            failures.append(f"manifest audit helper missing marker: {marker}")
+    for marker in [
+        "index.html",
+        "blueprints.html",
+        "demos/admin-hmi/index.html",
+        "smoke_page",
+        "resolve_local_reference",
+    ]:
+        if marker not in smoke_script:
+            failures.append(f"Pages smoke script missing marker: {marker}")
+    return failures
+
+
+def audit_site_pages(root: Path = ROOT) -> list[str]:
+    failures: list[str] = []
+    pages_index = (root / "site/github-pages/index.html").read_text(encoding="utf-8")
+    failures.extend(require_markers(pages_index, [
+        "ESP32 four-relay workbench",
+        "Open visual blueprint",
+        "blueprints.html",
+        "Open R&amp;D loop",
+        "Launch admin HMI demo",
+        "Relay Labels",
+        "Generated artifact only",
+        "Hardware and circuit research",
+        "Qualified review gate stays closed",
+    ], "Pages index"))
+
+    pages_blueprints = (root / "site/github-pages/blueprints.html").read_text(
+        encoding="utf-8"
+    )
+    failures.extend(require_markers(pages_blueprints, [
+        "Conceptual system map, not wiring instructions",
+        "system-overview.webp",
+        "safety-proof-ladder.webp",
+        "rd-loop-backplate.webp",
+        "Conceptual schematic, not a wiring diagram",
+        "Relay/load wiring",
+        "mains wiring",
+        "TFT wiring",
+        "expander-to-relay wiring remain",
+        "pinouts",
+        "serial IDs",
+        "MicroSD assets/logs",
+        "GPIO",
+        "Expander",
+        "Hardware gate",
+    ], "Pages blueprints"))
+    return failures
+
+
+def audit_pages(root: Path = ROOT) -> list[str]:
+    failures: list[str] = []
+    failures.extend(audit_admin_hmi(root))
+    failures.extend(audit_pages_build(root))
+    failures.extend(audit_site_pages(root))
+    return failures

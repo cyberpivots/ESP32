@@ -120,3 +120,60 @@ fr_status_t fr_xbee_decode_api2(
     frame->data_len = frame_len;
     return FR_OK;
 }
+
+fr_status_t fr_xbee_parse_at_response(
+    const fr_xbee_frame_t *frame,
+    fr_xbee_at_response_t *response
+)
+{
+    if (frame == 0 || response == 0 || frame->data_len < 5u) {
+        return FR_REJECT_PAYLOAD_INVALID;
+    }
+    if (frame->data[0] != 0x88u) {
+        return FR_REJECT_PAYLOAD_INVALID;
+    }
+
+    size_t value_len = frame->data_len - 5u;
+    if (value_len > FR_XBEE_AT_VALUE_MAX) {
+        return FR_REJECT_PAYLOAD_INVALID;
+    }
+
+    response->frame_id = frame->data[1];
+    response->command[0] = (char)frame->data[2];
+    response->command[1] = (char)frame->data[3];
+    response->command[2] = '\0';
+    response->command_status = frame->data[4];
+    response->value_len = value_len;
+    for (size_t index = 0; index < value_len; ++index) {
+        response->value[index] = frame->data[index + 5u];
+    }
+    return FR_OK;
+}
+
+fr_status_t fr_xbee_parse_receive_packet(
+    const fr_xbee_frame_t *frame,
+    fr_xbee_receive_packet_t *packet
+)
+{
+    if (frame == 0 || packet == 0 || frame->data_len <= 12u) {
+        return FR_REJECT_PAYLOAD_INVALID;
+    }
+    if (frame->data[0] != 0x90u) {
+        return FR_REJECT_PAYLOAD_INVALID;
+    }
+
+    for (size_t index = 0; index < 8u; ++index) {
+        packet->source64[index] = frame->data[index + 1u];
+    }
+    packet->source16 = ((uint16_t)frame->data[9] << 8u) | frame->data[10];
+    packet->receive_options = frame->data[11];
+
+    packet->payload_len = frame->data_len - 12u;
+    if (packet->payload_len > FR_XBEE_MAX_FRAME_DATA) {
+        return FR_REJECT_PAYLOAD_INVALID;
+    }
+    for (size_t index = 0; index < packet->payload_len; ++index) {
+        packet->payload[index] = frame->data[index + 12u];
+    }
+    return FR_OK;
+}

@@ -48,9 +48,10 @@ tested on the host before any ESP-IDF build or bench step.
 
 - `CMakeLists.txt` and `main/` form the minimal ESP-IDF project shell.
 - `components/safe_core/` contains host-testable state, safety, config, API,
-  storage, and XBee frame logic.
+  storage, pure-C API payload validation, normalized state snapshots, and XBee
+  frame logic.
 - Public relay channels are `1..4`; `safe_core` maps those public numbers to
   zero-based internal relay-state indexes before touching desired-state arrays.
   Source ID: `SRC-LOCAL-FOUR-RELAY-SAFE-CORE-CONTRACT-2026-05-19`.
-- `tests/four_relay_safe_core/` compiles the same core files with the host C
-  compiler and verifies safe defaults and negative paths.
+- `tests/four_relay_safe_core/` compiles split host-test binaries for relay and
+  safety gates, HTTP/API contracts, storage contracts, and the XBee frame codec.

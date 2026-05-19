@@ -59,4 +59,5 @@
 
 - [Known gaps](../research/known-gaps.md)
 - [Triage status](../research/triage-status.md)
+- [Bench record template](../research/bench-records/TEMPLATE.md)
 - [Available skills](../research/skills/available-skills.md)

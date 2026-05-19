@@ -41,7 +41,8 @@
   `four-relay-xbee-wifi`.
 - Inventory required bench instruments and fixtures for `four-relay-xbee-wifi`:
   DMM, current-limited supply, logic analyzer or LED proof fixture, USB serial
-  tools, labeled harnesses, low-voltage dummy loads, and test-record template.
+  tools, labeled harnesses, low-voltage dummy loads, and completed records
+  based on `research/bench-records/TEMPLATE.md`.
 - Create a separate qualified-review package before any mains switching design:
   load type, enclosure, overcurrent protection, grounding/bonding, strain
   relief, GFCI/de-energization, separation, labels/disconnect, and test record.
@@ -50,13 +51,34 @@
 ## Medium priority
 
 - Select first protocol to implement.
-- Add XBee API parser test vectors for escaped API frames, status frames, and
-- Add XBee API parser test vectors for AT response and receive-packet payload
-  validation beyond the current escaped-frame, bad-length, truncated-escape,
-  checksum, and transmit-status host vectors.
-- Refactor `scripts/verify_scaffold.py` into smaller check modules after the
-  M0/M1 research cycle settles stable validation categories.
+- Add XBee API parser test vectors beyond the current escaped-frame,
+  bad-length, truncated-escape, checksum, transmit-status, AT-response, and
+  receive-packet payload host vectors.
+- Decide whether modular scaffold audits should become a CI matrix job after
+  the local-only verifier proves stable.
 - Define CI matrix after the firmware framework is selected.
+
+## Next evidence record required
+
+| Blocker | Required evidence record before closure |
+| --- | --- |
+| Framework requirements outside ADR-0002 | Accepted ADR or explicit unresolved-gap note naming the project and blocked framework decision. |
+| ESP-IDF v6.0.1 toolchain | Local toolchain record covering `idf.py`, esptool, CMake, Ninja, Python, shell path, and failure text if absent. |
+| Exact ESP32 board and expansion shield | Physical inspection record with board markings, USB-UART marking, regulator marking, jumper position, continuity notes, and source links where available. |
+| Power entry and protection | Bench power record with selected input source, rail measurements, current-limit setting, brownout observation, reverse-protection decision, overcurrent candidate, TVS/ESD candidate, and test points. |
+| Four-channel relay module | Module identity record with manufacturer/model markings, input voltage, trigger polarity, 3.3 V input current measurement, `JD-VCC`/`VCC` behavior, isolation notes, and contact-rating source. |
+| Direct GPIO relay gate | Low-voltage proof record for `GPIO25`, `GPIO26`, `GPIO27`, and `GPIO33` showing no load/mains connection and measured relay-input behavior. |
+| Open-Smart R61509V TFT | Module identity and pin-pressure record with exact pinout, supply/backlight requirements, touch interface, driver path, and shared pin-budget impact. |
+| CD74HC4067 mux | Breakout identity and input-only scan record with select/enable wiring, ADC1 path, voltage protection, source impedance, and no relay-output claims. |
+| MCP23017 or TCA9555 expander | Expander board identity record with address pins, pullups, inactive default, latch/readback behavior, and driver-stage boundary. |
+| Relay driver stage | Driver selection record tied to measured relay input polarity, input current, voltage compatibility, and isolation behavior. |
+| Heltec WiFi LoRa 32(V2) | Physical revision record with board photos/markings and radio-chip/source confirmation. |
+| Waveshare XBee USB Adapter | Adapter/carrier record with serial port, UART voltage, DIN/DOUT routing, and PC-dock versus ESP32-mounted-carrier decision. |
+| XBee read-only bench proof | Tier A passive record and optional Tier B `VR`, `HV`, `SH`, `SL`, `AP`, `AO`, `BD`, `NP` read record with `--confirm-sends-read-commands`. |
+| MicroSD reader and card policy | Reader identity and card-prep record with 3.3 V path, pullups, card-detect/write-protect behavior, shield continuity, capacity, FAT preparation, low-space handling, rotation, and fallback behavior. |
+| Bench instruments and fixtures | Instrument inventory record covering DMM, current-limited supply, logic analyzer or LED proof fixture, USB serial tools, labeled harnesses, low-voltage dummy loads, and calibration/identity notes. |
+| Qualified mains package | Qualified-review package for load type, enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, separation, labels/disconnect, and test record. |
+| First flashing target board | Flash target and recovery record with exact board, boot/recovery method, toolchain proof, and rollback path. |
 
 ## Closure criteria
 

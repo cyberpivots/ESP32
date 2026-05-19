@@ -88,6 +88,9 @@ Allowed public content:
   workbench pages, with factual labels rendered in HTML instead of inside the
   image;
 - generated manifest metadata for the allowlisted public files.
+- a public-safe expert review panel section that describes workspace,
+  source, risk, QA, and knowledge-record review lanes without publishing
+  private `.agents/` records.
 
 Excluded public content:
 
@@ -138,6 +141,11 @@ python3 scripts/verify_scaffold.py
 python3 -m py_compile scripts/*.py tests/four_relay_safe_core/run_host_tests.py
 git diff --check
 ```
+
+The GitHub Actions Pages workflow runs the non-browser subset before uploading
+the Pages artifact: JSON and JavaScript syntax checks, build, manifest audit,
+smoke checks, scaffold verification, Python compilation, and host-side contract
+tests.
 
 Local browser verification should confirm that the landing page renders on
 desktop and mobile, `blueprints.html`, `quality.html`, and

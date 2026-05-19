@@ -99,7 +99,7 @@
   ],
   "deploymentStatus": [
     {
-      "label": "Live Pages",
+      "label": "Public docs",
       "value": "Workflow deploy",
       "state": "ok"
     },
@@ -109,7 +109,7 @@
       "state": "ok"
     },
     {
-      "label": "QA checks",
+      "label": "Artifact checks",
       "value": "Pass before deploy",
       "state": "ok"
     },
@@ -123,28 +123,28 @@
     {
       "channel": 1,
       "label": "Output A",
-      "pin": "GPIO25",
+      "pin": "Candidate GPIO25",
       "status": "Blocked",
       "gate": "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring."
     },
     {
       "channel": 2,
       "label": "Output B",
-      "pin": "GPIO26",
+      "pin": "Candidate GPIO26",
       "status": "Blocked",
       "gate": "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring."
     },
     {
       "channel": 3,
       "label": "Output C",
-      "pin": "GPIO27",
+      "pin": "Candidate GPIO27",
       "status": "Blocked",
       "gate": "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring."
     },
     {
       "channel": 4,
       "label": "Output D",
-      "pin": "GPIO33",
+      "pin": "Candidate GPIO33",
       "status": "Blocked",
       "gate": "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring."
     }
@@ -233,8 +233,8 @@
       "linkText": "Review smoke"
     },
     {
-      "title": "Safe-core host tests",
-      "summary": "Host tests cover relay safety, API channel contracts, storage failure paths, and XBee parser rejection without live hardware.",
+      "title": "Host software contract tests",
+      "summary": "Host tests cover relay safety logic, API channel contracts, storage failure paths, and XBee parser rejection without live hardware or electrical safety testing.",
       "href": "quality.html#safe-core",
       "linkText": "Review contracts"
     },
@@ -249,6 +249,38 @@
       "summary": "The public package does not validate live ESP32 wiring, relay switching, MicroSD mounts, TFT wiring, or load-side work.",
       "href": "quality.html#non-coverage",
       "linkText": "Review boundary"
+    }
+  ],
+  "expertPanels": [
+    {
+      "title": "Workspace cartographer",
+      "summary": "Maps the public artifact, source bundle, dirty tree, and documentation links before any page change starts.",
+      "href": "quality.html#panel-method",
+      "linkText": "Review method"
+    },
+    {
+      "title": "Source researcher",
+      "summary": "Uses source-index entries and official documentation for deployment, model, hardware, safety, and protocol facts.",
+      "href": "bundle/knowledge-base/source-index.md",
+      "linkText": "Open sources"
+    },
+    {
+      "title": "Architecture risk reviewer",
+      "summary": "Checks that public copy keeps live hardware, relay/load wiring, and XBee write claims behind closed gates.",
+      "href": "quality.html#panel-method",
+      "linkText": "Review risks"
+    },
+    {
+      "title": "QA validation reviewer",
+      "summary": "Keeps build, manifest, smoke, scaffold, syntax, host-test, and browser-render checks tied to each release.",
+      "href": "quality.html#smoke-checks",
+      "linkText": "Review checks"
+    },
+    {
+      "title": "KB curator",
+      "summary": "Records task logs and source-backed ledgers when public knowledge changes, while private agent records stay unpublished.",
+      "href": "quality.html#artifact-policy",
+      "linkText": "Review records"
     }
   ],
   "futureTracks": [

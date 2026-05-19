@@ -25,6 +25,7 @@ def audit_admin_hmi(root: Path = ROOT) -> list[str]:
         "lockButton",
         "lock-banner",
         "Static artifact",
+        "Static non-operational demo",
     ], "UI index"))
     for endpoint in [
         "/api/state",
@@ -52,7 +53,10 @@ def audit_pages_build(root: Path = ROOT) -> list[str]:
         "actions/configure-pages@v5",
         "actions/upload-pages-artifact@v4",
         "actions/deploy-pages@v4",
+        "Check JSON and JavaScript syntax",
         "build/github-pages",
+        "Audit public artifact",
+        "Run host-side contract tests",
     ], "Pages workflow"))
 
     pages_build = (root / "scripts/build_github_pages.py").read_text(encoding="utf-8")
@@ -132,12 +136,15 @@ def audit_site_pages(root: Path = ROOT) -> list[str]:
         "blueprints.html",
         "quality.html",
         "Open quality evidence",
+        "Expert review panels",
+        "Page changes move through evidence lanes",
         "Open R&amp;D loop",
         "Launch admin HMI demo",
         "Relay Labels",
         "Current status",
         "Quality gates",
-        "Generated artifact only",
+        "What the public artifact checks",
+        "Candidate GPIO25",
         "Hardware and circuit research",
         "Qualified review gate stays closed",
     ], "Pages index"))
@@ -149,6 +156,7 @@ def audit_site_pages(root: Path = ROOT) -> list[str]:
         "Conceptual system map, not wiring instructions",
         "system-overview.webp",
         "safety-proof-ladder.webp",
+        "Safety evidence ladder",
         "rd-loop-backplate.webp",
         "Conceptual schematic, not a wiring diagram",
         "Relay/load wiring",
@@ -167,11 +175,14 @@ def audit_site_pages(root: Path = ROOT) -> list[str]:
         encoding="utf-8"
     )
     failures.extend(require_markers(pages_quality, [
-        "What this public artifact currently proves",
+        "What this public artifact checks",
         "Generated artifact policy",
         "Manifest, link, and hash audit",
         "Page smoke checks",
-        "Safe-core host tests",
+        "Host software contract tests",
+        "not electrical safety testing",
+        "Expert panel method",
+        "How public-page changes are improved",
         "XBee read-only boundary",
         "Explicit non-coverage",
         "public-file-manifest.json",

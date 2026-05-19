@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ESP32 Four-Relay Quality Evidence</title>
-    <meta name="description" content="Public-safe quality evidence for the ESP32 four-relay workbench generated GitHub Pages artifact, validation gates, and non-coverage boundaries.">
+    <meta name="description" content="Public-safe artifact checks for the ESP32 four-relay workbench generated GitHub Pages package, validation gates, and non-coverage boundaries.">
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -18,6 +18,7 @@
         <a href="index.html#build">Build</a>
         <a href="blueprints.html">Blueprints</a>
         <a href="quality.html" aria-current="page">Quality</a>
+        <a href="index.html#panels">Panels</a>
         <a href="index.html#relay-labels">Relay Labels</a>
         <a href="index.html#demo">Demo</a>
         <a href="index.html#safety">Safety</a>
@@ -28,7 +29,7 @@
       <section class="quality-page-hero" aria-labelledby="quality-hero-title">
         <div>
           <p class="eyebrow">Quality evidence</p>
-          <h1 id="quality-hero-title">What this public artifact currently proves</h1>
+          <h1 id="quality-hero-title">What this public artifact checks</h1>
           <p class="lede">
             This page summarizes public-safe validation for the generated
             GitHub Pages package. It is evidence about the static artifact and
@@ -53,12 +54,12 @@
 
       <section class="content-section current-status quality-status" aria-labelledby="verified-status-title">
         <div class="section-heading">
-          <p class="eyebrow">Verified status</p>
+          <p class="eyebrow">Artifact deployment status</p>
           <h2 id="verified-status-title">Deployment and artifact checks</h2>
           <a class="text-link" href="index.html#package">Open package links</a>
         </div>
         <div class="status-rail deployment-status" aria-label="Verified deployment status">
-          <article data-state="ok"><span>Pages URL</span><strong>Live workflow site</strong></article>
+          <article data-state="ok"><span>Pages URL</span><strong>Public docs site</strong></article>
           <article data-state="ok"><span>Build source</span><strong>GitHub Actions</strong></article>
           <article data-state="ok"><span>Manifest</span><strong>Hashes and paths</strong></article>
           <article data-state="stop"><span>Hardware</span><strong>Not live-proofed</strong></article>
@@ -109,11 +110,12 @@
 
         <article id="safe-core">
           <span>04</span>
-          <h3>Safe-core host tests</h3>
+          <h3>Host software contract tests</h3>
           <p>
-            Host-side tests cover relay safety gates, public API channel
+            Host-side tests cover relay safety logic, public API channel
             contracts, storage failure paths, and XBee frame parser rejection
-            behavior without requiring a connected ESP32 or live relay module.
+            behavior without requiring a connected ESP32 or live relay module;
+            these are host software checks, not electrical safety testing.
           </p>
           <a href="bundle/docs/projects/four-relay-xbee-wifi/firmware-task-model.md">Read task model</a>
         </article>
@@ -147,6 +149,57 @@
         The public package excludes `.agents/` records, raw bench records,
         private uploads, screenshots, copied vendor PDFs, bulky binaries, and
         any unallowlisted generated media.
+      </section>
+
+      <section id="panel-method" class="content-section evidence-grid panel-method-grid" aria-labelledby="panel-method-title">
+        <div class="section-heading">
+          <p class="eyebrow">Expert panel method</p>
+          <h2 id="panel-method-title">How public-page changes are improved</h2>
+          <a class="text-link" href="index.html#panels">Open homepage panels</a>
+        </div>
+
+        <article>
+          <span>01</span>
+          <h3>Workspace truth first</h3>
+          <p>
+            The panel starts from the local worktree, current build scripts,
+            source index, task logs, and generated artifact before proposing
+            visual or copy changes.
+          </p>
+          <a href="bundle/docs/github-pages-public-site.md">Read site model</a>
+        </article>
+
+        <article>
+          <span>02</span>
+          <h3>Evidence-safe copy</h3>
+          <p>
+            Hardware, radio, relay, load-side, and deployment statements remain
+            tied to source-index entries, local validation, or explicit
+            unresolved gaps.
+          </p>
+          <a href="bundle/knowledge-base/source-index.md">Open source index</a>
+        </article>
+
+        <article>
+          <span>03</span>
+          <h3>Review before widening</h3>
+          <p>
+            New public sections must preserve the allowlist artifact, keep
+            private records out of Pages, and avoid adding unverified wiring or
+            live-control claims.
+          </p>
+          <a href="quality.html#non-coverage">Review non-coverage</a>
+        </article>
+
+        <article>
+          <span>04</span>
+          <h3>Validation closes the loop</h3>
+          <p>
+            Build, manifest, smoke, scaffold, syntax, host-test, and browser
+            rendering checks are the release gate for public-site changes.
+          </p>
+          <a href="quality.html#smoke-checks">Review checks</a>
+        </article>
       </section>
 
       <section class="content-section package-section quality-package" aria-labelledby="quality-links-title">

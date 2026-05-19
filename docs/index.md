@@ -54,6 +54,7 @@
 - [XBee read-only bench proof ledger](../knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md)
 - [Four relay hardware and circuit improvement ledger](../knowledge-base/source-ledger/2026-05-19-four-relay-hardware-circuit-improvement.md)
 - [Expert agent panels source ledger](../knowledge-base/source-ledger/2026-05-19-expert-agent-panels.md)
+- [GitHub Pages expert panels source ledger](../knowledge-base/source-ledger/2026-05-19-github-pages-expert-panels.md)
 - [Four relay XBee Wi-Fi toolchain](../knowledge-base/toolchain/four-relay-xbee-wifi-toolchain.md)
 - [SPI MicroSD reader profile](../hardware-profiles/storage/spi-microsd-reader/README.md)
 

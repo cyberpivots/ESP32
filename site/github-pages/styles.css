@@ -166,6 +166,13 @@ h3 {
   font-size: 1.18rem;
 }
 
+.section-lede {
+  max-width: 880px;
+  margin: 12px 0 22px;
+  color: var(--muted);
+  font-size: 1.02rem;
+}
+
 .hero-actions,
 .section-heading {
   display: flex;
@@ -521,6 +528,7 @@ h3 {
 .gate-grid article,
 .quality-card-grid article,
 .evidence-grid article,
+.expert-panel-grid article,
 .link-panel,
 .demo-frame {
   border: 1px solid var(--line);
@@ -795,7 +803,8 @@ h3 {
 }
 
 .quality-card-grid,
-.evidence-grid {
+.evidence-grid,
+.expert-panel-grid {
   display: grid;
   gap: 14px;
 }
@@ -804,18 +813,25 @@ h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.expert-panel-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .quality-card-grid article,
-.evidence-grid article {
+.evidence-grid article,
+.expert-panel-grid article {
   padding: 20px;
 }
 
 .quality-card-grid p,
-.evidence-grid p {
+.evidence-grid p,
+.expert-panel-grid p {
   color: var(--muted);
 }
 
 .quality-card-grid a,
-.evidence-grid a {
+.evidence-grid a,
+.expert-panel-grid a {
   color: var(--teal);
   font-weight: 900;
 }
@@ -1263,12 +1279,41 @@ h3 {
   background: #edf3f2;
 }
 
+.expert-panel-section {
+  background: #eef3f2;
+}
+
+.expert-panel-grid article {
+  min-height: 240px;
+  border-left: 6px solid var(--blue);
+}
+
+.expert-panel-grid article:nth-child(2) {
+  border-left-color: var(--teal);
+}
+
+.expert-panel-grid article:nth-child(3) {
+  border-left-color: var(--amber);
+}
+
+.expert-panel-grid article:nth-child(4) {
+  border-left-color: var(--green);
+}
+
+.expert-panel-grid article:nth-child(5) {
+  border-left-color: var(--red);
+}
+
 .evidence-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .evidence-grid .section-heading {
   grid-column: 1 / -1;
+}
+
+.panel-method-grid {
+  background: #f5f2ea;
 }
 
 .evidence-grid article span {
@@ -1353,6 +1398,7 @@ h3 {
   .visual-story-grid,
   .deployment-status,
   .quality-card-grid,
+  .expert-panel-grid,
   .evidence-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1376,12 +1422,14 @@ h3 {
   .visual-story-grid,
   .premium-gates,
   .quality-card-grid,
+  .expert-panel-grid,
   .evidence-grid {
     grid-template-columns: 1fr;
   }
 
   .hero-gate-rail article,
-  .visual-story-grid article {
+  .visual-story-grid article,
+  .expert-panel-grid article {
     min-height: auto;
   }
 }

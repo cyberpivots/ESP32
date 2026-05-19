@@ -110,7 +110,13 @@ def smoke_artifact(root: Path) -> list[str]:
         (
             "index.html",
             "ESP32 Four-Relay Workbench",
-            {"blueprints.html", "quality.html", "demos/admin-hmi/", "public-file-manifest.json"},
+            {
+                "blueprints.html",
+                "quality.html",
+                "expertPanelList",
+                "demos/admin-hmi/",
+                "public-file-manifest.json",
+            },
         ),
         (
             "blueprints.html",
@@ -120,7 +126,12 @@ def smoke_artifact(root: Path) -> list[str]:
         (
             "quality.html",
             "ESP32 Four-Relay Quality Evidence",
-            {"public-file-manifest.json", "artifact-policy", "non-coverage"},
+            {
+                "public-file-manifest.json",
+                "artifact-policy",
+                "panel-method",
+                "non-coverage",
+            },
         ),
         (
             "demos/admin-hmi/index.html",

@@ -15,22 +15,22 @@ const defaultRelayChannels = [
   {
     channel: 1,
     label: "Output A",
-    pin: "GPIO25",
+    pin: "Candidate GPIO25",
   },
   {
     channel: 2,
     label: "Output B",
-    pin: "GPIO26",
+    pin: "Candidate GPIO26",
   },
   {
     channel: 3,
     label: "Output C",
-    pin: "GPIO27",
+    pin: "Candidate GPIO27",
   },
   {
     channel: 4,
     label: "Output D",
-    pin: "GPIO33",
+    pin: "Candidate GPIO33",
   },
 ];
 
@@ -79,10 +79,10 @@ const baseState = {
     fallbackActive: false,
   },
   relays: [
-    { channel: 1, label: "Output A", pin: "GPIO25", state: false, enabled: false },
-    { channel: 2, label: "Output B", pin: "GPIO26", state: false, enabled: false },
-    { channel: 3, label: "Output C", pin: "GPIO27", state: false, enabled: false },
-    { channel: 4, label: "Output D", pin: "GPIO33", state: false, enabled: false },
+    { channel: 1, label: "Output A", pin: "Candidate GPIO25", state: false, enabled: false },
+    { channel: 2, label: "Output B", pin: "Candidate GPIO26", state: false, enabled: false },
+    { channel: 3, label: "Output C", pin: "Candidate GPIO27", state: false, enabled: false },
+    { channel: 4, label: "Output D", pin: "Candidate GPIO33", state: false, enabled: false },
   ],
   lastCommand: {
     source: "boot",

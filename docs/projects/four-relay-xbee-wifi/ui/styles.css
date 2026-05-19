@@ -652,6 +652,17 @@ body {
   font-weight: 700;
 }
 
+.static-mode-note {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #d9e4e8;
+  border-left: 5px solid var(--accent);
+  border-radius: 8px;
+  background: #f5fbfd;
+  color: var(--muted);
+  font-weight: 760;
+}
+
 .status-rail {
   gap: 10px;
   padding: 18px 0;

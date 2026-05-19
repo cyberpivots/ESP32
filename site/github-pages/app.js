@@ -5,28 +5,28 @@
     {
       channel: 1,
       label: "Output A",
-      pin: "GPIO25",
+      pin: "Candidate GPIO25",
       status: "Blocked",
       gate: "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring.",
     },
     {
       channel: 2,
       label: "Output B",
-      pin: "GPIO26",
+      pin: "Candidate GPIO26",
       status: "Blocked",
       gate: "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring.",
     },
     {
       channel: 3,
       label: "Output C",
-      pin: "GPIO27",
+      pin: "Candidate GPIO27",
       status: "Blocked",
       gate: "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring.",
     },
     {
       channel: 4,
       label: "Output D",
-      pin: "GPIO33",
+      pin: "Candidate GPIO33",
       status: "Blocked",
       gate: "Shield routing plus relay trigger voltage, current, polarity, and isolation must be verified before wiring.",
     },
@@ -285,6 +285,7 @@
       renderDemoPreview(relayChannels);
       renderGates(byId("gateList"), siteData.safetyGates);
       renderGates(byId("qualityGateList"), siteData.qualityGates);
+      renderGates(byId("expertPanelList"), siteData.expertPanels);
     } catch (error) {
       renderRelayMap(byId("relayChannelMap"), relayChannels);
       renderRelayEditor(byId("relayLabelEditor"), relayChannels);

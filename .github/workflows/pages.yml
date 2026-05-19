@@ -25,8 +25,26 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Check JSON and JavaScript syntax
+        run: |
+          python3 -m json.tool site/github-pages/site-data.json >/dev/null
+          python3 -m json.tool docs/projects/four-relay-xbee-wifi/ui/manifest.json >/dev/null
+          node --check site/github-pages/app.js
+          node --check docs/projects/four-relay-xbee-wifi/ui/app.js
+
       - name: Build curated public site
         run: python3 scripts/build_github_pages.py --out build/github-pages
+
+      - name: Audit public artifact
+        run: |
+          python3 scripts/audit_public_manifest.py
+          python3 scripts/smoke_github_pages.py
+          python3 scripts/verify_scaffold.py
+
+      - name: Run host-side contract tests
+        run: |
+          python3 -m py_compile scripts/*.py tests/four_relay_safe_core/run_host_tests.py
+          python3 tests/four_relay_safe_core/run_host_tests.py
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4

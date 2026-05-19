@@ -25,14 +25,26 @@ Pages source.
 
 ## Assumptions
 
-- The public site is a project site and must use relative links because this
-  repository does not hard-code an owner, repository name, custom domain, or
-  final deployed URL.
+- The current public site is a project site under `cyberpivots/ESP32`; source
+  links stay relative so forks, custom domains, and local previews can reuse the
+  same generated artifact.
 - The public audience needs a credibility-first entry point to the DIY concept
   package, not a hardware operation guide.
 - Public review should start from a generated artifact so the repository root,
   `.agents/`, private uploads, raw photos, and unrelated docs are not exposed by
   default.
+
+## Current Repository Status
+
+Verified from the local shell on 2026-05-19:
+
+- GitHub Pages API for `cyberpivots/ESP32` reports `build_type` as `workflow`,
+  source branch `main`, and public URL `https://cyberpivots.github.io/ESP32/`.
+- The latest checked `pages.yml` run completed successfully on `main`.
+- `https://cyberpivots.github.io/ESP32/` returned HTTP 200.
+
+Future repository, branch, workflow, or Pages setting changes must be
+re-verified before claiming deployment success.
 
 ## Deployment Model
 
@@ -46,9 +58,11 @@ python3 scripts/build_github_pages.py --out build/github-pages
 
 The build script copies:
 
-- static site files from `site/github-pages/`;
-- the dedicated visual blueprint page and the two named generated blueprint
-  backplates under `site/github-pages/assets/blueprints/`;
+- static site files from `site/github-pages/`, including the landing page,
+  visual blueprint page, and quality evidence page;
+- named generated public-safe backplates under
+  `site/github-pages/assets/blueprints/` and
+  `site/github-pages/assets/workbench/`;
 - explicitly allowlisted Markdown files, including the XBee read-only bench
   proof, into `build/github-pages/bundle/`;
 - the existing static admin HMI demo into
@@ -70,8 +84,8 @@ Allowed public content:
   marked as an assumption or unresolved gap;
 - static HTML, CSS, JavaScript, and JSON for the landing page and admin HMI
   demo;
-- the two named generated WebP blueprint backplates used by the public visual
-  blueprint page, with factual labels rendered in HTML instead of inside the
+- the named generated WebP backplates used by the public visual blueprint and
+  workbench pages, with factual labels rendered in HTML instead of inside the
   image;
 - generated manifest metadata for the allowlisted public files.
 
@@ -100,31 +114,33 @@ relay input current, isolation behavior, XBee read/write readiness, enclosure
 selection, overcurrent protection, grounding/bonding, GFCI/de-energization
 process, strain relief, XBee read-only proof status, and qualified review.
 
-## Manual Repository Setting
+## Deployment Re-Verification
 
-Before a live deployment can succeed, a repository admin or maintainer must set
-the repository Pages source to `GitHub Actions` in the repository settings.
-Source ID: `SRC-GITHUB-PAGES-PUBLISHING-SOURCE`.
+The current repository is configured for GitHub Actions Pages deployment, but
+that status is not a permanent assumption. Re-check the Pages API, latest
+workflow result, and public URL after any remote, branch, workflow, permission,
+or Pages setting change.
 
-Unknowns:
+Known open deployment question:
 
-- final repository owner/name and project-site URL;
-- whether Pages permissions are enabled in the eventual remote repository;
-- whether deployment protection rules will be added to the `github-pages`
-  environment.
+- Whether future deployment protection rules will be added to the
+  `github-pages` environment.
 
 ## Validation
 
 Run these checks before handoff:
 
 ```bash
-python3 scripts/build_github_pages.py --out build/github-pages
-python3 -m py_compile scripts/build_github_pages.py scripts/verify_scaffold.py scripts/xbee_read_only_probe.py
+python3 scripts/build_github_pages.py
+python3 scripts/audit_public_manifest.py
+python3 scripts/smoke_github_pages.py
 python3 scripts/verify_scaffold.py
-find . -path './.git' -prune -o \( -name 'CMakeLists.txt' -o -name 'sdkconfig*' -o -name 'platformio.ini' -o -name 'idf_component.yml' -o -name 'arduino-cli.yaml' \) -print
+python3 -m py_compile scripts/*.py tests/four_relay_safe_core/run_host_tests.py
+git diff --check
 ```
 
 Local browser verification should confirm that the landing page renders on
-desktop and mobile, no horizontal overflow appears, public bundle links resolve,
-the admin HMI demo opens from `demos/admin-hmi/`, safety disclaimers are
-visible, no console errors are emitted, and no external network requests occur.
+desktop and mobile, `blueprints.html`, `quality.html`, and
+`demos/admin-hmi/index.html` render without horizontal overflow, public bundle
+links resolve, safety disclaimers are visible, and no console errors are
+emitted.

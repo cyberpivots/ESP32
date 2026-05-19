@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ESP32 Four-Relay Quality Evidence</title>
+    <meta name="description" content="Public-safe quality evidence for the ESP32 four-relay workbench generated GitHub Pages artifact, validation gates, and non-coverage boundaries.">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="ESP32 Four-Relay Workbench home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>ESP32 Workbench</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="index.html#build">Build</a>
+        <a href="blueprints.html">Blueprints</a>
+        <a href="quality.html" aria-current="page">Quality</a>
+        <a href="index.html#relay-labels">Relay Labels</a>
+        <a href="index.html#demo">Demo</a>
+        <a href="index.html#safety">Safety</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="quality-page-hero" aria-labelledby="quality-hero-title">
+        <div>
+          <p class="eyebrow">Quality evidence</p>
+          <h1 id="quality-hero-title">What this public artifact currently proves</h1>
+          <p class="lede">
+            This page summarizes public-safe validation for the generated
+            GitHub Pages package. It is evidence about the static artifact and
+            host-side contracts, not proof that live hardware is connected,
+            wired, flashed, switched, or approved for load work.
+          </p>
+          <div class="hero-actions" aria-label="Quality actions">
+            <a class="button primary" href="public-file-manifest.json">Open generated manifest</a>
+            <a class="button" href="bundle/docs/github-pages-public-site.md">Open deployment model</a>
+            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md">Open XBee boundary</a>
+          </div>
+        </div>
+        <aside class="blueprint-summary" aria-label="Quality boundary summary">
+          <strong>Non-coverage</strong>
+          <p>
+            No live ESP32, relay, MicroSD card, TFT, XBee setting write, relay
+            switching, relay-contact wiring, or mains/load action is validated
+            by the public site.
+          </p>
+        </aside>
+      </section>
+
+      <section class="content-section current-status quality-status" aria-labelledby="verified-status-title">
+        <div class="section-heading">
+          <p class="eyebrow">Verified status</p>
+          <h2 id="verified-status-title">Deployment and artifact checks</h2>
+          <a class="text-link" href="index.html#package">Open package links</a>
+        </div>
+        <div class="status-rail deployment-status" aria-label="Verified deployment status">
+          <article data-state="ok"><span>Pages URL</span><strong>Live workflow site</strong></article>
+          <article data-state="ok"><span>Build source</span><strong>GitHub Actions</strong></article>
+          <article data-state="ok"><span>Manifest</span><strong>Hashes and paths</strong></article>
+          <article data-state="stop"><span>Hardware</span><strong>Not live-proofed</strong></article>
+        </div>
+      </section>
+
+      <section class="content-section evidence-grid" aria-labelledby="evidence-title">
+        <div class="section-heading">
+          <p class="eyebrow">Review surface</p>
+          <h2 id="evidence-title">Public-safe quality gates</h2>
+        </div>
+
+        <article id="artifact-policy">
+          <span>01</span>
+          <h3>Generated artifact policy</h3>
+          <p>
+            The public site is assembled from an explicit allowlist in
+            <code>scripts/build_github_pages.py</code>. The generated package
+            publishes curated site files, selected Markdown, named WebP
+            backplates, the static admin HMI demo, and
+            <code>public-file-manifest.json</code>.
+          </p>
+          <a href="bundle/docs/github-pages-public-site.md">Read deployment model</a>
+        </article>
+
+        <article id="manifest-audit">
+          <span>02</span>
+          <h3>Manifest, link, and hash audit</h3>
+          <p>
+            <code>scripts/audit_public_manifest.py</code> verifies manifest
+            entries, file sizes, SHA-256 hashes, blocked source paths, image
+            allowlist membership, local HTML references, and CSS asset links.
+          </p>
+          <a href="public-file-manifest.json">Open manifest</a>
+        </article>
+
+        <article id="smoke-checks">
+          <span>03</span>
+          <h3>Page smoke checks</h3>
+          <p>
+            <code>scripts/smoke_github_pages.py</code> checks the landing page,
+            visual blueprint page, this quality page, and the static admin HMI
+            demo for required titles, required markers, and broken local
+            references.
+          </p>
+          <a href="demos/admin-hmi/">Open admin HMI demo</a>
+        </article>
+
+        <article id="safe-core">
+          <span>04</span>
+          <h3>Safe-core host tests</h3>
+          <p>
+            Host-side tests cover relay safety gates, public API channel
+            contracts, storage failure paths, and XBee frame parser rejection
+            behavior without requiring a connected ESP32 or live relay module.
+          </p>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/firmware-task-model.md">Read task model</a>
+        </article>
+
+        <article id="xbee-boundary">
+          <span>05</span>
+          <h3>XBee read-only boundary</h3>
+          <p>
+            Published XBee work stays at passive discovery and fixed read-only
+            AT-query planning. XBee setting writes, API transmit frames, and
+            ESP32 carrier DIN/DOUT wiring remain blocked.
+          </p>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md">Read XBee proof</a>
+        </article>
+
+        <article id="non-coverage">
+          <span>06</span>
+          <h3>Explicit non-coverage</h3>
+          <p>
+            The public artifact does not validate live ESP32 wiring, power
+            rails, boot-pin effects, relay trigger polarity, relay input
+            current, isolation, load-side wiring, mains wiring, live firmware
+            flashing, live GPIO, MicroSD mount behavior, or TFT wiring.
+          </p>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/power-and-safety.md">Read power gates</a>
+        </article>
+      </section>
+
+      <section class="notice-band" aria-label="Public evidence boundary">
+        <strong>Private evidence stays private.</strong>
+        The public package excludes `.agents/` records, raw bench records,
+        private uploads, screenshots, copied vendor PDFs, bulky binaries, and
+        any unallowlisted generated media.
+      </section>
+
+      <section class="content-section package-section quality-package" aria-labelledby="quality-links-title">
+        <div>
+          <p class="eyebrow">Evidence links</p>
+          <h2 id="quality-links-title">Source-backed public references</h2>
+          <p>
+            These links are part of the curated artifact and keep public review
+            centered on source-backed documentation, validation gates, and
+            unresolved hardware gaps.
+          </p>
+        </div>
+        <div class="link-panel">
+          <a href="bundle/docs/github-pages-public-site.md">Deployment model</a>
+          <a href="bundle/knowledge-base/source-index.md">Source index</a>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/rd-loop.md">R&amp;D loop</a>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md">Mains readiness gate</a>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md">XBee read-only proof</a>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/power-and-safety.md">Power and safety gates</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Generated from a curated ESP32 workspace artifact.</span>
+      <a href="index.html">Back to workbench</a>
+      <a href="blueprints.html">Visual blueprints</a>
+    </footer>
+  </body>
+</html>

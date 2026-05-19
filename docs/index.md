@@ -39,6 +39,7 @@
 - [Prompt triage](prompt/prompt-triage.md)
 - [Pre-engineered prompts](prompt/preengineered-prompts.md)
 - [Autoencoded model selection](prompt/autoencoded-model-selection.md)
+- [Expert agent panels](prompt/expert-agent-panels.md)
 
 ## Knowledge base
 
@@ -52,6 +53,7 @@
 - [TFT relay expansion ledger](../knowledge-base/source-ledger/2026-05-18-tft-relay-expansion.md)
 - [XBee read-only bench proof ledger](../knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md)
 - [Four relay hardware and circuit improvement ledger](../knowledge-base/source-ledger/2026-05-19-four-relay-hardware-circuit-improvement.md)
+- [Expert agent panels source ledger](../knowledge-base/source-ledger/2026-05-19-expert-agent-panels.md)
 - [Four relay XBee Wi-Fi toolchain](../knowledge-base/toolchain/four-relay-xbee-wifi-toolchain.md)
 - [SPI MicroSD reader profile](../hardware-profiles/storage/spi-microsd-reader/README.md)
 

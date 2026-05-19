@@ -17,6 +17,7 @@ DEFAULT_OUTPUT = ROOT / "build" / "github-pages"
 SITE_FILES = [
     "index.html",
     "blueprints.html",
+    "quality.html",
     "styles.css",
     "app.js",
     "site-data.json",

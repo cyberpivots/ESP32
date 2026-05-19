@@ -77,6 +77,7 @@ def audit_pages_build(root: Path = ROOT) -> list[str]:
             failures.append(f"Pages build script missing exclusion marker: {blocked_marker}")
     for public_marker in [
         "blueprints.html",
+        "quality.html",
         "assets/blueprints/system-overview.webp",
         "assets/blueprints/safety-proof-ladder.webp",
         "assets/workbench/hero-workbench.webp",
@@ -112,6 +113,7 @@ def audit_pages_build(root: Path = ROOT) -> list[str]:
     for marker in [
         "index.html",
         "blueprints.html",
+        "quality.html",
         "demos/admin-hmi/index.html",
         "smoke_page",
         "resolve_local_reference",
@@ -128,9 +130,13 @@ def audit_site_pages(root: Path = ROOT) -> list[str]:
         "ESP32 four-relay workbench",
         "Open visual blueprint",
         "blueprints.html",
+        "quality.html",
+        "Open quality evidence",
         "Open R&amp;D loop",
         "Launch admin HMI demo",
         "Relay Labels",
+        "Current status",
+        "Quality gates",
         "Generated artifact only",
         "Hardware and circuit research",
         "Qualified review gate stays closed",
@@ -156,6 +162,24 @@ def audit_site_pages(root: Path = ROOT) -> list[str]:
         "Expander",
         "Hardware gate",
     ], "Pages blueprints"))
+
+    pages_quality = (root / "site/github-pages/quality.html").read_text(
+        encoding="utf-8"
+    )
+    failures.extend(require_markers(pages_quality, [
+        "What this public artifact currently proves",
+        "Generated artifact policy",
+        "Manifest, link, and hash audit",
+        "Page smoke checks",
+        "Safe-core host tests",
+        "XBee read-only boundary",
+        "Explicit non-coverage",
+        "public-file-manifest.json",
+        "scripts/audit_public_manifest.py",
+        "scripts/smoke_github_pages.py",
+        "does not validate live ESP32 wiring",
+        "Private evidence stays private",
+    ], "Pages quality"))
     return failures
 
 

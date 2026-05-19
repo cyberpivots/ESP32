@@ -5,6 +5,10 @@
       "href": "blueprints.html"
     },
     {
+      "label": "Quality evidence page",
+      "href": "quality.html"
+    },
+    {
       "label": "Workspace overview",
       "href": "bundle/README.md"
     },
@@ -90,6 +94,28 @@
     {
       "label": "Load wiring",
       "value": "Blocked",
+      "state": "stop"
+    }
+  ],
+  "deploymentStatus": [
+    {
+      "label": "Live Pages",
+      "value": "Workflow deploy",
+      "state": "ok"
+    },
+    {
+      "label": "Artifact",
+      "value": "57 public files",
+      "state": "ok"
+    },
+    {
+      "label": "QA checks",
+      "value": "Pass before deploy",
+      "state": "ok"
+    },
+    {
+      "label": "Hardware gates",
+      "value": "Closed to live action",
       "state": "stop"
     }
   ],
@@ -187,8 +213,46 @@
       "linkText": "Read expansion plan"
     }
   ],
+  "qualityGates": [
+    {
+      "title": "Generated artifact policy",
+      "summary": "Only allowlisted site files, public-safe docs, named WebP backplates, and the static demo enter the Pages artifact.",
+      "href": "quality.html#artifact-policy",
+      "linkText": "Review policy"
+    },
+    {
+      "title": "Manifest and link audit",
+      "summary": "The public manifest verifies file sizes, SHA-256 hashes, blocked paths, image allowlists, and local references.",
+      "href": "quality.html#manifest-audit",
+      "linkText": "Review audit"
+    },
+    {
+      "title": "Smoke checks",
+      "summary": "Landing, blueprint, quality, and admin HMI pages are checked for required titles, markers, and local links.",
+      "href": "quality.html#smoke-checks",
+      "linkText": "Review smoke"
+    },
+    {
+      "title": "Safe-core host tests",
+      "summary": "Host tests cover relay safety, API channel contracts, storage failure paths, and XBee parser rejection without live hardware.",
+      "href": "quality.html#safe-core",
+      "linkText": "Review contracts"
+    },
+    {
+      "title": "XBee read-only boundary",
+      "summary": "Passive discovery and fixed AT reads stay separated from XBee setting writes, API transmit frames, and ESP32 carrier wiring.",
+      "href": "quality.html#xbee-boundary",
+      "linkText": "Review XBee"
+    },
+    {
+      "title": "Live hardware non-coverage",
+      "summary": "The public package does not validate live ESP32 wiring, relay switching, MicroSD mounts, TFT wiring, or load-side work.",
+      "href": "quality.html#non-coverage",
+      "linkText": "Review boundary"
+    }
+  ],
   "futureTracks": [
-    "Confirm repository Pages source is set to GitHub Actions before public deployment.",
+    "Re-verify the Pages source, public URL, and latest workflow result after any repository, workflow, branch, or Pages setting change.",
     "Review the build-script allowlist before adding any file to the public artifact.",
     "Close hardware blockers before firmware flashing, relay switching, XBee setting writes, or mains/load wiring.",
     "Verify the exact TFT, mux breakout, expander board, driver stage, and MicroSD module behavior before wiring.",

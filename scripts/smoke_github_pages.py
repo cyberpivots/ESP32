@@ -109,13 +109,18 @@ def smoke_artifact(root: Path) -> list[str]:
     for rel, title, tokens in [
         (
             "index.html",
-            "ESP32 Four-Relay Premium Workbench",
-            {"blueprints.html", "demos/admin-hmi/", "public-file-manifest.json"},
+            "ESP32 Four-Relay Workbench",
+            {"blueprints.html", "quality.html", "demos/admin-hmi/", "public-file-manifest.json"},
         ),
         (
             "blueprints.html",
             "ESP32 Four-Relay Visual Blueprints",
             {"system-overview.webp", "safety-proof-ladder.webp"},
+        ),
+        (
+            "quality.html",
+            "ESP32 Four-Relay Quality Evidence",
+            {"public-file-manifest.json", "artifact-policy", "non-coverage"},
         ),
         (
             "demos/admin-hmi/index.html",

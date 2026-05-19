@@ -278,11 +278,13 @@
         : DEFAULT_RELAY_CHANNELS;
       renderLinks(byId("bundleList"), siteData.bundleLinks);
       renderStatusRail(byId("buildStatusRail"), siteData.buildStatus);
+      renderStatusRail(byId("deploymentStatusRail"), siteData.deploymentStatus);
       renderSequence(byId("sequenceList"), siteData.constructionSequence);
       renderRelayMap(byId("relayChannelMap"), relayChannels);
       renderRelayEditor(byId("relayLabelEditor"), relayChannels);
       renderDemoPreview(relayChannels);
       renderGates(byId("gateList"), siteData.safetyGates);
+      renderGates(byId("qualityGateList"), siteData.qualityGates);
     } catch (error) {
       renderRelayMap(byId("relayChannelMap"), relayChannels);
       renderRelayEditor(byId("relayLabelEditor"), relayChannels);

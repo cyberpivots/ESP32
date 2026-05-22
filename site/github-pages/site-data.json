@@ -5,6 +5,10 @@
       "href": "blueprints.html"
     },
     {
+      "label": "Prototype Build Packet page",
+      "href": "prototype.html"
+    },
+    {
       "label": "Quality evidence page",
       "href": "quality.html"
     },
@@ -29,6 +33,10 @@
       "href": "bundle/docs/projects/four-relay-xbee-wifi/build-guide.md"
     },
     {
+      "label": "Prototype Build Packet",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/prototype-build-packet.md"
+    },
+    {
       "label": "Prototype blueprint",
       "href": "bundle/docs/projects/four-relay-xbee-wifi/prototype-blueprint.md"
     },
@@ -39,6 +47,10 @@
     {
       "label": "XBee read-only proof",
       "href": "bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md"
+    },
+    {
+      "label": "XBee public boundary",
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/xbee-public-boundary.md"
     },
     {
       "label": "MicroSD assets/logs profile",
@@ -61,7 +73,7 @@
       "href": "bundle/hardware-profiles/device-matrix.md"
     },
     {
-      "label": "Source index",
+      "label": "Sanitized source index",
       "href": "bundle/knowledge-base/source-index.md"
     }
   ],
@@ -105,7 +117,7 @@
     },
     {
       "label": "Artifact",
-      "value": "57 public files",
+      "value": "Generated manifest",
       "state": "ok"
     },
     {
@@ -152,7 +164,7 @@
   "constructionSequence": [
     {
       "title": "Visual blueprint review",
-      "summary": "Start with the conceptual system map, R&D loop, and safety proof ladder before any low-voltage bench action."
+      "summary": "Start with the Prototype Build Packet, conceptual system map, R&D loop, and safety proof ladder before any low-voltage bench action."
     },
     {
       "title": "Board and shield inspection",
@@ -164,7 +176,7 @@
     },
     {
       "title": "XBee read-only discovery",
-      "summary": "Use the USB adapter as a PC dock for passive discovery first, then explicitly confirmed AT read queries only."
+      "summary": "Use the public XBee boundary and USB adapter as a PC dock for passive discovery first, then explicitly confirmed AT read queries only."
     },
     {
       "title": "Expansion dry proof",
@@ -191,8 +203,8 @@
     {
       "title": "XBee writes blocked",
       "summary": "The radio path starts with passive discovery and fixed AT read queries; setting writes require later owner review and explicit approval.",
-      "href": "bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md",
-      "linkText": "Read XBee proof"
+      "href": "bundle/docs/projects/four-relay-xbee-wifi/xbee-public-boundary.md",
+      "linkText": "Read XBee boundary"
     },
     {
       "title": "MicroSD behavior gated",
@@ -222,7 +234,7 @@
     },
     {
       "title": "Manifest and link audit",
-      "summary": "The public manifest verifies file sizes, SHA-256 hashes, blocked paths, image allowlists, and local references.",
+      "summary": "The public manifest verifies file sizes, SHA-256 hashes, blocked paths, image allowlists, decoded WebP dimensions, public Markdown content, and local references.",
       "href": "quality.html#manifest-audit",
       "linkText": "Review audit"
     },
@@ -288,7 +300,8 @@
     "Review the build-script allowlist before adding any file to the public artifact.",
     "Close hardware blockers before firmware flashing, relay switching, XBee setting writes, or mains/load wiring.",
     "Verify the exact TFT, mux breakout, expander board, driver stage, and MicroSD module behavior before wiring.",
-    "Keep future generated screenshots, raw uploads, vendor PDFs, and bulky binaries out of the public Pages artifact.",
-    "Permit only the named generated technical backplates under site/github-pages/assets/."
+    "Keep future generated screenshots, private upload archives, vendor PDFs, and bulky binaries out of the public Pages artifact.",
+    "Permit only the named generated technical backplates under site/github-pages/assets/.",
+    "Keep prototype packet diagrams label-free and put factual labels, pins, source links, and warnings in HTML or Markdown."
   ]
 }

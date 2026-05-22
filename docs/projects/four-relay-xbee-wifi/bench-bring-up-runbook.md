@@ -15,6 +15,11 @@
   expansion proof sequence. Source IDs: `SRC-TI-CD74HC4067`,
   `SRC-TI-TCA9555`, `SRC-ESPRESSIF-MCP23017-COMPONENT`,
   `SRC-TI-TPIC6B595`.
+- The local read-only live-bench preflight captures COM6 inventory, WSL serial
+  permissions, ESP32 read-only identity, Pi SSH identity, listener state, and
+  toolchain status without flashing or relay/radio mutation. Source IDs:
+  `SRC-ESPTOOL-BASIC`, `SRC-RASPBERRY-PI-CONFIGURATION`,
+  `SRC-LOCAL-LIVE-BENCH-PREFLIGHT-2026-05-21`.
 
 ## Assumptions
 
@@ -35,6 +40,43 @@
 - Expander I2C address, pullups, inactive defaults, output latch behavior, and
   relay driver-stage fit.
 - CD74HC4067 breakout wiring, ADC protection, and input-only scan behavior.
+
+## Stage 0 - Read-only live-bench preflight
+
+Tooling:
+
+- `python3 scripts/live_bench_preflight.py --out research/bench-records/live-bench/local-preflight-YYYYMMDDTHHMMSSZ.json`
+- ESP-IDF v6.0.1 activation, when a build is needed:
+  `source /home/cyber/.espressif/tools/activate_idf_v6.0.1.sh`
+
+Expected evidence:
+
+- Windows COM6 inventory shows only the USB-UART bridge identity; it does not
+  prove carrier-board revision, shield wiring, or pinout.
+- WSL `/dev/ttyS6` permissions show whether the current user can open the
+  serial device.
+- ESP32 identity uses fixed esptool `chip_id`, `read_mac`, and `flash_id`
+  commands only. Flash, erase, write-memory, and monitor automation remain
+  excluded.
+- Pi SSH identity uses a fresh local known-hosts file and must match expected
+  fingerprints, hostname, model, serial, root device, network address, and no
+  listeners on `31331`, `31332`, or `8080`.
+- Toolchain evidence records exact command versions or exact missing-command
+  failures.
+
+Pass result:
+
+- The bench candidate identity and toolchain state may be used for build-only
+  validation of the disabled skeleton.
+- This does not authorize flashing, relay switching, XBee writes, ESP-NOW radio
+  traffic, TFT/MicroSD wiring, load wiring, or mains work.
+
+Stop condition:
+
+- Stop if COM6 identity changes unexpectedly, Pi fingerprints do not match, Pi
+  listeners are already open on the gated ports, esptool read-only identity
+  fails, or the toolchain selects a framework version other than ESP-IDF
+  v6.0.1 for this project.
 
 ## Stage 1 - ESP32 board and expansion shield
 

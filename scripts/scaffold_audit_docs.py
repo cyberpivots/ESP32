@@ -167,6 +167,40 @@ def audit_project_docs(root: Path = ROOT) -> list[str]:
         "future driver-stage",
     ], "prototype blueprint"))
 
+    prototype_packet = (
+        root / "docs/projects/four-relay-xbee-wifi/prototype-build-packet.md"
+    ).read_text(encoding="utf-8")
+    failures.extend(require_markers(prototype_packet, [
+        "## Verified facts",
+        "## Assumptions",
+        "## Unknowns",
+        "## Public packet map",
+        "## Provisional signal map",
+        "## Bench review sequence",
+        "## Bench evidence checklist",
+        "## Stop conditions",
+        "SRC-LOCAL-PROTOTYPE-PACKET-2026-05-21",
+        "SRC-ESP-IDF-GPIO",
+        "SRC-DIGI-XBP9B-DPUT-001",
+        "xbee-public-boundary.md",
+        "not a final wiring diagram",
+    ], "prototype build packet"))
+
+    xbee_public_boundary = (
+        root / "docs/projects/four-relay-xbee-wifi/xbee-public-boundary.md"
+    ).read_text(encoding="utf-8")
+    failures.extend(require_markers(xbee_public_boundary, [
+        "## Verified facts",
+        "## Assumptions",
+        "## Unknowns",
+        "## Public rules",
+        "## Next evidence",
+        "SRC-DIGI-XBP9B-DPUT-001",
+        "SRC-LOCAL-XBEE-READONLY-PROBE-2026-05-18",
+        "XBee setting writes",
+        "private bench records",
+    ], "XBee public boundary"))
+
     build_guide = (
         root / "docs/projects/four-relay-xbee-wifi/build-guide.md"
     ).read_text(encoding="utf-8")

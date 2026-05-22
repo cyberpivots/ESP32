@@ -11,8 +11,10 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
 
 - [Build guide](build-guide.md)
 - [Architecture](architecture.md)
+- [Prototype Build Packet](prototype-build-packet.md)
 - [Prototype blueprint](prototype-blueprint.md)
 - [Bench bring-up runbook](bench-bring-up-runbook.md)
+- [XBee public boundary](xbee-public-boundary.md)
 - [XBee read-only bench proof](xbee-read-only-bench-proof.md)
 - [Hardware and circuit improvement research](hardware-circuit-improvement-research.md)
 - [R&D loop](rd-loop.md)
@@ -137,3 +139,11 @@ require physical verification records and owner review.
 
 Mains switching remains hard blocked by
 [mains-readiness-gate.md](mains-readiness-gate.md).
+
+## Public packet entry point
+
+Start with [Prototype Build Packet](prototype-build-packet.md) before using the
+visual blueprint, build guide, pin plan, or XBee documents. The packet is the
+public navigation layer for verified facts, assumptions, unknowns, review
+sequence, evidence checklist, and stop conditions. It does not close any
+hardware, relay, radio, TFT, MicroSD, load, or mains gap.

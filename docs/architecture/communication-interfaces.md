@@ -14,3 +14,9 @@ Current project protocol: `comm-protocols/wireless/xbee-api-four-relay.md`.
 
 Source IDs: `SRC-DIGI-XBEE-900HP-AP`, `SRC-DIGI-XBEE-900HP-AO`,
 `SRC-DIGI-XBEE-900HP-USER-GUIDE`.
+
+Simulator-only TCP bridge for DOS-C Windows 3.1:
+`docs/projects/four-relay-xbee-wifi/dosbox-win31-simulator.md`.
+
+Source IDs: `SRC-ESP-IDF-LWIP-SOCKETS`,
+`SRC-LOCAL-FOUR-RELAY-SAFE-CORE-CONTRACT-2026-05-19`.

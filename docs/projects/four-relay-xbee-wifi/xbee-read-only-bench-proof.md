@@ -7,6 +7,9 @@ Digi XBee radio through the Waveshare USB adapter without changing radio
 settings, flashing firmware, wiring the adapter to ESP32 GPIO, switching
 relays, or touching load wiring.
 
+For public navigation, use [XBee Public Boundary](xbee-public-boundary.md).
+This proof document remains the detailed read-only bench plan.
+
 This proof has two tiers:
 
 - Tier A passive discovery: enumerate host serial devices, inspect adapter
@@ -35,7 +38,7 @@ This proof has two tiers:
   USB-to-UART use. Source ID: `SRC-WAVESHARE-XBEE-USB-ADAPTER`.
 - The current local XBee probe environment is WSL2 with Python 3.12.3,
   pyserial 3.5, `lsusb` and PowerShell available, no `xctu` on PATH, and only
-  `/dev/ttyS*` serial candidates visible at probe time. Source ID:
+  redacted serial-device candidates visible at probe time. Source ID:
   `SRC-LOCAL-XBEE-READONLY-PROBE-2026-05-18`.
 
 ## Assumptions
@@ -96,7 +99,7 @@ python3 scripts/xbee_read_only_probe.py list --json
 Optional passive observation:
 
 ```bash
-python3 scripts/xbee_read_only_probe.py passive --port /dev/ttyS1 --baud 9600 --duration 10 --json
+python3 scripts/xbee_read_only_probe.py passive --port <serial-port> --baud 9600 --duration 10 --json
 ```
 
 The passive command opens the serial port and reads only. It does not write
@@ -133,7 +136,7 @@ Allowed AT read queries:
 Run only after Tier A records the serial candidate and adapter voltage check:
 
 ```bash
-python3 scripts/xbee_read_only_probe.py at-query --port /dev/ttyS1 --baud 9600 --confirm-sends-read-commands --json
+python3 scripts/xbee_read_only_probe.py at-query --port <serial-port> --baud 9600 --confirm-sends-read-commands --json
 ```
 
 The script uses a fixed allowlist. It rejects parameter writes, `WR`, `AC`, and
@@ -169,7 +172,7 @@ Example:
 python3 scripts/xbee_read_only_probe.py list --json --out research/bench-records/xbee-readonly/2026-05-18-list.json
 ```
 
-Do not add unredacted serial numbers, raw passive bytes, or private bench notes
+Do not add unredacted serial numbers, raw passive bytes, or private bench records
 to the public Pages bundle.
 
 ## Acceptance

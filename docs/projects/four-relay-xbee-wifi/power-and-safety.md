@@ -57,6 +57,10 @@
 
 ## Hardware gates before wiring
 
+The public [Prototype Build Packet](prototype-build-packet.md) keeps these
+gates visible as stop conditions. A visible public diagram or label does not
+close a gate.
+
 | Gate | Required evidence | Owner |
 | --- | --- | --- |
 | ESP32 board identity | Photo/source/inspection record showing dev-board vendor, revision, USB-UART bridge, regulator, and module variant. | Hardware |

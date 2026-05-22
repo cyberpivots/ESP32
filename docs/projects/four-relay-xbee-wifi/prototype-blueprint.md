@@ -11,6 +11,12 @@ The visual GitHub Pages blueprint uses generated label-free backplates with
 HTML labels so the public page can stay readable without turning the image into
 unverified wiring evidence.
 
+For the complete public review path, start with
+[Prototype Build Packet](prototype-build-packet.md). It links the visual
+schematics to the low-voltage review sequence, pin-pressure map, XBee
+read-only boundary, MicroSD/TFT/expander/mux branches, evidence checklist, and
+stop conditions.
+
 ## What each box means
 
 | Box | Plain meaning | Evidence boundary |
@@ -156,6 +162,8 @@ Mains wiring: hard blocked by mains-readiness gate.
 
 Do not continue unless:
 
+- [Prototype Build Packet](prototype-build-packet.md) is current and linked
+  from the public Pages artifact.
 - The active hardware is confirmed as the photographed target set or the docs
   are updated for a different target.
 - `knowledge-base/source-index.md` contains all source IDs cited by this

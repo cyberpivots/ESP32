@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import shutil
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,6 +17,7 @@ DEFAULT_OUTPUT = ROOT / "build" / "github-pages"
 
 SITE_FILES = [
     "index.html",
+    "prototype.html",
     "blueprints.html",
     "quality.html",
     "styles.css",
@@ -28,6 +30,9 @@ SITE_FILES = [
 SITE_ASSET_FILES = [
     "assets/blueprints/system-overview.webp",
     "assets/blueprints/safety-proof-ladder.webp",
+    "assets/blueprints/prototype-evidence-map.webp",
+    "assets/blueprints/low-voltage-review-sequence.webp",
+    "assets/blueprints/pin-pressure-map.webp",
     "assets/workbench/hero-workbench.webp",
     "assets/workbench/rd-loop-backplate.webp",
     "assets/workbench/admin-hmi-backplate.webp",
@@ -44,8 +49,10 @@ PUBLIC_BUNDLE_FILES = [
     ("docs/projects/four-relay-xbee-wifi/README.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/build-guide.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/architecture.md", "four-relay"),
+    ("docs/projects/four-relay-xbee-wifi/prototype-build-packet.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/prototype-blueprint.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/bench-bring-up-runbook.md", "four-relay"),
+    ("docs/projects/four-relay-xbee-wifi/xbee-public-boundary.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md", "four-relay"),
     (
         "docs/projects/four-relay-xbee-wifi/hardware-circuit-improvement-research.md",
@@ -84,7 +91,6 @@ PUBLIC_BUNDLE_FILES = [
         "hardware-profile",
     ),
     ("hardware-profiles/storage/spi-microsd-reader/README.md", "hardware-profile"),
-    ("comm-protocols/wireless/xbee-api-four-relay.md", "protocol"),
     ("knowledge-base/source-index.md", "source-index"),
     (
         "knowledge-base/source-ledger/2026-05-18-four-relay-xbee-wifi-design.md",
@@ -110,6 +116,10 @@ PUBLIC_BUNDLE_FILES = [
         "knowledge-base/source-ledger/2026-05-19-four-relay-hardware-circuit-improvement.md",
         "source-ledger",
     ),
+    (
+        "knowledge-base/source-ledger/2026-05-21-blueprint-schematic-improvement.md",
+        "source-ledger",
+    ),
 ]
 
 ADMIN_HMI_FILES = [
@@ -123,6 +133,18 @@ ALLOWED_SUFFIXES = {".css", ".html", ".js", ".json", ".md"}
 ALLOWED_PUBLIC_IMAGE_ASSETS = {
     f"site/github-pages/{rel}" for rel in SITE_ASSET_FILES
 }
+
+PUBLIC_SOURCE_INDEX_REDACTIONS = [
+    (re.compile(r"`?/mnt/h/[^`|,) ]+`?"), "[local path redacted]"),
+    (re.compile(r"`?/mnt/c/[^`|,) ]+`?"), "[local path redacted]"),
+    (re.compile(r"`?/home/[A-Za-z0-9_.-]+/[^`|,) ]+`?"), "[local path redacted]"),
+    (re.compile(r"`?/dev/tty[A-Za-z0-9/_-]*`?"), "[serial device redacted]"),
+    (re.compile(r"(?<!-)COM\d+", re.IGNORECASE), "COM port redacted"),
+    (re.compile(r"`?[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}`?"), "[local device identifier redacted]"),
+    (re.compile(r"user_uploads/[A-Za-z0-9_.-]+"), "private upload archive"),
+    (re.compile(r"IMG_\d+\.(?:jpe?g|png|webp)", re.IGNORECASE), "[photo filename redacted]"),
+    (re.compile(r"private bench notes", re.IGNORECASE), "private bench records"),
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -168,7 +190,46 @@ def copy_file(source: Path, destination: Path, artifact_root: Path) -> dict[str,
         raise ValueError(f"not a file: {relative_to_root(source)}")
     assert_safe_source(source)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, destination)
+    if source.suffix.lower() == ".md":
+        destination.write_text(sanitize_public_markdown(source), encoding="utf-8")
+    else:
+        shutil.copy2(source, destination)
+    return {
+        "source": relative_to_root(source),
+        "path": destination.relative_to(artifact_root).as_posix(),
+        "bytes": destination.stat().st_size,
+        "sha256": digest(destination),
+    }
+
+
+def sanitize_public_markdown(source: Path) -> str:
+    text = source.read_text(encoding="utf-8")
+    for pattern, replacement in PUBLIC_SOURCE_INDEX_REDACTIONS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+def sanitize_public_source_index(source: Path) -> str:
+    text = sanitize_public_markdown(source)
+    notice = (
+        "> Public copy: local paths, raw upload archive names, raw photo "
+        "filenames, serial device names, COM ports, and device identifiers are "
+        "redacted in the generated Pages artifact. The repository source index "
+        "keeps the full internal evidence references.\n\n"
+    )
+    return text.replace("# Source Index\n\n", "# Source Index\n\n" + notice, 1)
+
+
+def copy_public_source_index(
+    source: Path,
+    destination: Path,
+    artifact_root: Path,
+) -> dict[str, object]:
+    if not source.exists():
+        raise FileNotFoundError(relative_to_root(source))
+    assert_safe_source(source)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(sanitize_public_source_index(source), encoding="utf-8")
     return {
         "source": relative_to_root(source),
         "path": destination.relative_to(artifact_root).as_posix(),
@@ -210,7 +271,12 @@ def build(out_dir: Path) -> dict[str, object]:
 
     for rel, category in PUBLIC_BUNDLE_FILES:
         source = ROOT / rel
-        record = copy_file(source, out_dir / "bundle" / rel, out_dir)
+        destination = out_dir / "bundle" / rel
+        if rel == "knowledge-base/source-index.md":
+            record = copy_public_source_index(source, destination, out_dir)
+            record["sanitized"] = True
+        else:
+            record = copy_file(source, destination, out_dir)
         record["category"] = category
         manifest_files.append(record)
 
@@ -233,7 +299,7 @@ def build(out_dir: Path) -> dict[str, object]:
                 "generated screenshots except allowlisted technical backplates",
                 "vendor PDFs",
                 "bulky binaries",
-                "private bench notes",
+                "private bench records",
                 "image binaries except named site/github-pages/assets/**/*.webp",
             ],
         },

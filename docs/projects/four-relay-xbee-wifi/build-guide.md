@@ -63,6 +63,10 @@
 
 ## Parts layout
 
+Start public review from [Prototype Build Packet](prototype-build-packet.md).
+This build guide is the low-voltage review order inside that packet, not a
+final construction or load-wiring procedure.
+
 | Area | Current role | Evidence boundary |
 | --- | --- | --- |
 | ESP32 board plus expansion shield | Low-voltage controller target | Visible photo evidence and Espressif module/GPIO sources; exact carrier board still unresolved. |
@@ -122,6 +126,9 @@ labels are not hardware facts and must not be used as wiring evidence.
 
 ## Verification checklist
 
+- Prototype packet page and Markdown link to the visual blueprint, quality
+  evidence, public-safe XBee boundary, source index, known gaps, and stop
+  conditions.
 - Source index contains every source ID cited by this guide.
 - Build artifact includes this guide and the generated manifest records it.
 - Public links resolve for the visual blueprint page, build guide, pin plan,
@@ -134,7 +141,7 @@ labels are not hardware facts and must not be used as wiring evidence.
   `relayExpander.ready`, `relayExpander.lastWrite`, and `mux.ready`.
 - Admin HMI static mode makes no `/api/` requests on GitHub Pages.
 - No vendor PDFs, raw photo archives, generated screenshots, bulky binaries,
-  private bench notes, or `.agents/` records are published in the Pages
+  private bench records, or `.agents/` records are published in the Pages
   artifact.
 
 ## Stop conditions

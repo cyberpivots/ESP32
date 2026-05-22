@@ -16,6 +16,7 @@
       </a>
       <nav aria-label="Primary navigation">
         <a href="index.html#build">Build</a>
+        <a href="prototype.html">Prototype</a>
         <a href="blueprints.html">Blueprints</a>
         <a href="quality.html" aria-current="page">Quality</a>
         <a href="index.html#panels">Panels</a>
@@ -37,9 +38,10 @@
             wired, flashed, switched, or approved for load work.
           </p>
           <div class="hero-actions" aria-label="Quality actions">
+            <a class="button primary" href="prototype.html">Open Prototype Build Packet</a>
             <a class="button primary" href="public-file-manifest.json">Open generated manifest</a>
             <a class="button" href="bundle/docs/github-pages-public-site.md">Open deployment model</a>
-            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md">Open XBee boundary</a>
+            <a class="button" href="bundle/docs/projects/four-relay-xbee-wifi/xbee-public-boundary.md">Open XBee boundary</a>
           </div>
         </div>
         <aside class="blueprint-summary" aria-label="Quality boundary summary">
@@ -87,11 +89,13 @@
 
         <article id="manifest-audit">
           <span>02</span>
-          <h3>Manifest, link, and hash audit</h3>
+          <h3>Manifest, link, content, and hash audit</h3>
           <p>
             <code>scripts/audit_public_manifest.py</code> verifies manifest
             entries, file sizes, SHA-256 hashes, blocked source paths, image
-            allowlist membership, local HTML references, and CSS asset links.
+            allowlist membership, WebP decode/dimensions, public Markdown
+            content redaction, local HTML references, JSON-rendered links, and
+            CSS asset links.
           </p>
           <a href="public-file-manifest.json">Open manifest</a>
         </article>
@@ -128,7 +132,7 @@
             AT-query planning. XBee setting writes, API transmit frames, and
             ESP32 carrier DIN/DOUT wiring remain blocked.
           </p>
-          <a href="bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md">Read XBee proof</a>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/xbee-public-boundary.md">Read XBee boundary</a>
         </article>
 
         <article id="non-coverage">
@@ -217,7 +221,7 @@
           <a href="bundle/knowledge-base/source-index.md">Source index</a>
           <a href="bundle/docs/projects/four-relay-xbee-wifi/rd-loop.md">R&amp;D loop</a>
           <a href="bundle/docs/projects/four-relay-xbee-wifi/mains-readiness-gate.md">Mains readiness gate</a>
-          <a href="bundle/docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md">XBee read-only proof</a>
+          <a href="bundle/docs/projects/four-relay-xbee-wifi/xbee-public-boundary.md">XBee public boundary</a>
           <a href="bundle/docs/projects/four-relay-xbee-wifi/power-and-safety.md">Power and safety gates</a>
         </div>
       </section>

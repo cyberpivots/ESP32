@@ -41,6 +41,10 @@
 
 ## Revised pin strategy
 
+The public [Prototype Build Packet](prototype-build-packet.md) exposes this
+pin plan as a pin-pressure review surface. The map is provisional and does not
+authorize final wiring.
+
 The relay pin-relief path is now a latched output-expander branch, not an
 analog-mux branch. `GPIO25`, `GPIO26`, `GPIO27`, and `GPIO33` remain historical
 direct-relay candidates only; they should be freed if the R61509V TFT branch

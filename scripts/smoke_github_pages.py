@@ -111,11 +111,24 @@ def smoke_artifact(root: Path) -> list[str]:
             "index.html",
             "ESP32 Four-Relay Workbench",
             {
+                "prototype.html",
                 "blueprints.html",
                 "quality.html",
                 "expertPanelList",
                 "demos/admin-hmi/",
                 "public-file-manifest.json",
+            },
+        ),
+        (
+            "prototype.html",
+            "ESP32 Four-Relay Prototype Build Packet",
+            {
+                "prototype-evidence-map.webp",
+                "low-voltage-review-sequence.webp",
+                "pin-pressure-map.webp",
+                "Prototype Build Packet",
+                "No blockers means findability",
+                "xbee-public-boundary.md",
             },
         ),
         (

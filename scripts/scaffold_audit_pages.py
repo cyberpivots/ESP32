@@ -71,33 +71,39 @@ def audit_pages_build(root: Path = ROOT) -> list[str]:
         "user_uploads/",
         "vendor PDFs",
         "bulky binaries",
-        "PRIVATE_BENCH_NOTES",
+        "PRIVATE_BENCH_RECORDS",
     ]:
-        if blocked_marker == "PRIVATE_BENCH_NOTES":
-            if "private bench notes" not in pages_build:
-                failures.append("Pages build script missing private bench notes exclusion")
+        if blocked_marker == "PRIVATE_BENCH_RECORDS":
+            if "private bench records" not in pages_build:
+                failures.append("Pages build script missing private bench records exclusion")
             continue
         if blocked_marker not in pages_build:
             failures.append(f"Pages build script missing exclusion marker: {blocked_marker}")
     for public_marker in [
         "blueprints.html",
+        "prototype.html",
         "quality.html",
         "assets/blueprints/system-overview.webp",
         "assets/blueprints/safety-proof-ladder.webp",
+        "assets/blueprints/prototype-evidence-map.webp",
+        "assets/blueprints/low-voltage-review-sequence.webp",
+        "assets/blueprints/pin-pressure-map.webp",
         "assets/workbench/hero-workbench.webp",
         "assets/workbench/rd-loop-backplate.webp",
         "assets/workbench/admin-hmi-backplate.webp",
         "docs/projects/four-relay-xbee-wifi/build-guide.md",
         "docs/projects/four-relay-xbee-wifi/README.md",
+        "docs/projects/four-relay-xbee-wifi/prototype-build-packet.md",
+        "docs/projects/four-relay-xbee-wifi/xbee-public-boundary.md",
         "docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md",
         "docs/projects/four-relay-xbee-wifi/hardware-circuit-improvement-research.md",
         "docs/projects/four-relay-xbee-wifi/rd-loop.md",
         "hardware-profiles/relays/four-channel/README.md",
         "hardware-profiles/xbee/xbp9b-dput-001/README.md",
         "hardware-profiles/storage/spi-microsd-reader/README.md",
-        "comm-protocols/wireless/xbee-api-four-relay.md",
         "knowledge-base/source-ledger/2026-05-18-xbee-read-only-bench-proof.md",
         "knowledge-base/source-ledger/2026-05-19-four-relay-hardware-circuit-improvement.md",
+        "knowledge-base/source-ledger/2026-05-21-blueprint-schematic-improvement.md",
     ]:
         if public_marker not in pages_build:
             failures.append(f"Pages build script missing public allowlist marker: {public_marker}")
@@ -110,12 +116,17 @@ def audit_pages_build(root: Path = ROOT) -> list[str]:
         ".agents",
         "ALLOWED_IMAGE_SOURCES",
         "audit_links_and_assets",
+        "audit_public_text",
+        "audit_public_source_ids",
+        "SOURCE_ID_PATTERN",
+        "webp_dimensions",
         "sha256 mismatch",
     ]:
         if marker not in manifest_audit:
             failures.append(f"manifest audit helper missing marker: {marker}")
     for marker in [
         "index.html",
+        "prototype.html",
         "blueprints.html",
         "quality.html",
         "demos/admin-hmi/index.html",
@@ -132,7 +143,9 @@ def audit_site_pages(root: Path = ROOT) -> list[str]:
     pages_index = (root / "site/github-pages/index.html").read_text(encoding="utf-8")
     failures.extend(require_markers(pages_index, [
         "ESP32 four-relay workbench",
+        "Open Prototype Build Packet",
         "Open visual blueprint",
+        "prototype.html",
         "blueprints.html",
         "quality.html",
         "Open quality evidence",
@@ -148,6 +161,24 @@ def audit_site_pages(root: Path = ROOT) -> list[str]:
         "Hardware and circuit research",
         "Qualified review gate stays closed",
     ], "Pages index"))
+
+    pages_prototype = (root / "site/github-pages/prototype.html").read_text(
+        encoding="utf-8"
+    )
+    failures.extend(require_markers(pages_prototype, [
+        "Prototype Build Packet",
+        "No blockers means findability",
+        "prototype-evidence-map.webp",
+        "low-voltage-review-sequence.webp",
+        "pin-pressure-map.webp",
+        "bundle/docs/projects/four-relay-xbee-wifi/prototype-build-packet.md",
+        "bundle/docs/projects/four-relay-xbee-wifi/xbee-public-boundary.md",
+        "Generated label-free backplate",
+        "It is not a wiring",
+        "qualified review only",
+        "does not approve final wiring",
+        "Public Markdown content",
+    ], "Pages prototype"))
 
     pages_blueprints = (root / "site/github-pages/blueprints.html").read_text(
         encoding="utf-8"
@@ -177,7 +208,7 @@ def audit_site_pages(root: Path = ROOT) -> list[str]:
     failures.extend(require_markers(pages_quality, [
         "What this public artifact checks",
         "Generated artifact policy",
-        "Manifest, link, and hash audit",
+        "Manifest, link, content, and hash audit",
         "Page smoke checks",
         "Host software contract tests",
         "not electrical safety testing",
@@ -187,6 +218,8 @@ def audit_site_pages(root: Path = ROOT) -> list[str]:
         "Explicit non-coverage",
         "public-file-manifest.json",
         "scripts/audit_public_manifest.py",
+        "public Markdown",
+        "WebP decode",
         "scripts/smoke_github_pages.py",
         "does not validate live ESP32 wiring",
         "Private evidence stays private",

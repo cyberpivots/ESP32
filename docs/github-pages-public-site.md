@@ -63,8 +63,8 @@ The build script copies:
 - named generated public-safe backplates under
   `site/github-pages/assets/blueprints/` and
   `site/github-pages/assets/workbench/`;
-- explicitly allowlisted Markdown files, including the XBee read-only bench
-  proof, into `build/github-pages/bundle/`;
+- explicitly allowlisted Markdown files, including the Prototype Build Packet
+  and public-safe XBee boundary, into `build/github-pages/bundle/`;
 - the existing static admin HMI demo into
   `build/github-pages/demos/admin-hmi/`;
 - a generated `public-file-manifest.json` with paths, byte counts, and hashes.
@@ -95,11 +95,16 @@ Allowed public content:
 Excluded public content:
 
 - `.agents/` records and internal handoffs;
-- `user_uploads/` and raw photo archives;
+- private upload archives and raw photo archives;
 - generated screenshots and bulky media except the two named blueprint
   backplates;
 - copied vendor PDFs or source artifacts;
-- private bench notes or files not listed in `scripts/build_github_pages.py`.
+- private bench records or files not listed in `scripts/build_github_pages.py`.
+
+The generated bundle writes a sanitized public copy of the source index and
+audits public Markdown text for private upload archive names, raw photo
+filenames, local device identifiers, unredacted radio identifiers, AES key
+values, and private bench-note breadcrumbs.
 
 ## Safety Boundary
 

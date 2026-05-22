@@ -73,6 +73,11 @@
 
 ## Current blockers
 
+The public [Prototype Build Packet](prototype-build-packet.md) is now the
+navigation surface for these blockers. This research document remains the
+source-backed hardware/circuit evidence package; no blocker below was closed
+by the public-site packet work.
+
 - Board/shield identity is not closed: vendor, revision, schematic, regulator,
   USB-UART bridge, jumper position, single-source power path, and GPIO
   continuity remain unresolved.

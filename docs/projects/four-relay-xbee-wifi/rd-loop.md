@@ -24,6 +24,10 @@ development without weakening hardware, safety, or public-release gates.
   `SRC-OSHA-GFCI`, `SRC-OSHA-AEGCP`,
   `SRC-OSHA-GROUNDING-OVERCURRENT`, `SRC-OSHA-1910-305`,
   `SRC-NEMA-ENCLOSURES`, `SRC-NEMA-250-ENCLOSURES`.
+- ESP-IDF v6.0.1 is installed locally for this project and the disabled
+  skeleton build passes after sourcing
+  `/home/cyber/.espressif/tools/activate_idf_v6.0.1.sh`. Source ID:
+  `SRC-LOCAL-LIVE-BENCH-PREFLIGHT-2026-05-21`.
 
 ## Assumptions
 
@@ -40,8 +44,10 @@ development without weakening hardware, safety, or public-release gates.
 
 - Exact board, shield, relay-module, MicroSD, TFT, mux, expander, XBee carrier,
   enclosure, and load evidence remain unresolved.
-- ESP-IDF v6.0.1, CMake, Ninja, and flashing tools are not currently proven
-  installed in this shell.
+- Flashing tools are present only as toolchain evidence; flashing remains
+  blocked until physical no-load evidence and recovery records are complete.
+- OpenOCD udev rules were not installed during EIM setup because copying to
+  `/etc/udev/rules.d/` needs elevated permissions.
 - Final pins, relay polarity, driver stage, XBee carrier wiring, storage
   wiring, authentication format, and release packaging remain open.
 
@@ -52,10 +58,11 @@ development without weakening hardware, safety, or public-release gates.
 - No XBee setting writes, `WR`, `AC`, firmware update, factory reset, API
   transmit frames, relay commands over XBee, or ESP32 DIN/DOUT carrier wiring.
 - No relay GPIO writes, expander writes to relay hardware, TFT wiring, firmware
-  flashing, or live bench mutation until the matching milestone gate closes.
-- No `.agents/`, `user_uploads/`, raw photos, vendor PDFs, private bench notes,
-  unredacted radio identifiers, or `research/bench-records/` paths in public
-  artifacts.
+  flashing, monitor automation, or live bench mutation until the matching
+  milestone gate closes.
+- No `.agents/` records, private upload archives, raw photos, vendor PDFs,
+  private bench records, unredacted radio identifiers, or bench-record paths in
+  public artifacts.
 
 ## Milestones
 

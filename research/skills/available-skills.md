@@ -1,34 +1,35 @@
 # Available Skills Inventory
 
-Verified on 2026-05-19 from `SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-05-19`.
+Verified on 2026-05-22 from
+`SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-05-22`.
 
-## Relevant for this task
+## Relevant for the Prototype Build Packet task
 
 | Skill | Path | Current use |
 | --- | --- | --- |
-| skill-creator | `/home/cyber/.codex/skills/.system/skill-creator` | Used to scaffold and validate the new global skill. |
-| openai-docs | `/home/cyber/.codex/skills/.system/openai-docs` | Used to verify current OpenAI model, reasoning, Codex subagent, and Codex config guidance from official docs. |
-| expert-agent-panels | `/home/cyber/.codex/skills/expert-agent-panels` | New output of this task; future trigger for evidence-first specialist panel loops. |
+| expert-agent-panels | `/home/cyber/.codex/skills/expert-agent-panels` | Controls the evidence-first specialist review loop and task/source-record updates. |
+| imagegen | `/home/cyber/.codex/skills/.system/imagegen` | Relevant only for label-free public-safe raster backplates; exact factual labels stay in HTML/Markdown. |
 
 ## Conditional future use
 
 | Skill | Path | Conditional use |
 | --- | --- | --- |
-| github:github | `/home/cyber/.codex/plugins/cache/openai-curated/github/eed16198/skills/github` | Future GitHub repository, PR, or issue orientation. |
-| github:gh-address-comments | `/home/cyber/.codex/plugins/cache/openai-curated/github/eed16198/skills/gh-address-comments` | Future actionable PR review comment handling. |
-| github:gh-fix-ci | `/home/cyber/.codex/plugins/cache/openai-curated/github/eed16198/skills/gh-fix-ci` | Future GitHub Actions failure investigation. |
-| github:yeet | `/home/cyber/.codex/plugins/cache/openai-curated/github/eed16198/skills/yeet` | Future commit, push, and draft PR publishing when explicitly requested. |
+| github:github | `/home/cyber/.codex/plugins/cache/openai-curated/github/004da724/skills/github` | Future GitHub repository, PR, issue, or Pages deployment orientation. |
+| github:gh-address-comments | `/home/cyber/.codex/plugins/cache/openai-curated/github/004da724/skills/gh-address-comments` | Future actionable PR review comment handling. |
+| github:gh-fix-ci | `/home/cyber/.codex/plugins/cache/openai-curated/github/004da724/skills/gh-fix-ci` | Future GitHub Actions failure investigation. |
+| github:yeet | `/home/cyber/.codex/plugins/cache/openai-curated/github/004da724/skills/yeet` | Future commit, push, and draft PR publishing when explicitly requested. |
+| openai-docs | `/home/cyber/.codex/skills/.system/openai-docs` | Future OpenAI API, model, Codex, or prompt-upgrade documentation checks. |
 | plugin-creator | `/home/cyber/.codex/skills/.system/plugin-creator` | Future local plugin scaffolding. |
+| skill-creator | `/home/cyber/.codex/skills/.system/skill-creator` | Future skill creation or update work. |
 | skill-installer | `/home/cyber/.codex/skills/.system/skill-installer` | Future curated or repo-hosted skill installation. |
 
-## Not relevant to this skill creation task
+## Not relevant to this implementation
 
 | Skill | Path | Reason |
 | --- | --- | --- |
-| imagegen | `/home/cyber/.codex/skills/.system/imagegen` | No raster image generation or editing requested. |
-| canva:canva-branded-presentation | `/home/cyber/.codex/plugins/cache/openai-curated/canva/eed16198/skills/canva-branded-presentation` | No Canva deck requested. |
-| canva:canva-resize-for-all-social-media | `/home/cyber/.codex/plugins/cache/openai-curated/canva/eed16198/skills/canva-resize-for-all-social-media` | No Canva social resize requested. |
-| canva:canva-translate-design | `/home/cyber/.codex/plugins/cache/openai-curated/canva/eed16198/skills/canva-translate-design` | No Canva localization requested. |
+| canva:canva-branded-presentation | `/home/cyber/.codex/plugins/cache/openai-curated/canva/004da724/skills/canva-branded-presentation` | No Canva deck requested. |
+| canva:canva-resize-for-all-social-media | `/home/cyber/.codex/plugins/cache/openai-curated/canva/004da724/skills/canva-resize-for-all-social-media` | No Canva social resize requested. |
+| canva:canva-translate-design | `/home/cyber/.codex/plugins/cache/openai-curated/canva/004da724/skills/canva-translate-design` | No Canva localization requested. |
 | davinci-resolve-audio-production | `/home/cyber/.codex/skills/davinci-resolve-audio-production` | DaVinci Resolve audio automation is out of scope. |
 | davinci-resolve-automation | `/home/cyber/.codex/skills/davinci-resolve-automation` | DaVinci Resolve diagnostics and scripting are out of scope. |
 | davinci-resolve-color-automation | `/home/cyber/.codex/skills/davinci-resolve-color-automation` | DaVinci Resolve color automation is out of scope. |
@@ -40,7 +41,8 @@ Verified on 2026-05-19 from `SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-05-19`.
 
 ## Notes
 
-- Plugin skill paths currently use cache hash `eed16198`; older workspace notes
-  with different plugin cache hashes are stale.
-- Future sessions must re-inventory skills before relying on this list because
-  skills and plugin cache paths can change independently of the ESP32 repo.
+- Plugin skill paths currently use cache hash `004da724`.
+- The prior checked-in `36878fcb` and `eed16198` plugin cache hashes are stale.
+- Future sessions must re-inventory skills before relying on path claims
+  because skills and plugin cache paths can change independently of the ESP32
+  repo.

@@ -4,8 +4,11 @@
 
 - Confirm exact firmware framework requirements and constraints for projects not
   covered by ADR-0002.
-- Install or locate ESP-IDF v6.0.1, `idf.py`, esptool, CMake, and Ninja before
-  firmware implementation for `four-relay-xbee-wifi`.
+- Keep ESP-IDF v6.0.1 activation evidence current for
+  `four-relay-xbee-wifi`: the 2026-05-21 cycle installed and built the
+  disabled skeleton, but `idf.py` still requires sourcing the local activation
+  script and OpenOCD udev rules were not installed without elevated
+  permissions.
 - Identify exact photographed ESP32 development board vendor/revision, USB-UART
   bridge, regulator, expansion-shield schematic, jumper position, and GPIO
   continuity for `four-relay-xbee-wifi`.
@@ -47,10 +50,35 @@
   load type, enclosure, overcurrent protection, grounding/bonding, strain
   relief, GFCI/de-energization, separation, labels/disconnect, and test record.
 - Define first flashing target board and recovery method.
+- Incorporate the Windows COM6 DevKitC-class board into the hardware evidence
+  package: local DOS-C evidence identifies ESP32-D0WDQ6 MAC
+  `78:e3:6d:10:4d:6c` behind a CP210x bridge, but this workspace still needs
+  physical carrier-board inspection before pin or flashing decisions.
+- Complete DOSBox-X SLIRP proof from the Windows 3.1 operator console to the
+  simulator at `10.0.2.2:31331`; current bridge proof is host-side protocol
+  tests only.
+- Define the ESP-NOW coordinator serial protocol, peer table, channel policy,
+  and application-level acknowledgement behavior before any DOS-C-to-ESP-NOW
+  bench proof.
+- ESP-NOW BBS lane now has a project-local ESP-IDF v6.0.1 ADR and protocol
+  plan, but still has no firmware source, no coordinator/client flash target,
+  no serial write proof, no peer acceptance proof, and no physical carrier-board
+  inspection for the COM6 candidate coordinator.
+- Resolved on 2026-05-22 for bounded coordinator scope: live Pi USB serial
+  visibility, private flash backup, coordinator flash, `hello`/`state`/`diag`
+  UART proof, and Windows 3.1 OPCON physical coordinator dashboard proof passed.
+  ESP-NOW peer/channel/key proof remains a separate open gap.
+- Keep PCAP bridge acceptance blocked until Pi identity, wired `eth0`,
+  `cap_net_raw` setup, rollback, and redacted packet-capture evidence are
+  recorded.
 
 ## Medium priority
 
 - Select first protocol to implement.
+- Add a checked-in browser QA script for the public Prototype Build Packet so
+  desktop/mobile rendering, decoded WebP dimensions, no console errors, no
+  failed same-origin requests, keyboard focus visibility, and no horizontal
+  overflow are covered by CI instead of local Playwright review only.
 - Add XBee API parser test vectors beyond the current escaped-frame,
   bad-length, truncated-escape, checksum, transmit-status, AT-response, and
   receive-packet payload host vectors.
@@ -63,7 +91,7 @@
 | Blocker | Required evidence record before closure |
 | --- | --- |
 | Framework requirements outside ADR-0002 | Accepted ADR or explicit unresolved-gap note naming the project and blocked framework decision. |
-| ESP-IDF v6.0.1 toolchain | Local toolchain record covering `idf.py`, esptool, CMake, Ninja, Python, shell path, and failure text if absent. |
+| ESP-IDF v6.0.1 toolchain | Closed for the disabled skeleton build by `SRC-LOCAL-LIVE-BENCH-PREFLIGHT-2026-05-21`; refresh if shell/toolchain state changes. Future flash/JTAG work still needs physical no-load evidence, recovery record, and OpenOCD/udev review. |
 | Exact ESP32 board and expansion shield | Physical inspection record with board markings, USB-UART marking, regulator marking, jumper position, continuity notes, and source links where available. |
 | Power entry and protection | Bench power record with selected input source, rail measurements, current-limit setting, brownout observation, reverse-protection decision, overcurrent candidate, TVS/ESD candidate, and test points. |
 | Four-channel relay module | Module identity record with manufacturer/model markings, input voltage, trigger polarity, 3.3 V input current measurement, `JD-VCC`/`VCC` behavior, isolation notes, and contact-rating source. |
@@ -79,6 +107,9 @@
 | Bench instruments and fixtures | Instrument inventory record covering DMM, current-limited supply, logic analyzer or LED proof fixture, USB serial tools, labeled harnesses, low-voltage dummy loads, and calibration/identity notes. |
 | Qualified mains package | Qualified-review package for load type, enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, separation, labels/disconnect, and test record. |
 | First flashing target board | Flash target and recovery record with exact board, boot/recovery method, toolchain proof, and rollback path. |
+| ESP-NOW BBS coordinator/client lane | Peer table/channel/key policy, one-coordinator/one-client ESP-NOW ping/ACK proof, and no relay/XBee/mains/load actions. The 2026-05-22 live Pi coordinator proof closes USB serial dashboard telemetry only. |
+| DOS-C Windows 3.1 TCP bridge | SLIRP acceptance record showing guest ICMP/TCP path to the Pi simulator and operator-console state proof, with generated screenshots and captures kept out of Git. |
+| DOSBox-X PCAP bridge | Pi identity record, wired `eth0` evidence, capability setup and restore evidence, redacted packet-flow proof, and rollback result. |
 
 ## Closure criteria
 

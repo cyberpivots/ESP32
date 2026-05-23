@@ -66,6 +66,7 @@
 - [ESP-NOW BBS source ledger](../knowledge-base/source-ledger/2026-05-20-espnow-bbs.md)
 - [ESP-NOW BBS multi-peer dashboard source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-multipeer-dashboard.md)
 - [ESP-NOW BBS live gate tooling source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-live-gate-tooling.md)
+- [ESP-NOW BBS live preflight source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-live-preflight.md)
 - [ESP-NOW BBS network live-gate source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-network-live-gate.md)
 - [Live bench toolchain source ledger](../knowledge-base/source-ledger/2026-05-21-live-bench-toolchain.md)
 - [Windows ICS Netgear WNR1000 source ledger](../knowledge-base/source-ledger/2026-05-23-windows-ics-netgear-wnr1000.md)

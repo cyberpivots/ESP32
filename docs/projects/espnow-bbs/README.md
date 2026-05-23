@@ -40,6 +40,17 @@ remain outside the ESP32 firmware image.
   `COM4`, `COM5`, `COM6`, Pi `172.16.0.2`, and coordinator `/dev/ttyUSB0`,
   plus prepare/flash manifest tooling that records backups, build hashes, and
   recovery commands before any explicit write-confirmed flash.
+- A fresh read-only preflight on 2026-05-23 found exactly three Windows CP210x
+  ESP32 peers on `COM4`, `COM5`, and `COM6`, all ESP32-D0WDQ6 with 4 MB flash
+  and distinct MACs. Direct Pi access at `172.16.0.2` failed from the current
+  host route, but the accepted WAN-side SSH-forwarded address
+  `192.168.137.93` reached the Pi and passed host-key, hostname, serial, root,
+  `eth0=172.16.0.2/24`, stale listener, stale process, and `/dev/ttyUSB0`
+  presence gates. Pi-side `esptool` was installed from Debian Trixie and the
+  live gate now uses `--no-stub` for Pi coordinator operations. The latest
+  forwarded read-only preflight passed with coordinator MAC
+  `78:e3:6d:10:4d:6c`, distinct from the three peers. Source ID:
+  `SRC-LOCAL-ESPNOW-LIVE-PREFLIGHT-2026-05-23`.
 - ADR-0004 proposes ESP-WIFI-MESH as a future self-healing branch and BLE GATT
   as the Android client-node interface model, but no firmware migration is
   accepted. The paired DOS-C bridge/operator source now has simulator-only
@@ -81,3 +92,6 @@ remain outside the ESP32 firmware image.
 6. Prove multi-peer behavior only under the new three-peer live gate.
 7. Keep ESP-WIFI-MESH/BLE GATT work design-only until ADR-0004 is accepted and
    fresh mesh, BLE, coexistence, backup, recovery, and cleanup evidence exists.
+8. Confirm physical USB-only/no-load/no-relay/no-XBee/no-TFT/no-MicroSD state,
+   then run the backup/manifest `prepare` step before any flash or Win31 live
+   acceptance work.

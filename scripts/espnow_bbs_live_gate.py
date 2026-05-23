@@ -244,7 +244,8 @@ def backup_remote_coordinator(
         "elif command -v esptool.py >/dev/null 2>&1; then ESPTOOL=esptool.py; "
         "elif python3 -c 'import esptool' >/dev/null 2>&1; then ESPTOOL='python3 -m esptool'; "
         "else echo esptool-not-found >&2; exit 127; fi; "
-        f"$ESPTOOL --port {shlex.quote(device['port'])} read-flash 0 ALL {shlex.quote(remote_path)}; "
+        f"$ESPTOOL --no-stub --port {shlex.quote(device['port'])} "
+        f"read-flash 0 ALL {shlex.quote(remote_path)}; "
         f"sha256sum {shlex.quote(remote_path)}"
     )
     read_result = run_command(
@@ -533,7 +534,7 @@ def flash_remote_coordinator(
             "elif command -v esptool.py >/dev/null 2>&1; then ESPTOOL=esptool.py; "
             "elif python3 -c 'import esptool' >/dev/null 2>&1; then ESPTOOL='python3 -m esptool'; "
             "else echo esptool-not-found >&2; exit 127; fi; "
-            "$ESPTOOL --port "
+            "$ESPTOOL --no-stub --port "
             + shlex.quote(device["port"])
             + " "
             + shlex.join([command] + rest)

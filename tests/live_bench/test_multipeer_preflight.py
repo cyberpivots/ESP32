@@ -121,6 +121,15 @@ def failure_codes(record: dict[str, object]) -> set[str]:
 
 
 class MultiPeerPreflightTests(unittest.TestCase):
+    def test_forwarded_pi_host_uses_expected_identity_profile(self) -> None:
+        self.assertTrue(live_bench_preflight.uses_expected_pi_profile("172.16.0.2"))
+        self.assertTrue(live_bench_preflight.uses_expected_pi_profile("192.168.137.93"))
+        self.assertFalse(live_bench_preflight.uses_expected_pi_profile("192.168.200.104"))
+
+    def test_pi_coordinator_identity_uses_no_stub(self) -> None:
+        script = live_bench_preflight.build_pi_remote_script("/dev/ttyUSB0", False)
+        self.assertIn('--no-stub --port "$COORDINATOR_PORT"', script)
+
     def test_good_inventory_maps_ports_by_order(self) -> None:
         record = live_bench_preflight.validate_preflight_record(base_record())
         self.assertTrue(record["ok"])
@@ -128,6 +137,14 @@ class MultiPeerPreflightTests(unittest.TestCase):
         self.assertEqual(record["peerMap"]["peer02"]["windowsPort"], "COM5")
         self.assertEqual(record["peerMap"]["peer03"]["windowsPort"], "COM6")
         self.assertEqual(record["coordinatorMap"]["mac"], "78:e3:6d:10:4d:6c")
+
+    def test_summary_reports_ready_gate_without_command_logs(self) -> None:
+        record = live_bench_preflight.validate_preflight_record(base_record())
+        summary = live_bench_preflight.summarize_preflight_record(record)
+        self.assertTrue(summary["ok"])
+        self.assertEqual(summary["readiness"], "ready_for_prepare")
+        self.assertEqual(summary["peers"]["COM4"]["mac"], "78:e3:6d:0a:90:14")
+        self.assertNotIn("commands", summary["peers"]["COM4"])
 
     def test_missing_peer_fails(self) -> None:
         record = base_record()
@@ -156,6 +173,9 @@ class MultiPeerPreflightTests(unittest.TestCase):
         checked = live_bench_preflight.validate_preflight_record(record)
         self.assertFalse(checked["ok"])
         self.assertIn("piFingerprintMismatch", failure_codes(checked))
+        summary = live_bench_preflight.summarize_preflight_record(checked)
+        self.assertEqual(summary["readiness"], "blocked_pi_identity")
+        self.assertIn("172.16.0.2", summary["nextAction"])
 
     def test_stale_listener_fails(self) -> None:
         record = base_record()
@@ -177,6 +197,23 @@ class MultiPeerPreflightTests(unittest.TestCase):
         checked = live_bench_preflight.validate_preflight_record(record)
         self.assertFalse(checked["ok"])
         self.assertIn("coordinatorUsbMissing", failure_codes(checked))
+
+    def test_missing_pi_esptool_has_specific_blocker(self) -> None:
+        record = base_record()
+        record["piIdentity"]["coordinatorEsp32Identity"] = {
+            "ok": False,
+            "error": "Pi esptool command is not available",
+            "commands": {
+                command: {"returncode": 127, "stdout": ["esptool not found"], "stderr": []}
+                for command in live_bench_preflight.ALLOWED_ESPTOOL_COMMANDS
+            },
+            "parsedIdentity": live_bench_preflight.parse_esptool_identity({}),
+        }
+        checked = live_bench_preflight.validate_preflight_record(record)
+        self.assertFalse(checked["ok"])
+        self.assertIn("piCoordinatorToolMissing", failure_codes(checked))
+        summary = live_bench_preflight.summarize_preflight_record(checked)
+        self.assertEqual(summary["readiness"], "blocked_pi_esptool")
 
     def test_malformed_esptool_output_fails(self) -> None:
         record = base_record()

@@ -28,6 +28,7 @@ OUT_ROOT = ROOT / "research" / "bench-records" / "live-bench"
 DEFAULT_WINDOWS_PORTS = ["COM4", "COM5", "COM6"]
 DEFAULT_PI_USER = "dospi"
 DEFAULT_PI_HOST = "172.16.0.2"
+ACCEPTED_PI_ACCESS_HOSTS = {DEFAULT_PI_HOST, "192.168.137.93"}
 DEFAULT_COORDINATOR_PORT = "/dev/ttyUSB0"
 
 EXPECTED_USB = {
@@ -129,6 +130,10 @@ def normalize_flash_size(value: str | None) -> str | None:
     compact = re.sub(r"\s+", "", value.upper())
     compact = compact.replace("MIB", "MB").replace("KIB", "KB")
     return compact
+
+
+def uses_expected_pi_profile(host: str) -> bool:
+    return host in ACCEPTED_PI_ACCESS_HOSTS
 
 
 def run_command(
@@ -666,6 +671,17 @@ def finalize_esp32_identity(record: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
+def remote_coordinator_tool_missing(record: dict[str, Any]) -> bool:
+    commands = record.get("commands", {})
+    if not commands:
+        return False
+    for result in commands.values():
+        text = "\n".join(result.get("stdout", []) + result.get("stderr", []))
+        if result.get("returncode") != 127 or "esptool not found" not in text:
+            return False
+    return True
+
+
 def parse_fingerprint_lines(lines: list[str]) -> dict[str, str]:
     fingerprints: dict[str, str] = {}
     for line in lines:
@@ -687,7 +703,7 @@ def collect_pi_identity(
 ) -> dict[str, Any]:
     record: dict[str, Any] = {
         "target": f"{user}@{host}",
-        "expected": EXPECTED_PI if host == DEFAULT_PI_HOST else None,
+        "expected": EXPECTED_PI if uses_expected_pi_profile(host) else None,
         "coordinatorPort": coordinator_port,
     }
     keyscan = run_command(["ssh-keyscan", "-T", "5", host], timeout=8.0)
@@ -697,7 +713,7 @@ def collect_pi_identity(
     record["sshFingerprints"] = keygen
     observed = parse_fingerprint_lines(keygen.get("stdout", []))
     record["observedFingerprints"] = observed
-    expected = EXPECTED_PI["sshFingerprints"] if host == DEFAULT_PI_HOST else {}
+    expected = EXPECTED_PI["sshFingerprints"] if uses_expected_pi_profile(host) else {}
     record["fingerprintCheck"] = {
         "ok": bool(expected) and observed == expected,
         "expected": expected,
@@ -806,7 +822,7 @@ if [ "$SKIP_COORDINATOR" = "0" ]; then
     for CMD in chip_id read_mac flash_id; do
       echo "__coordinator_${{CMD}}__"
       if [ -n "$ESPTOOL" ]; then
-        $ESPTOOL --port "$COORDINATOR_PORT" "$CMD" 2>&1
+        $ESPTOOL --no-stub --port "$COORDINATOR_PORT" "$CMD" 2>&1
         RC=$?
       else
         echo "esptool not found"
@@ -841,7 +857,7 @@ def section_value(lines: list[str], section: str) -> list[str]:
 
 
 def check_pi_identity(lines: list[str], host: str, coordinator_port: str) -> dict[str, Any]:
-    expected = EXPECTED_PI if host == DEFAULT_PI_HOST else {}
+    expected = EXPECTED_PI if uses_expected_pi_profile(host) else {}
     hostnamectl = "\n".join(section_value(lines, "hostnamectl"))
     model = " ".join(section_value(lines, "model")).strip()
     serial = " ".join(section_value(lines, "serial")).strip()
@@ -942,6 +958,9 @@ def parse_remote_coordinator_identity(
         "portKind": "pi-ssh",
         "commands": commands,
     }
+    if remote_coordinator_tool_missing(record):
+        record["toolMissing"] = True
+        record["error"] = "Pi esptool command is not available"
     finalize_esp32_identity(record)
     return record
 
@@ -1089,6 +1108,15 @@ def validate_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
                 "value": "Coordinator identity was skipped",
             }
         )
+    elif remote_coordinator_tool_missing(coordinator) or coordinator.get("toolMissing"):
+        failures.append(
+            {
+                "section": "piIdentity.coordinatorEsp32Identity",
+                "name": "coordinatorTool",
+                "code": "piCoordinatorToolMissing",
+                "value": "Pi esptool command is not available",
+            }
+        )
     elif not coordinator.get("ok"):
         failures.append(
             {
@@ -1144,6 +1172,91 @@ def validate_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
     record["failures"] = failures
     record["ok"] = not failures
     return record
+
+
+def summarize_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
+    """Return a compact, non-secret gate summary for operator review."""
+
+    peer_summary = {}
+    for port, identity in sorted(
+        record.get("peerEsp32Identities", {}).get("ports", {}).items()
+    ):
+        parsed = identity.get("parsedIdentity", {})
+        peer_summary[port] = {
+            "ok": bool(identity.get("ok")),
+            "mac": parsed.get("mac"),
+            "chip": parsed.get("chip"),
+            "flashSize": parsed.get("flashSize"),
+            "wslPort": identity.get("wslPort"),
+            "tool": " ".join(identity.get("tool", {}).get("argv", [])) or None,
+        }
+
+    coordinator_identity = (
+        record.get("piIdentity", {})
+        .get("coordinatorEsp32Identity", {})
+    )
+    coordinator_parsed = coordinator_identity.get("parsedIdentity", {})
+    coordinator_error = coordinator_identity.get("error")
+    if remote_coordinator_tool_missing(coordinator_identity):
+        coordinator_error = "Pi esptool command is not available"
+    failure_codes = [
+        failure.get("code", "gateFailed")
+        for failure in record.get("failures", [])
+        if isinstance(failure, dict)
+    ]
+
+    if record.get("ok"):
+        next_action = (
+            "Confirm physical USB-only/no-load state, then run "
+            "scripts/espnow_bbs_live_gate.py prepare with "
+            "--confirm-read-flash-backups."
+        )
+        readiness = "ready_for_prepare"
+    elif "piFingerprintMismatch" in failure_codes:
+        next_action = (
+            "Restore or verify Pi SSH reachability at 172.16.0.2, then rerun "
+            "the read-only preflight before any backup or flash step."
+        )
+        readiness = "blocked_pi_identity"
+    elif "piCoordinatorToolMissing" in failure_codes:
+        next_action = (
+            "Install or activate esptool on the verified Pi, then rerun the "
+            "read-only preflight before any backup or flash step."
+        )
+        readiness = "blocked_pi_esptool"
+    elif "coordinatorUsbMissing" in failure_codes or "malformedCoordinatorIdentity" in failure_codes:
+        next_action = (
+            "Restore or verify the Pi /dev/ttyUSB0 coordinator identity, then "
+            "rerun the read-only preflight."
+        )
+        readiness = "blocked_coordinator_identity"
+    else:
+        next_action = "Resolve listed failures and rerun the read-only preflight."
+        readiness = "blocked"
+
+    return {
+        "ok": bool(record.get("ok")),
+        "readiness": readiness,
+        "generatedAt": record.get("generatedAt"),
+        "outputPath": record.get("outputPath"),
+        "expectedPeerPorts": record.get("expectedPeerPorts", DEFAULT_WINDOWS_PORTS),
+        "peers": peer_summary,
+        "peerMap": record.get("peerMap", {}),
+        "piTarget": record.get("piIdentity", {}).get("target"),
+        "coordinator": {
+            "ok": bool(coordinator_identity.get("ok")),
+            "port": record.get("coordinatorPort", DEFAULT_COORDINATOR_PORT),
+            "mac": coordinator_parsed.get("mac"),
+            "chip": coordinator_parsed.get("chip"),
+            "flashSize": coordinator_parsed.get("flashSize"),
+            "error": coordinator_error,
+        },
+        "verifiedFacts": record.get("verifiedFacts", []),
+        "failures": record.get("failures", []),
+        "unknowns": record.get("unknowns", []),
+        "readOnlyBoundary": record.get("readOnlyBoundary", {}),
+        "nextAction": next_action,
+    }
 
 
 def validate_output_path(out_path: Path | None) -> Path | None:
@@ -1256,7 +1369,14 @@ def parse_args() -> argparse.Namespace:
         help="Expected Windows CP210x peer ports in peer order.",
     )
     parser.add_argument("--pi-user", default=DEFAULT_PI_USER)
-    parser.add_argument("--pi-host", default=DEFAULT_PI_HOST)
+    parser.add_argument(
+        "--pi-host",
+        default=DEFAULT_PI_HOST,
+        help=(
+            "Pi SSH access host. Accepted live-gate hosts are direct "
+            "172.16.0.2 and forwarded 192.168.137.93."
+        ),
+    )
     parser.add_argument("--coordinator-port", default=DEFAULT_COORDINATOR_PORT)
     parser.add_argument(
         "--skip-peers",
@@ -1278,6 +1398,16 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Optional JSON output path under research/bench-records/live-bench/.",
     )
+    parser.add_argument(
+        "--from-record",
+        type=Path,
+        help="Summarize and revalidate an existing preflight JSON without probing hardware.",
+    )
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="Print a concise gate summary instead of the full evidence JSON.",
+    )
     args = parser.parse_args()
     args.windows_ports = [normalize_windows_port(port) for port in args.windows_ports]
     if args.windows_ports != DEFAULT_WINDOWS_PORTS:
@@ -1289,8 +1419,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    record = build_record(args)
-    print(json.dumps(record, indent=2, sort_keys=True))
+    if args.from_record:
+        record = json.loads(args.from_record.read_text(encoding="utf-8"))
+        validate_preflight_record(record)
+        output = summarize_preflight_record(record)
+    else:
+        record = build_record(args)
+        output = summarize_preflight_record(record) if args.summary else record
+    print(json.dumps(output, indent=2, sort_keys=True))
     return 0 if record.get("ok") else 2
 
 

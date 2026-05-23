@@ -20,6 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DOSC_ROOT = Path("/mnt/h/dos-c")
 DEFAULT_LIVE_ROOT = DEFAULT_DOSC_ROOT / "secrets" / "espnow-bbs"
 DEFAULT_COORDINATOR_PORT = "/dev/ttyUSB0"
+REMOTE_ESPNOW_ESPTOOL = (
+    "/home/dospi/dos-c/artifacts/runtime/esptool-venv-espnow-encrypted/bin/esptool.py"
+)
 FLASH_ORDER = ["coordinator", "peer01", "peer02", "peer03"]
 FORBIDDEN_FLASH_ARGS = {
     "--trust-flash-content",
@@ -141,6 +144,93 @@ def run_esptool_with_spelling_fallback(
     return first or {"available": False, "argv": argv_prefix, "error": "no command attempted"}
 
 
+def wsl_path_to_windows(path: Path) -> str:
+    text = str(path)
+    if text.startswith("/mnt/") and len(text) >= 7 and text[5].isalpha() and text[6] == "/":
+        drive = text[5].upper()
+        rest = text[7:].replace("/", "\\")
+        return f"{drive}:\\{rest}" if rest else f"{drive}:\\"
+    return text
+
+
+def local_file_arg(device: dict[str, Any], path: Path) -> str:
+    if device.get("portKind") == "windows":
+        return wsl_path_to_windows(path)
+    return str(path)
+
+
+def remote_esptool_setup_script() -> str:
+    """Select the coordinator-side esptool runtime used by proven Pi backups."""
+    return (
+        f"REMOTE_ESPNOW_ESPTOOL={shlex.quote(REMOTE_ESPNOW_ESPTOOL)}; "
+        "ESPTOOL_KIND=path; "
+        "ESPTOOL_STUB_ARGS=''; "
+        "if [ -n \"${ESPNOW_BBS_ESPTOOL:-}\" ]; then "
+        "if [ -x \"$ESPNOW_BBS_ESPTOOL\" ]; then "
+        "ESPTOOL=\"$ESPNOW_BBS_ESPTOOL\"; ESPTOOL_LABEL=\"$ESPNOW_BBS_ESPTOOL\"; "
+        "else echo espnow-bbs-esptool-env-not-executable >&2; exit 127; fi; "
+        "elif [ -x \"$REMOTE_ESPNOW_ESPTOOL\" ]; then "
+        "ESPTOOL=\"$REMOTE_ESPNOW_ESPTOOL\"; ESPTOOL_LABEL=\"$REMOTE_ESPNOW_ESPTOOL\"; "
+        "elif command -v esptool >/dev/null 2>&1; then "
+        "ESPTOOL=esptool; ESPTOOL_LABEL=$(command -v esptool); ESPTOOL_STUB_ARGS='--no-stub'; "
+        "elif command -v esptool.py >/dev/null 2>&1; then "
+        "ESPTOOL=esptool.py; ESPTOOL_LABEL=$(command -v esptool.py); ESPTOOL_STUB_ARGS='--no-stub'; "
+        "elif python3 -c 'import esptool' >/dev/null 2>&1; then "
+        "ESPTOOL_KIND=python_module; ESPTOOL_LABEL='python3 -m esptool'; "
+        "ESPTOOL_STUB_ARGS='--no-stub'; "
+        "else echo esptool-not-found >&2; exit 127; fi; "
+        "echo \"__espnow_bbs_esptool__ ${ESPTOOL_LABEL} stub_args=${ESPTOOL_STUB_ARGS:-none}\"; "
+        "run_esptool() { "
+        "if [ \"$ESPTOOL_KIND\" = python_module ]; then python3 -m esptool \"$@\"; "
+        "else \"$ESPTOOL\" \"$@\"; fi; "
+        "}; "
+    )
+
+
+def remote_esptool_invocation(port: str, command: str, rest: list[str]) -> str:
+    return (
+        remote_esptool_setup_script()
+        + "run_esptool $ESPTOOL_STUB_ARGS --port "
+        + shlex.quote(port)
+        + " "
+        + shlex.join([command] + rest)
+    )
+
+
+def idf_py_command(env: dict[str, str]) -> list[str]:
+    resolved = shutil.which("idf.py", path=env.get("PATH"))
+    if resolved:
+        return [resolved]
+    idf_path = env.get("IDF_PATH")
+    if idf_path:
+        idf_script = Path(idf_path) / "tools" / "idf.py"
+        if idf_script.exists():
+            python_env = env.get("IDF_PYTHON_ENV_PATH")
+            if python_env:
+                python = Path(python_env) / "bin" / "python"
+                if python.exists():
+                    return [str(python), str(idf_script)]
+            return [sys.executable, str(idf_script)]
+    return ["idf.py"]
+
+
+def idf_build_command(
+    env: dict[str, str],
+    project: Path,
+    build_dir: Path,
+    sdkconfig: Path,
+) -> list[str]:
+    return idf_py_command(env) + [
+        "-C",
+        str(project),
+        "-B",
+        str(build_dir),
+        "-D",
+        f"SDKCONFIG={sdkconfig}",
+        "build",
+    ]
+
+
 def load_passing_preflight(path: Path) -> dict[str, Any]:
     record = json_load(path)
     preflight.validate_preflight_record(record)
@@ -212,11 +302,12 @@ def backup_local_peer(device: dict[str, Any], backup_dir: Path) -> dict[str, Any
     target = backup_dir / f"{device['role']}-{device['windowsPort']}-full-flash.bin"
     if target.exists():
         raise SystemExit(f"refusing to overwrite backup: {target}")
+    target_arg = local_file_arg(device, target)
     result = run_esptool_with_spelling_fallback(
         list(device["tool"]["argv"]),
         device["port"],
         "read-flash",
-        ["0", "ALL", str(target)],
+        ["0", "ALL", target_arg],
         timeout=600.0,
     )
     require_success(result, f"read-flash backup for {device['role']}")
@@ -240,12 +331,8 @@ def backup_remote_coordinator(
     remote_path = f"/tmp/espnow-bbs-{stamp}-coordinator-full-flash.bin"
     remote_script = (
         "set -eu; "
-        "if command -v esptool >/dev/null 2>&1; then ESPTOOL=esptool; "
-        "elif command -v esptool.py >/dev/null 2>&1; then ESPTOOL=esptool.py; "
-        "elif python3 -c 'import esptool' >/dev/null 2>&1; then ESPTOOL='python3 -m esptool'; "
-        "else echo esptool-not-found >&2; exit 127; fi; "
-        f"$ESPTOOL --no-stub --port {shlex.quote(device['port'])} "
-        f"read_flash 0 ALL {shlex.quote(remote_path)}; "
+        + remote_esptool_invocation(device["port"], "read_flash", ["0", "ALL", remote_path])
+        + "; "
         f"sha256sum {shlex.quote(remote_path)}"
     )
     read_result = run_command(
@@ -320,10 +407,13 @@ def build_role(
         project = dosc_root / "firmware" / "espnow-bbs" / "peer"
         override = live_dir / f"{role}.sdkconfig.defaults"
     build_dir = live_dir / "builds" / role
+    sdkconfig = live_dir / "sdkconfigs" / f"{role}.sdkconfig"
+    sdkconfig.parent.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env["SDKCONFIG_DEFAULTS"] = f"sdkconfig.defaults;{override}"
+    env["SDKCONFIG"] = str(sdkconfig)
     result = run_command(
-        ["idf.py", "-C", str(project), "-B", str(build_dir), "build"],
+        idf_build_command(env, project, build_dir, sdkconfig),
         env=env,
         timeout=900.0,
     )
@@ -332,6 +422,7 @@ def build_role(
     artifact["buildCommand"] = result
     artifact["project"] = str(project)
     artifact["sdkconfigDefaults"] = env["SDKCONFIG_DEFAULTS"]
+    artifact["sdkconfig"] = str(sdkconfig)
     return artifact
 
 
@@ -443,17 +534,40 @@ def verify_current_identities(manifest: dict[str, Any], known_hosts: Path) -> di
     return results
 
 
-def write_flash_args(build: dict[str, Any], *, remote_dir: str | None = None) -> list[str]:
+def build_file_arg(
+    path: Path,
+    *,
+    remote_dir: str | None = None,
+    path_arg: Any | None = None,
+) -> str:
+    if remote_dir:
+        return f"{remote_dir}/{path.name}"
+    if path_arg:
+        return path_arg(path)
+    return str(path)
+
+
+def write_flash_args(
+    build: dict[str, Any],
+    *,
+    remote_dir: str | None = None,
+    path_arg: Any | None = None,
+) -> list[str]:
     args = list(build.get("writeFlashArgs", []))
     reject_forbidden_flash_args(args)
     for item in build["files"]:
         args.append(item["offset"])
         path = Path(item["path"])
-        args.append(f"{remote_dir}/{path.name}" if remote_dir else str(path))
+        args.append(build_file_arg(path, remote_dir=remote_dir, path_arg=path_arg))
     return args
 
 
-def verify_flash_args(build: dict[str, Any], *, remote_dir: str | None = None) -> list[str] | None:
+def verify_flash_args(
+    build: dict[str, Any],
+    *,
+    remote_dir: str | None = None,
+    path_arg: Any | None = None,
+) -> list[str] | None:
     settings = build.get("flashSettings", {})
     if not all(settings.get(key) for key in ["flash_mode", "flash_size", "flash_freq"]):
         return None
@@ -468,7 +582,7 @@ def verify_flash_args(build: dict[str, Any], *, remote_dir: str | None = None) -
     for item in build["files"]:
         args.append(item["offset"])
         path = Path(item["path"])
-        args.append(f"{remote_dir}/{path.name}" if remote_dir else str(path))
+        args.append(build_file_arg(path, remote_dir=remote_dir, path_arg=path_arg))
     return args
 
 
@@ -477,12 +591,12 @@ def flash_local_peer(device: dict[str, Any], build: dict[str, Any]) -> dict[str,
         list(device["tool"]["argv"]),
         device["port"],
         "write-flash",
-        write_flash_args(build),
+        write_flash_args(build, path_arg=lambda path: local_file_arg(device, path)),
         timeout=700.0,
     )
     require_success(write, f"write-flash {device['role']}")
     record: dict[str, Any] = {"writeFlash": write}
-    verify_args = verify_flash_args(build)
+    verify_args = verify_flash_args(build, path_arg=lambda path: local_file_arg(device, path))
     if verify_args:
         verify = run_esptool_with_spelling_fallback(
             list(device["tool"]["argv"]),
@@ -530,14 +644,7 @@ def flash_remote_coordinator(
     def remote_esptool(command: str, rest: list[str], timeout: float) -> dict[str, Any]:
         remote_script = (
             "set -eu; "
-            "if command -v esptool >/dev/null 2>&1; then ESPTOOL=esptool; "
-            "elif command -v esptool.py >/dev/null 2>&1; then ESPTOOL=esptool.py; "
-            "elif python3 -c 'import esptool' >/dev/null 2>&1; then ESPTOOL='python3 -m esptool'; "
-            "else echo esptool-not-found >&2; exit 127; fi; "
-            "$ESPTOOL --no-stub --port "
-            + shlex.quote(device["port"])
-            + " "
-            + shlex.join([command] + rest)
+            + remote_esptool_invocation(device["port"], command, rest)
         )
         result = run_command(ssh_base(device["target"], known_hosts) + [remote_script], timeout=timeout)
         if result.get("returncode") != 0 and command_not_supported(result):
@@ -629,12 +736,14 @@ def recovery_commands(devices: dict[str, Any], backups: dict[str, Any]) -> dict[
         if role == "coordinator":
             commands[role] = (
                 f"copy {backup} to {device['target']} and run: "
-                f"esptool --port {device['port']} write_flash 0x0 <backup-file>"
+                f"{REMOTE_ESPNOW_ESPTOOL} --port {device['port']} "
+                "write-flash 0x0 <backup-file>"
             )
         else:
+            backup_arg = local_file_arg(device, Path(backup))
             commands[role] = (
                 f"{shlex.join(device['tool']['argv'])} --port {device['port']} "
-                f"write-flash 0x0 {backup}"
+                f"write-flash 0x0 {backup_arg}"
             )
     return commands
 

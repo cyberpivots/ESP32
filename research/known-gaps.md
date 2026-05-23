@@ -59,14 +59,17 @@
   tests only.
 - ESP-NOW BBS lane now has a project-local ESP-IDF v6.0.1 ADR, accepted
   coordinator USB serial proof, encrypted one-peer firmware/bridge/OPCON
-  implementation, Windows COM6 peer identity/backup/flash/send-loop proof, and
-  accepted live encrypted one-coordinator/one-peer RX/TX/ACK OPCON proof.
+  implementation, Windows COM6 peer identity/backup/flash/send-loop proof,
+  accepted live encrypted one-coordinator/one-peer RX/TX/ACK OPCON proof, and
+  accepted 2026-05-23 USB-only three-peer live completion evidence.
 - ESP-NOW BBS three-peer live gate tooling exists for COM4/COM5/COM6 and Pi
-  `/dev/ttyUSB0`. A fresh same-session preflight passed on 2026-05-23, but the
-  three-peer live attempt stopped at the coordinator full-flash backup when
-  Pi-side `read_flash` failed around 50% with an esptool CRC/checksum error.
-  Build hashes, flashing, Win3.1/Pi three-peer acceptance, and radio proof
-  remain unproven.
+  `/dev/ttyUSB0`. The 2026-05-23 run first stopped at coordinator full-flash
+  backup due a Pi-side esptool CRC/checksum error, then completed after the
+  gate switched coordinator backup/flash to the proven Pi esptool venv/stub
+  runtime, translated Windows peer artifact paths, resolved activated ESP-IDF
+  `idf.py`, and isolated per-role `SDKCONFIG`. Corrected evidence records
+  complete backups, manifest, flash/verify, three `espnow-enc` peers, moving
+  RX/TX/ACK counters, Win31 runtime captures, and cleanup.
 - Resolved on 2026-05-22 for bounded coordinator scope: live Pi USB serial
   visibility, private flash backup, coordinator flash, `hello`/`state`/`diag`
   UART proof, and Windows 3.1 OPCON physical coordinator dashboard proof passed.
@@ -111,7 +114,7 @@
 | Bench instruments and fixtures | Instrument inventory record covering DMM, current-limited supply, logic analyzer or LED proof fixture, USB serial tools, labeled harnesses, low-voltage dummy loads, and calibration/identity notes. |
 | Qualified mains package | Qualified-review package for load type, enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, separation, labels/disconnect, and test record. |
 | First flashing target board | Flash target and recovery record with exact board, boot/recovery method, toolchain proof, and rollback path. |
-| ESP-NOW BBS coordinator/client lane | Closed for the first one-coordinator/one-peer encrypted proof by `SRC-LOCAL-ESPNOW-ENCRYPTED-PEER-2026-05-22`. `SRC-LOCAL-ESPNOW-LIVE-GATE-TOOLING-2026-05-23` adds tooling for the three-peer gate, and `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23` records a fresh passing preflight plus a coordinator backup CRC/checksum blocker. Future evidence is still required for complete coordinator and peer backups, build hashes, flashes, three-peer radio behavior, chunked message delivery, provisioning UX, firmware inventory, or any physical wiring beyond USB-only. |
+| ESP-NOW BBS coordinator/client lane | Closed for the first one-coordinator/one-peer encrypted proof by `SRC-LOCAL-ESPNOW-ENCRYPTED-PEER-2026-05-22`. `SRC-LOCAL-ESPNOW-LIVE-GATE-TOOLING-2026-05-23` adds tooling for the three-peer gate, and `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23` records the initial coordinator backup CRC/checksum blocker plus the corrected USB-only three-peer live completion with backups, build hashes, flash/verify evidence, three `espnow-enc` peers, moving RX/TX/ACK counters, and cleanup. Future evidence is still required for chunked message delivery, provisioning UX, BLE, ESP-WIFI-MESH, or any physical wiring beyond USB-only. |
 | DOS-C Windows 3.1 TCP bridge | SLIRP acceptance record showing guest ICMP/TCP path to the Pi simulator and operator-console state proof, with generated screenshots and captures kept out of Git. |
 | DOSBox-X PCAP bridge | Pi identity record, wired `eth0` evidence, capability setup and restore evidence, redacted packet-flow proof, and rollback result. |
 

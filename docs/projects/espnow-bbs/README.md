@@ -51,11 +51,16 @@ remain outside the ESP32 firmware image.
   forwarded read-only preflight passed with coordinator MAC
   `78:e3:6d:10:4d:6c`, distinct from the three peers. Source ID:
   `SRC-LOCAL-ESPNOW-LIVE-PREFLIGHT-2026-05-23`.
-- A later 2026-05-23 three-peer live attempt passed fresh preflight and fixed
-  two prepare-tooling issues, but stopped before any valid backup or flash:
-  Pi-side coordinator `read_flash` reached about 50% of the 4 MB read and
-  failed with an esptool CRC/checksum error. No peer backup, build manifest,
-  bridge launch, Win31 proof, or three-peer radio acceptance was produced.
+- A later 2026-05-23 three-peer live attempt first stopped before any valid
+  backup or flash when Pi Debian `esptool --no-stub read_flash` failed around
+  50% with a CRC/checksum error. The blocker was resolved by using the proven
+  Pi esptool venv/stub runtime for coordinator backup/flash, translating
+  Windows peer artifact paths, resolving activated ESP-IDF `idf.py`, and
+  isolating per-role `SDKCONFIG`. Corrected proof records four full-flash
+  backups, complete manifest, coordinator plus `peer01`/`peer02`/`peer03`
+  flash/verify evidence, three `espnow-enc` peers, moving RX/TX/ACK counters
+  from `126/126/126` to `129/129/129`, Win31 runtime captures, Program Manager
+  helper proof, and final cleanup.
   Source ID: `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23`.
 - ADR-0004 proposes ESP-WIFI-MESH as a future self-healing branch and BLE GATT
   as the Android client-node interface model, but no firmware migration is
@@ -83,10 +88,10 @@ remain outside the ESP32 firmware image.
   stale listener absence, and private backup passed.
 - Relay, XBee, TFT, MicroSD, load, mains, PCAP, Windows COM proxy, erase, and
   dashboard state-changing commands remain closed.
-- Three-peer flashing remains closed until the new live gate passes in a fresh
-  same-session run, coordinator and peer backups complete, the manifest is
-  reviewed, and `scripts/espnow_bbs_live_gate.py flash` is invoked with
-  explicit write confirmation.
+- The 2026-05-23 USB-only three-peer flashing gate is closed by corrected
+  evidence for the current coordinator and peers only; future reruns still
+  require fresh same-session identity, backups, manifest review, explicit
+  write confirmation, and cleanup proof.
 
 ## Implementation Order
 
@@ -96,9 +101,9 @@ remain outside the ESP32 firmware image.
 3. Preserve the accepted coordinator USB serial `hello`/`state`/`diag` proof.
 4. Add chunked message delivery and custody telemetry.
 5. Add provisioning and firmware inventory flows.
-6. Prove multi-peer behavior only under the new three-peer live gate.
+6. Preserve the accepted three-peer live gate evidence and require a fresh
+   same-session gate for any rerun or new hardware mix.
 7. Keep ESP-WIFI-MESH/BLE GATT work design-only until ADR-0004 is accepted and
    fresh mesh, BLE, coexistence, backup, recovery, and cleanup evidence exists.
-8. Confirm physical USB-only/no-load/no-relay/no-XBee/no-TFT/no-MicroSD state,
-   then resolve the coordinator backup CRC/checksum blocker before any flash or
-   Win31 live acceptance work.
+8. Keep chunked delivery, provisioning UX, mobile/BLE client-node work, and
+   physical wiring beyond USB-only as separate future evidence records.

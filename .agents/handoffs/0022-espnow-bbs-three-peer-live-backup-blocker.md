@@ -2,44 +2,41 @@
 
 Task: [../TASK_LOG/0032-espnow-bbs-three-peer-live-attempt.md](../TASK_LOG/0032-espnow-bbs-three-peer-live-attempt.md)
 
-## Continue With
+Status: closed by corrected 2026-05-23 live proof
 
-- Preserve the accepted SSH-forwarded Pi access path `dospi@192.168.137.93`
-  unless direct `172.16.0.2` routing is deliberately restored and reverified.
-- Rerun fresh read-only preflight before any future backup or flash attempt.
-- Investigate the coordinator full-flash backup failure before rerunning
-  `prepare`. The failed command was Pi `esptool --no-stub --port /dev/ttyUSB0
-  read_flash 0 ALL ...`, which stopped around 50% with CRC/checksum failure.
-- Consider a source-backed, read-only backup retry plan before mutation, such
-  as shorter read ranges, slower baud settings, cable/power inspection, or
-  other esptool-supported readback options. Do not flash without a complete
-  backup and manifest.
+## Resolution
+
+- The original blocker was the coordinator full-flash backup using Pi Debian
+  `esptool --no-stub`, which failed around 50% with a CRC/checksum error before
+  any valid backup, manifest, or flash.
+- The gate now prefers the proven Pi esptool venv/stub runtime for coordinator
+  backup and flash, translates Windows peer artifact paths for `esptool.exe`,
+  resolves activated ESP-IDF `idf.py` paths, and isolates per-role
+  `SDKCONFIG` files.
+- Corrected preflight, prepare, backup, build, manifest, flash, bridge
+  transcript, Win31 screenshot capture, Program Manager helper proof, and
+  cleanup all ran on 2026-05-23.
 
 ## Current Passing Surface
 
-- Fresh preflight passed on 2026-05-23 with `ok: true` and
-  `readiness: ready_for_prepare`.
-- Peer map:
-  `COM4=peer01` MAC `94:b9:7e:da:17:d0`,
-  `COM5=peer02` MAC `78:e3:6d:0a:90:14`,
-  `COM6=peer03` MAC `94:b9:7e:da:9a:50`.
-- Coordinator map:
-  `/dev/ttyUSB0` MAC `78:e3:6d:10:4d:6c`, ESP32-D0WDQ6, 4 MB flash.
-- Live-gate tooling now generates config before writing `known_hosts`, and uses
-  Pi-compatible `read_flash` for remote coordinator backup.
+- Corrected preflight:
+  `research/bench-records/live-bench/espnow-bbs-live-preflight-20260523T215548Z.json`.
+- Private manifest:
+  `/mnt/h/dos-c/secrets/espnow-bbs/live-20260523T215621Z/manifest.json`.
+- Private flash evidence:
+  `/mnt/h/dos-c/secrets/espnow-bbs/live-20260523T215621Z/flash-evidence-20260523T222853Z.json`.
+- Pi runtime proof directory:
+  `/home/dospi/dos-c/artifacts/pi4-poe/integration/2026-05-23-espnow-bbs-three-peer-live/three-peer-live-final-20260523T223453Z/`.
+- Final bridge transcript shows `peer01`, `peer02`, and `peer03` as
+  `espnow-enc`, response frames under the 512-byte line limit, and RX/TX/ACK
+  counters moving from `126/126/126` to `129/129/129`.
+- Final cleanup shows no DOSBox-X, modal/`zenity`, bridge process, or
+  `31331`/`31332`/`8080` listener.
 
-## Stop Gate
+## Remaining Boundaries
 
-- No valid coordinator full-flash backup exists for the 2026-05-23 three-peer
-  attempt.
-- No complete manifest exists.
-- Do not run `scripts/espnow_bbs_live_gate.py flash` until a future prepare run
-  records complete backups, build hashes, recovery commands, and a reviewed
-  manifest.
-
-## Closed Lanes
-
-No peer backup, build, flash, bridge launch, DOSBox-X launch, Win31 OPCON
-proof, Program Manager proof, ESP-NOW three-peer radio acceptance, relay, XBee,
-TFT, MicroSD, load, mains, PCAP, packet-driver work, BLE, ESP-WIFI-MESH, router
-admin, erase, or monitor work was completed by this attempt.
+- Do not infer any relay, XBee, TFT, MicroSD, load, mains, PCAP, router admin,
+  packet-driver, BLE, ESP-WIFI-MESH, erase, or monitor acceptance from this
+  proof.
+- Treat chunked message delivery, provisioning UX, mobile/BLE client-node work,
+  and any physical wiring beyond USB-only as future separately gated work.

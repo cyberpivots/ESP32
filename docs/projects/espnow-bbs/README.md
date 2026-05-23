@@ -51,6 +51,12 @@ remain outside the ESP32 firmware image.
   forwarded read-only preflight passed with coordinator MAC
   `78:e3:6d:10:4d:6c`, distinct from the three peers. Source ID:
   `SRC-LOCAL-ESPNOW-LIVE-PREFLIGHT-2026-05-23`.
+- A later 2026-05-23 three-peer live attempt passed fresh preflight and fixed
+  two prepare-tooling issues, but stopped before any valid backup or flash:
+  Pi-side coordinator `read_flash` reached about 50% of the 4 MB read and
+  failed with an esptool CRC/checksum error. No peer backup, build manifest,
+  bridge launch, Win31 proof, or three-peer radio acceptance was produced.
+  Source ID: `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23`.
 - ADR-0004 proposes ESP-WIFI-MESH as a future self-healing branch and BLE GATT
   as the Android client-node interface model, but no firmware migration is
   accepted. The paired DOS-C bridge/operator source now has simulator-only
@@ -78,7 +84,8 @@ remain outside the ESP32 firmware image.
 - Relay, XBee, TFT, MicroSD, load, mains, PCAP, Windows COM proxy, erase, and
   dashboard state-changing commands remain closed.
 - Three-peer flashing remains closed until the new live gate passes in a fresh
-  same-session run and `scripts/espnow_bbs_live_gate.py flash` is invoked with
+  same-session run, coordinator and peer backups complete, the manifest is
+  reviewed, and `scripts/espnow_bbs_live_gate.py flash` is invoked with
   explicit write confirmation.
 
 ## Implementation Order
@@ -93,5 +100,5 @@ remain outside the ESP32 firmware image.
 7. Keep ESP-WIFI-MESH/BLE GATT work design-only until ADR-0004 is accepted and
    fresh mesh, BLE, coexistence, backup, recovery, and cleanup evidence exists.
 8. Confirm physical USB-only/no-load/no-relay/no-XBee/no-TFT/no-MicroSD state,
-   then run the backup/manifest `prepare` step before any flash or Win31 live
-   acceptance work.
+   then resolve the coordinator backup CRC/checksum blocker before any flash or
+   Win31 live acceptance work.

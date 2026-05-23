@@ -245,7 +245,7 @@ def backup_remote_coordinator(
         "elif python3 -c 'import esptool' >/dev/null 2>&1; then ESPTOOL='python3 -m esptool'; "
         "else echo esptool-not-found >&2; exit 127; fi; "
         f"$ESPTOOL --no-stub --port {shlex.quote(device['port'])} "
-        f"read-flash 0 ALL {shlex.quote(remote_path)}; "
+        f"read_flash 0 ALL {shlex.quote(remote_path)}; "
         f"sha256sum {shlex.quote(remote_path)}"
     )
     read_result = run_command(
@@ -576,12 +576,12 @@ def command_prepare(args: argparse.Namespace) -> int:
     live_dir = args.live_dir or (args.dosc_root / "secrets" / "espnow-bbs" / f"live-{stamp}")
     if live_dir.exists() and any(live_dir.iterdir()):
         raise SystemExit(f"refusing to reuse non-empty live dir: {live_dir}")
+
+    config_result = run_live_config_generator(args.dosc_root, live_dir, devices, args.channel)
     live_dir.mkdir(parents=True, exist_ok=True)
     backup_dir = live_dir / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
     known_hosts = known_hosts_for_preflight(preflight_record, live_dir)
-
-    config_result = run_live_config_generator(args.dosc_root, live_dir, devices, args.channel)
     backups: dict[str, Any] = {
         "coordinator": backup_remote_coordinator(devices["coordinator"], backup_dir, known_hosts, stamp)
     }
@@ -629,7 +629,7 @@ def recovery_commands(devices: dict[str, Any], backups: dict[str, Any]) -> dict[
         if role == "coordinator":
             commands[role] = (
                 f"copy {backup} to {device['target']} and run: "
-                f"esptool --port {device['port']} write-flash 0x0 <backup-file>"
+                f"esptool --port {device['port']} write_flash 0x0 <backup-file>"
             )
         else:
             commands[role] = (

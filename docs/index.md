@@ -21,6 +21,7 @@
 
 - [ESP-NOW BBS coordinator and client firmware](projects/espnow-bbs/README.md)
 - [ESP-NOW BBS protocol plan](projects/espnow-bbs/protocol.md)
+- [ESP-NOW BBS network live-gate design](projects/espnow-bbs/network-live-gate-design.md)
 - [Four relay XBee Wi-Fi controller](projects/four-relay-xbee-wifi/README.md)
 - [Four relay build guide](projects/four-relay-xbee-wifi/build-guide.md)
 - [Four relay architecture](projects/four-relay-xbee-wifi/architecture.md)
@@ -65,7 +66,9 @@
 - [ESP-NOW BBS source ledger](../knowledge-base/source-ledger/2026-05-20-espnow-bbs.md)
 - [ESP-NOW BBS multi-peer dashboard source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-multipeer-dashboard.md)
 - [ESP-NOW BBS live gate tooling source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-live-gate-tooling.md)
+- [ESP-NOW BBS network live-gate source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-network-live-gate.md)
 - [Live bench toolchain source ledger](../knowledge-base/source-ledger/2026-05-21-live-bench-toolchain.md)
+- [Windows ICS Netgear WNR1000 source ledger](../knowledge-base/source-ledger/2026-05-23-windows-ics-netgear-wnr1000.md)
 - [Four relay XBee Wi-Fi toolchain](../knowledge-base/toolchain/four-relay-xbee-wifi-toolchain.md)
 - [SPI MicroSD reader profile](../hardware-profiles/storage/spi-microsd-reader/README.md)
 
@@ -74,4 +77,5 @@
 - [Known gaps](../research/known-gaps.md)
 - [Triage status](../research/triage-status.md)
 - [Bench record template](../research/bench-records/TEMPLATE.md)
+- [Windows ICS to Netgear WNR1000 bench record](../research/bench-records/live-bench/2026-05-23-windows-ics-netgear-wnr1000.md)
 - [Available skills](../research/skills/available-skills.md)

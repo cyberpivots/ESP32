@@ -40,6 +40,10 @@ remain outside the ESP32 firmware image.
   `COM4`, `COM5`, `COM6`, Pi `172.16.0.2`, and coordinator `/dev/ttyUSB0`,
   plus prepare/flash manifest tooling that records backups, build hashes, and
   recovery commands before any explicit write-confirmed flash.
+- ADR-0004 proposes ESP-WIFI-MESH as a future self-healing branch and BLE GATT
+  as the Android client-node interface model, but no firmware migration is
+  accepted. The paired DOS-C bridge/operator source now has simulator-only
+  network metadata and a read-only Win31 Network view.
 
 ## Firmware Roles
 
@@ -75,3 +79,5 @@ remain outside the ESP32 firmware image.
 4. Add chunked message delivery and custody telemetry.
 5. Add provisioning and firmware inventory flows.
 6. Prove multi-peer behavior only under the new three-peer live gate.
+7. Keep ESP-WIFI-MESH/BLE GATT work design-only until ADR-0004 is accepted and
+   fresh mesh, BLE, coexistence, backup, recovery, and cleanup evidence exists.

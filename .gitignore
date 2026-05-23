@@ -22,6 +22,11 @@ secrets/
 user_uploads/
 research/bench-records/**/*.json
 research/bench-records/**/*.jsonl
+research/bench-records/**/*.bin
+research/bench-records/**/*.txt
+research/bench-records/**/*.log
+research/bench-records/**/*.stderr
+research/bench-records/**/*.png
 research/bench-records/**/local-*
 !research/bench-records/
 !research/bench-records/TEMPLATE.md

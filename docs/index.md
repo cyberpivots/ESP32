@@ -63,6 +63,8 @@
 - [Blueprint schematic improvement source ledger](../knowledge-base/source-ledger/2026-05-21-blueprint-schematic-improvement.md)
 - [DOS-C Windows 3.1 custom TCP bridge ledger](../knowledge-base/source-ledger/2026-05-20-esp32-win31-custom-tcp.md)
 - [ESP-NOW BBS source ledger](../knowledge-base/source-ledger/2026-05-20-espnow-bbs.md)
+- [ESP-NOW BBS multi-peer dashboard source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-multipeer-dashboard.md)
+- [ESP-NOW BBS live gate tooling source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-live-gate-tooling.md)
 - [Live bench toolchain source ledger](../knowledge-base/source-ledger/2026-05-21-live-bench-toolchain.md)
 - [Four relay XBee Wi-Fi toolchain](../knowledge-base/toolchain/four-relay-xbee-wifi-toolchain.md)
 - [SPI MicroSD reader profile](../hardware-profiles/storage/spi-microsd-reader/README.md)

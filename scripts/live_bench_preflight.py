@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only live-bench preflight for the ESP32/Pi bench lane."""
+"""Read-only live-bench preflight for the ESP-NOW BBS bench lane."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import json
 import os
 import platform
 import pwd
+import re
 import shlex
 import shutil
 import stat
@@ -24,16 +25,20 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 OUT_ROOT = ROOT / "research" / "bench-records" / "live-bench"
 
-DEFAULT_WINDOWS_PORT = "COM6"
-DEFAULT_WSL_PORT = "/dev/ttyS6"
+DEFAULT_WINDOWS_PORTS = ["COM4", "COM5", "COM6"]
 DEFAULT_PI_USER = "dospi"
-DEFAULT_PI_HOST = "192.168.200.104"
+DEFAULT_PI_HOST = "172.16.0.2"
+DEFAULT_COORDINATOR_PORT = "/dev/ttyUSB0"
 
-EXPECTED_COM6 = {
-    "deviceId": "COM6",
-    "description": "Silicon Labs CP210x USB to UART Bridge",
+EXPECTED_USB = {
+    "descriptionContains": "CP210x",
     "pnpDeviceIdContains": "VID_10C4&PID_EA60",
     "status": "OK",
+}
+
+EXPECTED_ESP32 = {
+    "chipContains": "ESP32-D0WDQ6",
+    "flashSize": "4MB",
 }
 
 EXPECTED_PI = {
@@ -41,7 +46,7 @@ EXPECTED_PI = {
     "model": "Raspberry Pi 4 Model B Rev 1.2",
     "serial": "10000000aaaa5b24",
     "rootSource": "/dev/mmcblk0p2",
-    "networkAddress": "192.168.200.104",
+    "eth0Address": "172.16.0.2/24",
     "closedTcpPorts": ["31331", "31332", "8080"],
     "sshFingerprints": {
         "RSA": "SHA256:ZA1lH2codkJpMkj3FpSIoHoqFmUbRUIHO6QpUDcBT50",
@@ -53,11 +58,21 @@ EXPECTED_PI = {
 ALLOWED_ESPTOOL_COMMANDS = ("chip_id", "read_mac", "flash_id")
 FORBIDDEN_ESPTOOL_TERMS = (
     "write_flash",
+    "write-flash",
     "erase_flash",
+    "erase-flash",
     "erase_region",
+    "erase-region",
     "write_mem",
+    "write-mem",
     "load_ram",
+    "load-ram",
     "monitor",
+)
+
+STALE_PROCESS_PATTERN = (
+    r"[e]sp32_gateway_sim|[e]spnow_bbs_bridge|[d]osbox-x|"
+    r"[d]osbox|[z]enity|[y]ad"
 )
 
 TOOL_COMMANDS = {
@@ -87,6 +102,33 @@ def repository_relative(path: Path) -> str:
         return path.resolve().relative_to(ROOT).as_posix()
     except ValueError:
         return str(path)
+
+
+def wsl_port_for_windows(windows_port: str) -> str:
+    match = re.fullmatch(r"COM([0-9]+)", windows_port.strip().upper())
+    if not match:
+        raise ValueError(f"unsupported Windows serial port name: {windows_port}")
+    return f"/dev/ttyS{int(match.group(1))}"
+
+
+def normalize_windows_port(value: str) -> str:
+    return value.strip().upper()
+
+
+def ensure_list(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
+def normalize_flash_size(value: str | None) -> str | None:
+    if value is None:
+        return None
+    compact = re.sub(r"\s+", "", value.upper())
+    compact = compact.replace("MIB", "MB").replace("KIB", "KB")
+    return compact
 
 
 def run_command(
@@ -152,116 +194,173 @@ def read_json_from_lines(lines: list[str]) -> Any:
     return json.loads(text)
 
 
-def collect_windows_com_inventory(port: str) -> dict[str, Any]:
+def collect_windows_peer_inventory(ports: list[str]) -> dict[str, Any]:
+    expected_ports = [normalize_windows_port(port) for port in ports]
     powershell = shutil.which("powershell.exe")
     cmd = shutil.which("cmd.exe")
+    ps_ports = "@(" + ",".join(f"'{port}'" for port in expected_ports) + ")"
     script = f"""
-$serial = Get-CimInstance Win32_SerialPort |
-    Where-Object {{ $_.DeviceID -eq '{port}' }} |
-    Select-Object Caption,Description,DeviceID,PNPDeviceID,Status,ConfigManagerErrorCode,Name,MaxBaudRate
-$pnp = Get-CimInstance Win32_PnPEntity |
-    Where-Object {{ $_.Name -like '*({port})*' -or $_.DeviceID -like '*VID_10C4*PID_EA60*' }} |
-    Select-Object Name,DeviceID,Status,ConfigManagerErrorCode
+$expected = {ps_ports}
+$serial = @(Get-CimInstance Win32_SerialPort |
+    Select-Object Caption,Description,DeviceID,PNPDeviceID,Status,ConfigManagerErrorCode,Name,MaxBaudRate)
+$pnp = @(Get-CimInstance Win32_PnPEntity |
+    Where-Object {{ $_.Name -match '\\(COM[0-9]+\\)' -or $_.DeviceID -like '*VID_10C4*PID_EA60*' }} |
+    Select-Object Name,DeviceID,Status,ConfigManagerErrorCode)
 [pscustomobject]@{{
-    serialPort = $serial
+    expectedPorts = $expected
+    serialPorts = $serial
     pnp = $pnp
-}} | ConvertTo-Json -Depth 5
+}} | ConvertTo-Json -Depth 6
 """
-    inventory = {
-        "expected": EXPECTED_COM6 if port.upper() == "COM6" else None,
+    inventory: dict[str, Any] = {
+        "expectedPorts": expected_ports,
+        "expectedUsb": EXPECTED_USB,
         "powershellPath": powershell,
         "cmdPath": cmd,
     }
     if powershell:
         ps_result = run_command(
             [powershell, "-NoProfile", "-Command", script],
-            timeout=10.0,
+            timeout=15.0,
         )
-        inventory["win32SerialPort"] = ps_result
+        inventory["win32SerialPorts"] = ps_result
         try:
             parsed = read_json_from_lines(ps_result.get("stdout", []))
         except json.JSONDecodeError as exc:
             parsed = None
             inventory["parseError"] = str(exc)
         inventory["parsed"] = parsed
-        inventory["expectedChecks"] = check_windows_com(parsed, port)
+        inventory["expectedChecks"] = check_windows_peers(parsed, expected_ports)
     else:
-        inventory["win32SerialPort"] = {
+        inventory["win32SerialPorts"] = {
             "available": False,
             "error": "powershell.exe not found",
         }
+        inventory["expectedChecks"] = {
+            "ok": False,
+            "items": [
+                {
+                    "name": "powershellAvailable",
+                    "ok": False,
+                    "code": "powershellMissing",
+                }
+            ],
+        }
 
+    inventory["mode"] = {}
     if cmd:
-        inventory["mode"] = run_command([cmd, "/c", "mode", port], timeout=5.0)
+        for port in expected_ports:
+            inventory["mode"][port] = run_command([cmd, "/c", "mode", port], timeout=5.0)
     else:
-        inventory["mode"] = {"available": False, "error": "cmd.exe not found"}
+        inventory["mode"]["error"] = "cmd.exe not found"
     return inventory
 
 
-def check_windows_com(parsed: Any, port: str) -> dict[str, Any]:
-    checks: dict[str, Any] = {"ok": False, "items": []}
-    if not isinstance(parsed, dict) or not parsed.get("serialPort"):
-        checks["items"].append({"name": "serialPortPresent", "ok": False})
-        return checks
-
-    serial_port = parsed["serialPort"]
-    expected = EXPECTED_COM6 if port.upper() == "COM6" else {}
-    description = str(serial_port.get("Description", ""))
-    pnp_device = str(serial_port.get("PNPDeviceID", ""))
-    status_text = str(serial_port.get("Status", ""))
-    items = [
-        {
-            "name": "deviceId",
-            "ok": serial_port.get("DeviceID") == expected.get("deviceId", port),
-            "value": serial_port.get("DeviceID"),
-        },
-        {
-            "name": "description",
-            "ok": expected.get("description", "") in description,
-            "value": description,
-        },
-        {
-            "name": "pnpDeviceId",
-            "ok": expected.get("pnpDeviceIdContains", "") in pnp_device,
-            "value": pnp_device,
-        },
-        {
-            "name": "status",
-            "ok": status_text == expected.get("status", status_text),
-            "value": status_text,
-        },
-    ]
-    checks["items"] = items
-    checks["ok"] = all(item["ok"] for item in items)
-    return checks
+def serial_port_entries(parsed: Any) -> list[dict[str, Any]]:
+    if not isinstance(parsed, dict):
+        return []
+    entries = parsed.get("serialPorts", parsed.get("serialPort"))
+    return [entry for entry in ensure_list(entries) if isinstance(entry, dict)]
 
 
-def collect_wsl_serial_permissions(port: str) -> dict[str, Any]:
-    path = Path(port)
-    record: dict[str, Any] = {
-        "path": port,
-        "exists": path.exists(),
-        "currentUser": getpass.getuser(),
-        "currentGroups": sorted(
-            grp.getgrgid(gid).gr_name for gid in os.getgroups()
-        ),
+def check_windows_peers(parsed: Any, expected_ports: list[str]) -> dict[str, Any]:
+    expected = [normalize_windows_port(port) for port in expected_ports]
+    entries = serial_port_entries(parsed)
+    by_port = {
+        normalize_windows_port(str(entry.get("DeviceID", ""))): entry
+        for entry in entries
+        if entry.get("DeviceID")
     }
-    if not path.exists():
-        return record
-
-    st = path.stat()
-    record.update(
-        {
-            "mode": stat.filemode(st.st_mode),
-            "octalMode": oct(stat.S_IMODE(st.st_mode)),
-            "owner": pwd.getpwuid(st.st_uid).pw_name,
-            "group": grp.getgrgid(st.st_gid).gr_name,
-            "rdevMajor": os.major(st.st_rdev),
-            "rdevMinor": os.minor(st.st_rdev),
-            "userInDeviceGroup": st.st_gid in os.getgroups(),
-        }
+    cp210x_ports = sorted(
+        port
+        for port, entry in by_port.items()
+        if EXPECTED_USB["pnpDeviceIdContains"] in str(entry.get("PNPDeviceID", ""))
+        or EXPECTED_USB["descriptionContains"].lower()
+        in str(entry.get("Description", "")).lower()
     )
-    return record
+
+    items: list[dict[str, Any]] = [
+        {
+            "name": "exactCp210xPortSet",
+            "ok": cp210x_ports == expected,
+            "code": "unexpectedWindowsPeerSet" if cp210x_ports != expected else None,
+            "expected": expected,
+            "value": cp210x_ports,
+        }
+    ]
+    for port in expected:
+        entry = by_port.get(port)
+        if entry is None:
+            items.append(
+                {
+                    "name": f"{port}.present",
+                    "ok": False,
+                    "code": "missingWindowsPeer",
+                    "value": None,
+                }
+            )
+            continue
+        description = str(entry.get("Description", ""))
+        pnp_device = str(entry.get("PNPDeviceID", ""))
+        status_text = str(entry.get("Status", ""))
+        items.extend(
+            [
+                {
+                    "name": f"{port}.description",
+                    "ok": EXPECTED_USB["descriptionContains"].lower()
+                    in description.lower(),
+                    "code": "unexpectedUsbDescription",
+                    "value": description,
+                },
+                {
+                    "name": f"{port}.pnpDeviceId",
+                    "ok": EXPECTED_USB["pnpDeviceIdContains"] in pnp_device,
+                    "code": "unexpectedVidPid",
+                    "value": pnp_device,
+                },
+                {
+                    "name": f"{port}.status",
+                    "ok": status_text == EXPECTED_USB["status"],
+                    "code": "unexpectedWindowsStatus",
+                    "value": status_text,
+                },
+            ]
+        )
+    for item in items:
+        if item.get("ok"):
+            item.pop("code", None)
+    return {"ok": all(item["ok"] for item in items), "items": items}
+
+
+def collect_wsl_serial_permissions(ports: list[str]) -> dict[str, Any]:
+    records: dict[str, Any] = {}
+    for windows_port in ports:
+        wsl_port = wsl_port_for_windows(windows_port)
+        path = Path(wsl_port)
+        record: dict[str, Any] = {
+            "path": wsl_port,
+            "windowsPort": normalize_windows_port(windows_port),
+            "exists": path.exists(),
+            "currentUser": getpass.getuser(),
+            "currentGroups": sorted(
+                grp.getgrgid(gid).gr_name for gid in os.getgroups()
+            ),
+        }
+        if path.exists():
+            st = path.stat()
+            record.update(
+                {
+                    "mode": stat.filemode(st.st_mode),
+                    "octalMode": oct(stat.S_IMODE(st.st_mode)),
+                    "owner": pwd.getpwuid(st.st_uid).pw_name,
+                    "group": grp.getgrgid(st.st_gid).gr_name,
+                    "rdevMajor": os.major(st.st_rdev),
+                    "rdevMinor": os.minor(st.st_rdev),
+                    "userInDeviceGroup": st.st_gid in os.getgroups(),
+                }
+            )
+        records[normalize_windows_port(windows_port)] = record
+    return {"ports": records}
 
 
 def collect_toolchain_status() -> dict[str, Any]:
@@ -422,23 +521,49 @@ def select_esptool() -> dict[str, Any]:
     return {"selected": None, "attempts": attempts}
 
 
-def collect_esp32_identity(windows_port: str, wsl_port: str) -> dict[str, Any]:
+def collect_peer_esp32_identities(ports: list[str]) -> dict[str, Any]:
     selected = select_esptool()
-    record: dict[str, Any] = {
+    identities: dict[str, Any] = {
+        "expectedProfile": EXPECTED_ESP32,
         "allowedCommands": list(ALLOWED_ESPTOOL_COMMANDS),
         "forbiddenTerms": list(FORBIDDEN_ESPTOOL_TERMS),
         "toolSelection": selected,
+        "ports": {},
+    }
+    for windows_port in ports:
+        port_name = normalize_windows_port(windows_port)
+        identities["ports"][port_name] = collect_esp32_identity_for_port(
+            selected,
+            port_name,
+            wsl_port_for_windows(port_name),
+        )
+    identities["ok"] = all(
+        identity.get("ok") for identity in identities["ports"].values()
+    )
+    return identities
+
+
+def collect_esp32_identity_for_port(
+    selected: dict[str, Any],
+    windows_port: str,
+    wsl_port: str,
+) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "windowsPort": normalize_windows_port(windows_port),
+        "wslPort": wsl_port,
         "commands": {},
     }
     tool = selected.get("selected")
     if not tool:
         record["ok"] = False
         record["error"] = "no esptool command available"
+        finalize_esp32_identity(record)
         return record
 
     port = windows_port if tool["portKind"] == "windows" else wsl_port
     record["port"] = port
     record["portKind"] = tool["portKind"]
+    record["tool"] = tool
     for command in ALLOWED_ESPTOOL_COMMANDS:
         argv = tool["argv"] + ["--port", port, command]
         if any(term in " ".join(argv) for term in FORBIDDEN_ESPTOOL_TERMS):
@@ -450,10 +575,94 @@ def collect_esp32_identity(windows_port: str, wsl_port: str) -> dict[str, Any]:
             }
             continue
         record["commands"][command] = run_command(argv, timeout=30.0)
-    record["ok"] = all(
-        result.get("returncode") == 0
-        for result in record["commands"].values()
+    finalize_esp32_identity(record)
+    return record
+
+
+def parse_esptool_identity(commands: dict[str, Any]) -> dict[str, Any]:
+    lines: list[str] = []
+    command_results: dict[str, bool] = {}
+    for command in ALLOWED_ESPTOOL_COMMANDS:
+        result = commands.get(command, {})
+        command_results[command] = result.get("returncode") == 0
+        lines.extend(str(line) for line in result.get("stdout", []))
+        lines.extend(str(line) for line in result.get("stderr", []))
+    text = "\n".join(lines)
+    chip_match = re.search(r"Chip is\s+([A-Za-z0-9_ -]+)(?:\s+\(|$)", text)
+    if chip_match:
+        chip = chip_match.group(1).strip()
+    else:
+        chip_match = re.search(r"Detecting chip type\.\.\.\s*([A-Za-z0-9_-]+)", text)
+        chip = chip_match.group(1).strip() if chip_match else None
+
+    mac_match = re.search(r"\bMAC:\s*([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})", text)
+    flash_match = re.search(
+        r"Detected flash size:\s*([0-9]+)\s*([KMGT]?B?)",
+        text,
+        re.IGNORECASE,
     )
+    manufacturer_match = re.search(r"Manufacturer:\s*([0-9a-fA-Fx]+)", text)
+    device_match = re.search(r"Device:\s*([0-9a-fA-Fx]+)", text)
+    parsed = {
+        "chip": chip,
+        "chipTextContainsExpected": EXPECTED_ESP32["chipContains"] in text,
+        "mac": mac_match.group(1).lower() if mac_match else None,
+        "flashSize": normalize_flash_size(
+            "".join(flash_match.groups()) if flash_match else None
+        ),
+        "manufacturer": manufacturer_match.group(1) if manufacturer_match else None,
+        "device": device_match.group(1) if device_match else None,
+        "commandResults": command_results,
+    }
+    parsed["profileChecks"] = validate_esp32_profile(parsed)
+    parsed["ok"] = (
+        all(command_results.values())
+        and parsed["mac"] is not None
+        and parsed["profileChecks"]["ok"]
+    )
+    return parsed
+
+
+def validate_esp32_profile(parsed: dict[str, Any]) -> dict[str, Any]:
+    items = [
+        {
+            "name": "chip",
+            "ok": bool(parsed.get("chipTextContainsExpected"))
+            or EXPECTED_ESP32["chipContains"] in str(parsed.get("chip", "")),
+            "code": "unexpectedChipProfile",
+            "expected": EXPECTED_ESP32["chipContains"],
+            "value": parsed.get("chip"),
+        },
+        {
+            "name": "mac",
+            "ok": bool(parsed.get("mac")),
+            "code": "missingMac",
+            "value": parsed.get("mac"),
+        },
+        {
+            "name": "flashSize",
+            "ok": parsed.get("flashSize") == EXPECTED_ESP32["flashSize"],
+            "code": "unexpectedFlashProfile",
+            "expected": EXPECTED_ESP32["flashSize"],
+            "value": parsed.get("flashSize"),
+        },
+    ]
+    for item in items:
+        if item["ok"]:
+            item.pop("code", None)
+    return {"ok": all(item["ok"] for item in items), "items": items}
+
+
+def finalize_esp32_identity(record: dict[str, Any]) -> dict[str, Any]:
+    parsed = parse_esptool_identity(record.get("commands", {}))
+    record["parsedIdentity"] = parsed
+    command_ok = all(
+        result.get("returncode") == 0
+        for result in record.get("commands", {}).values()
+    )
+    record["ok"] = command_ok and parsed.get("ok", False)
+    if not record["ok"] and not record.get("error"):
+        record["error"] = "esptool identity output did not match expected ESP32 profile"
     return record
 
 
@@ -473,10 +682,13 @@ def collect_pi_identity(
     host: str,
     output_dir: Path | None,
     stamp: str,
+    coordinator_port: str,
+    skip_coordinator: bool,
 ) -> dict[str, Any]:
     record: dict[str, Any] = {
         "target": f"{user}@{host}",
         "expected": EXPECTED_PI if host == DEFAULT_PI_HOST else None,
+        "coordinatorPort": coordinator_port,
     }
     keyscan = run_command(["ssh-keyscan", "-T", "5", host], timeout=8.0)
     record["sshKeyscan"] = keyscan
@@ -515,28 +727,7 @@ def collect_pi_identity(
         record["knownHostsPath"] = str(known_hosts_path)
 
     try:
-        remote_script = r"""
-set -eu
-echo "__hostnamectl__"
-hostnamectl
-echo "__model__"
-tr -d '\000' </proc/device-tree/model || true
-echo
-echo "__serial__"
-awk '/^Serial/ {print $3}' /proc/cpuinfo
-echo "__root_source__"
-findmnt -no SOURCE /
-echo "__os_release__"
-if [ -r /etc/os-release ]; then . /etc/os-release; printf '%s\n' "${PRETTY_NAME:-unknown}"; fi
-echo "__kernel__"
-uname -a
-echo "__ip_addr__"
-ip -brief address
-echo "__listeners__"
-if command -v ss >/dev/null 2>&1; then ss -ltnH; else netstat -ltn; fi | awk '$0 ~ /:(31331|31332|8080)([[:space:]]|$)/ {print}'
-echo "__processes__"
-pgrep -af '[e]sp32_gateway_sim|[d]osbox-x|[d]osbox' || true
-"""
+        remote_script = build_pi_remote_script(coordinator_port, skip_coordinator)
         ssh = run_command(
             [
                 "ssh",
@@ -551,7 +742,7 @@ pgrep -af '[e]sp32_gateway_sim|[d]osbox-x|[d]osbox' || true
                 f"{user}@{host}",
                 remote_script,
             ],
-            timeout=20.0,
+            timeout=90.0,
         )
     finally:
         if temp_file is not None:
@@ -561,13 +752,75 @@ pgrep -af '[e]sp32_gateway_sim|[d]osbox-x|[d]osbox' || true
                 pass
 
     record["sshIdentity"] = ssh
-    record["identityChecks"] = check_pi_identity(ssh.get("stdout", []), host)
+    record["identityChecks"] = check_pi_identity(ssh.get("stdout", []), host, coordinator_port)
+    record["coordinatorEsp32Identity"] = parse_remote_coordinator_identity(
+        ssh.get("stdout", []),
+        coordinator_port,
+        skipped=skip_coordinator,
+    )
     record["ok"] = (
         record["fingerprintCheck"]["ok"]
         and ssh.get("returncode") == 0
         and record["identityChecks"]["ok"]
+        and (skip_coordinator or record["coordinatorEsp32Identity"].get("ok"))
     )
     return record
+
+
+def build_pi_remote_script(coordinator_port: str, skip_coordinator: bool) -> str:
+    skip_value = "1" if skip_coordinator else "0"
+    return f"""
+set -u
+COORDINATOR_PORT={shlex.quote(coordinator_port)}
+SKIP_COORDINATOR={skip_value}
+echo "__hostnamectl__"
+hostnamectl
+echo "__model__"
+tr -d '\\000' </proc/device-tree/model || true
+echo
+echo "__serial__"
+awk '/^Serial/ {{print $3}}' /proc/cpuinfo
+echo "__root_source__"
+findmnt -no SOURCE /
+echo "__os_release__"
+if [ -r /etc/os-release ]; then . /etc/os-release; printf '%s\\n' "${{PRETTY_NAME:-unknown}}"; fi
+echo "__kernel__"
+uname -a
+echo "__ip_addr__"
+ip -brief address
+echo "__eth0_addr__"
+ip -brief address show eth0 || true
+echo "__listeners__"
+if command -v ss >/dev/null 2>&1; then ss -ltnH; else netstat -ltn; fi | awk '$0 ~ /:(31331|31332|8080)([[:space:]]|$)/ {{print}}'
+echo "__processes__"
+pgrep -af '{STALE_PROCESS_PATTERN}' || true
+echo "__usb_inventory__"
+if command -v lsusb >/dev/null 2>&1; then lsusb; else echo "lsusb missing"; fi
+ls -l /dev/ttyUSB* 2>/dev/null || true
+if [ "$SKIP_COORDINATOR" = "0" ]; then
+  if [ -e "$COORDINATOR_PORT" ]; then
+    if command -v esptool >/dev/null 2>&1; then ESPTOOL="esptool";
+    elif command -v esptool.py >/dev/null 2>&1; then ESPTOOL="esptool.py";
+    elif python3 -c 'import esptool' >/dev/null 2>&1; then ESPTOOL="python3 -m esptool";
+    else ESPTOOL=""; fi
+    for CMD in chip_id read_mac flash_id; do
+      echo "__coordinator_${{CMD}}__"
+      if [ -n "$ESPTOOL" ]; then
+        $ESPTOOL --port "$COORDINATOR_PORT" "$CMD" 2>&1
+        RC=$?
+      else
+        echo "esptool not found"
+        RC=127
+      fi
+      echo "__coordinator_${{CMD}}_returncode__"
+      printf '%s\\n' "$RC"
+    done
+  else
+    echo "__coordinator_missing__"
+    printf '%s\\n' "$COORDINATOR_PORT"
+  fi
+fi
+"""
 
 
 def section_value(lines: list[str], section: str) -> list[str]:
@@ -587,53 +840,310 @@ def section_value(lines: list[str], section: str) -> list[str]:
     return lines[start:end]
 
 
-def check_pi_identity(lines: list[str], host: str) -> dict[str, Any]:
+def check_pi_identity(lines: list[str], host: str, coordinator_port: str) -> dict[str, Any]:
     expected = EXPECTED_PI if host == DEFAULT_PI_HOST else {}
     hostnamectl = "\n".join(section_value(lines, "hostnamectl"))
     model = " ".join(section_value(lines, "model")).strip()
     serial = " ".join(section_value(lines, "serial")).strip()
     root_source = " ".join(section_value(lines, "root_source")).strip()
-    addresses = "\n".join(section_value(lines, "ip_addr"))
+    eth0_address = "\n".join(section_value(lines, "eth0_addr"))
     listeners = [line for line in section_value(lines, "listeners") if line.strip()]
     processes = [line for line in section_value(lines, "processes") if line.strip()]
+    usb_inventory = "\n".join(section_value(lines, "usb_inventory"))
+    coordinator_missing = section_value(lines, "coordinator_missing")
     items = [
         {
             "name": "hostname",
             "ok": expected.get("hostname", "") in hostnamectl,
+            "code": "piHostnameMismatch",
             "value": hostnamectl,
         },
         {
             "name": "model",
             "ok": model == expected.get("model", model),
+            "code": "piModelMismatch",
             "value": model,
         },
         {
             "name": "serial",
             "ok": serial == expected.get("serial", serial),
+            "code": "piSerialMismatch",
             "value": serial,
         },
         {
             "name": "rootSource",
             "ok": root_source == expected.get("rootSource", root_source),
+            "code": "piRootMismatch",
             "value": root_source,
         },
         {
-            "name": "networkAddress",
-            "ok": expected.get("networkAddress", "") in addresses,
-            "value": addresses,
+            "name": "eth0Address",
+            "ok": expected.get("eth0Address", "") in eth0_address,
+            "code": "piEth0AddressMismatch",
+            "value": eth0_address,
         },
         {
             "name": "closedTcpPorts",
             "ok": not listeners,
+            "code": "stalePiListener",
             "value": listeners,
         },
         {
-            "name": "noBridgeOrDosboxProcesses",
+            "name": "noBridgeDosboxOrModalProcesses",
             "ok": not processes,
+            "code": "stalePiProcess",
             "value": processes,
         },
+        {
+            "name": "coordinatorUsbPresent",
+            "ok": not coordinator_missing and coordinator_port in usb_inventory,
+            "code": "coordinatorUsbMissing",
+            "value": usb_inventory if usb_inventory else coordinator_missing,
+        },
     ]
+    for item in items:
+        if item["ok"]:
+            item.pop("code", None)
     return {"ok": all(item["ok"] for item in items), "items": items}
+
+
+def parse_remote_coordinator_identity(
+    lines: list[str],
+    coordinator_port: str,
+    *,
+    skipped: bool,
+) -> dict[str, Any]:
+    if skipped:
+        return {"skipped": True, "ok": False}
+    if section_value(lines, "coordinator_missing"):
+        return {
+            "ok": False,
+            "port": coordinator_port,
+            "error": "coordinator USB serial device missing",
+            "commands": {},
+            "parsedIdentity": parse_esptool_identity({}),
+        }
+    commands: dict[str, Any] = {}
+    for command in ALLOWED_ESPTOOL_COMMANDS:
+        rc_lines = section_value(lines, f"coordinator_{command}_returncode")
+        try:
+            returncode = int(" ".join(rc_lines).strip())
+        except ValueError:
+            returncode = None
+        commands[command] = {
+            "available": True,
+            "argv": ["ssh", "remote", "esptool", "--port", coordinator_port, command],
+            "returncode": returncode,
+            "stdout": section_value(lines, f"coordinator_{command}"),
+            "stderr": [],
+        }
+    record: dict[str, Any] = {
+        "port": coordinator_port,
+        "portKind": "pi-ssh",
+        "commands": commands,
+    }
+    finalize_esp32_identity(record)
+    return record
+
+
+def collect_failures_from_items(
+    section: str,
+    items: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    failures: list[dict[str, Any]] = []
+    for item in items:
+        if item.get("ok"):
+            continue
+        failures.append(
+            {
+                "section": section,
+                "name": item.get("name"),
+                "code": item.get("code", "gateFailed"),
+                "expected": item.get("expected"),
+                "value": item.get("value"),
+            }
+        )
+    return failures
+
+
+def validate_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+    verified_facts: list[str] = []
+    expected_ports = [
+        normalize_windows_port(port)
+        for port in record.get("expectedPeerPorts", DEFAULT_WINDOWS_PORTS)
+    ]
+
+    windows_checks = record.get("windowsPeerInventory", {}).get("expectedChecks")
+    if not windows_checks or not windows_checks.get("ok"):
+        failures.extend(
+            collect_failures_from_items(
+                "windowsPeerInventory",
+                (windows_checks or {}).get("items", []),
+            )
+        )
+    else:
+        verified_facts.append(
+            "Windows inventory contains exactly COM4, COM5, and COM6 CP210x VID:PID 10C4:EA60 peers."
+        )
+
+    peer_identities = record.get("peerEsp32Identities", {}).get("ports", {})
+    peer_macs: dict[str, str] = {}
+    malformed_peer = False
+    for port in expected_ports:
+        identity = peer_identities.get(port)
+        if not identity:
+            malformed_peer = True
+            failures.append(
+                {
+                    "section": "peerEsp32Identities",
+                    "name": port,
+                    "code": "missingPeerIdentity",
+                    "value": None,
+                }
+            )
+            continue
+        parsed = identity.get("parsedIdentity", {})
+        profile_checks = parsed.get("profileChecks", {})
+        if not identity.get("ok"):
+            malformed_peer = True
+            failures.append(
+                {
+                    "section": "peerEsp32Identities",
+                    "name": port,
+                    "code": "malformedPeerIdentity",
+                    "value": identity.get("error"),
+                }
+            )
+            failures.extend(
+                collect_failures_from_items(
+                    f"peerEsp32Identities.{port}",
+                    profile_checks.get("items", []),
+                )
+            )
+        mac = parsed.get("mac")
+        if mac:
+            peer_macs[port] = mac
+
+    mac_to_ports: dict[str, list[str]] = {}
+    for port, mac in peer_macs.items():
+        mac_to_ports.setdefault(mac, []).append(port)
+    duplicate_macs = {
+        mac: ports for mac, ports in mac_to_ports.items() if len(ports) > 1
+    }
+    if duplicate_macs:
+        failures.append(
+            {
+                "section": "peerEsp32Identities",
+                "name": "macUniqueness",
+                "code": "duplicatePeerMac",
+                "value": duplicate_macs,
+            }
+        )
+    elif len(peer_macs) == len(expected_ports) and not malformed_peer:
+        verified_facts.append(
+            "Read-only esptool identity passed for COM4, COM5, and COM6 with distinct ESP32 MACs."
+        )
+
+    pi_identity = record.get("piIdentity", {})
+    if pi_identity.get("skipped"):
+        failures.append(
+            {
+                "section": "piIdentity",
+                "name": "requiredPiGate",
+                "code": "skippedRequiredGate",
+                "value": "Pi identity was skipped",
+            }
+        )
+    elif not pi_identity.get("fingerprintCheck", {}).get("ok"):
+        failures.append(
+            {
+                "section": "piIdentity",
+                "name": "sshFingerprints",
+                "code": "piFingerprintMismatch",
+                "expected": pi_identity.get("fingerprintCheck", {}).get("expected"),
+                "value": pi_identity.get("fingerprintCheck", {}).get("observed"),
+            }
+        )
+    else:
+        verified_facts.append("Pi SSH host fingerprints match the expected gate.")
+
+    pi_checks = pi_identity.get("identityChecks")
+    if not pi_identity.get("skipped") and (not pi_checks or not pi_checks.get("ok")):
+        failures.extend(
+            collect_failures_from_items("piIdentity", (pi_checks or {}).get("items", []))
+        )
+    elif not pi_identity.get("skipped"):
+        verified_facts.append(
+            "Pi hostname, model, serial, root filesystem, eth0 address, stale listeners, and stale processes match the gate."
+        )
+
+    coordinator = pi_identity.get("coordinatorEsp32Identity", {})
+    coordinator_mac = coordinator.get("parsedIdentity", {}).get("mac")
+    if coordinator.get("skipped"):
+        failures.append(
+            {
+                "section": "piIdentity.coordinatorEsp32Identity",
+                "name": "requiredCoordinatorGate",
+                "code": "skippedRequiredGate",
+                "value": "Coordinator identity was skipped",
+            }
+        )
+    elif not coordinator.get("ok"):
+        failures.append(
+            {
+                "section": "piIdentity.coordinatorEsp32Identity",
+                "name": "coordinatorProfile",
+                "code": "malformedCoordinatorIdentity",
+                "value": coordinator.get("error"),
+            }
+        )
+        failures.extend(
+            collect_failures_from_items(
+                "piIdentity.coordinatorEsp32Identity",
+                coordinator.get("parsedIdentity", {})
+                .get("profileChecks", {})
+                .get("items", []),
+            )
+        )
+    elif coordinator_mac in set(peer_macs.values()):
+        failures.append(
+            {
+                "section": "piIdentity.coordinatorEsp32Identity",
+                "name": "coordinatorMacUniqueness",
+                "code": "coordinatorMacMatchesPeer",
+                "value": coordinator_mac,
+            }
+        )
+    else:
+        verified_facts.append(
+            "Pi /dev/ttyUSB0 coordinator read-only esptool identity passed and is distinct from the peer MACs."
+        )
+
+    peer_map: dict[str, Any] = {}
+    if not failures and len(peer_macs) == len(expected_ports) and coordinator_mac:
+        for index, port in enumerate(expected_ports, start=1):
+            peer_id = f"peer{index:02d}"
+            identity = peer_identities[port]
+            peer_map[peer_id] = {
+                "windowsPort": port,
+                "wslPort": wsl_port_for_windows(port),
+                "mac": identity["parsedIdentity"]["mac"],
+                "chip": identity["parsedIdentity"]["chip"],
+                "flashSize": identity["parsedIdentity"]["flashSize"],
+            }
+        record["coordinatorMap"] = {
+            "id": "coord01",
+            "piPort": record.get("coordinatorPort", DEFAULT_COORDINATOR_PORT),
+            "mac": coordinator_mac,
+            "chip": coordinator["parsedIdentity"]["chip"],
+            "flashSize": coordinator["parsedIdentity"]["flashSize"],
+        }
+    record["peerMap"] = peer_map
+    record["verifiedFacts"] = verified_facts
+    record["failures"] = failures
+    record["ok"] = not failures
+    return record
 
 
 def validate_output_path(out_path: Path | None) -> Path | None:
@@ -665,11 +1175,14 @@ def build_record(args: argparse.Namespace) -> dict[str, Any]:
     stamp = utc_stamp()
     out_path = validate_output_path(args.out)
     output_dir = out_path.parent if out_path else None
+    ports = [normalize_windows_port(port) for port in args.windows_ports]
     record: dict[str, Any] = {
-        "ok": True,
+        "ok": False,
         "generatedAt": utc_now(),
         "tool": "scripts/live_bench_preflight.py",
         "workspace": str(ROOT),
+        "expectedPeerPorts": ports,
+        "coordinatorPort": args.coordinator_port,
         "readOnlyBoundary": {
             "noFlash": True,
             "noErase": True,
@@ -681,64 +1194,97 @@ def build_record(args: argparse.Namespace) -> dict[str, Any]:
             "noPiPersistentBridge": True,
         },
         "assumptions": [
-            "COM6 is only a candidate ESP32 target until this read-only evidence and physical bench evidence match.",
+            "COM4, COM5, and COM6 are only candidate ESP32 peers until fresh read-only identity and physical bench evidence match.",
+            "Peer IDs are assigned by Windows port order only after the full gate passes: COM4=peer01, COM5=peer02, COM6=peer03.",
             "The Pi target is accepted only when fresh host-key and identity checks match.",
         ],
         "unknowns": [
             "Physical USB-only/no-load/no-relay/TFT/MicroSD/XBee wiring state is not proven by this script.",
             "ESP-IDF install state outside common paths is not exhaustively proven.",
+            "No live ESP-NOW radio traffic is generated by this preflight.",
         ],
+        "verifiedFacts": [],
+        "failures": [],
     }
-    record["windowsComInventory"] = collect_windows_com_inventory(args.windows_port)
-    record["wslSerial"] = collect_wsl_serial_permissions(args.wsl_port)
-    record["toolchain"] = collect_toolchain_status()
-    record["esp32Identity"] = (
+
+    record["windowsPeerInventory"] = (
         {"skipped": True}
-        if args.skip_esp32
-        else collect_esp32_identity(args.windows_port, args.wsl_port)
+        if args.skip_peers
+        else collect_windows_peer_inventory(ports)
+    )
+    record["wslSerial"] = collect_wsl_serial_permissions(ports)
+    record["toolchain"] = collect_toolchain_status()
+    record["peerEsp32Identities"] = (
+        {"skipped": True, "ports": {}}
+        if args.skip_peers
+        else collect_peer_esp32_identities(ports)
     )
     record["piIdentity"] = (
         {"skipped": True}
         if args.skip_pi
-        else collect_pi_identity(args.pi_user, args.pi_host, output_dir, stamp)
+        else collect_pi_identity(
+            args.pi_user,
+            args.pi_host,
+            output_dir,
+            stamp,
+            args.coordinator_port,
+            args.skip_coordinator,
+        )
     )
-    record["ok"] = all(
-        section.get("ok", True)
-        for section in [
-            record["windowsComInventory"].get("expectedChecks", {"ok": True}),
-            record["esp32Identity"],
-            record["piIdentity"],
-        ]
-        if not section.get("skipped")
-    )
+    if args.skip_peers:
+        record["failures"].append(
+            {
+                "section": "peerEsp32Identities",
+                "name": "requiredPeerGate",
+                "code": "skippedRequiredGate",
+                "value": "Peer identity was skipped",
+            }
+        )
+    validate_preflight_record(record)
     write_output(record, out_path)
     return record
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Capture read-only ESP32/Pi bench preflight evidence."
+        description="Capture read-only ESP-NOW BBS multi-peer bench preflight evidence."
     )
-    parser.add_argument("--windows-port", default=DEFAULT_WINDOWS_PORT)
-    parser.add_argument("--wsl-port", default=DEFAULT_WSL_PORT)
+    parser.add_argument(
+        "--windows-ports",
+        nargs="+",
+        default=DEFAULT_WINDOWS_PORTS,
+        help="Expected Windows CP210x peer ports in peer order.",
+    )
     parser.add_argument("--pi-user", default=DEFAULT_PI_USER)
     parser.add_argument("--pi-host", default=DEFAULT_PI_HOST)
+    parser.add_argument("--coordinator-port", default=DEFAULT_COORDINATOR_PORT)
     parser.add_argument(
-        "--skip-esp32",
+        "--skip-peers",
         action="store_true",
-        help="Skip esptool chip_id/read_mac/flash_id identity commands.",
+        help="Diagnostic only: skip Windows and peer esptool identity checks.",
     )
     parser.add_argument(
         "--skip-pi",
         action="store_true",
-        help="Skip Pi host-key and SSH identity checks.",
+        help="Diagnostic only: skip Pi host-key, identity, and coordinator checks.",
+    )
+    parser.add_argument(
+        "--skip-coordinator",
+        action="store_true",
+        help="Diagnostic only: skip Pi /dev/ttyUSB0 esptool identity checks.",
     )
     parser.add_argument(
         "--out",
         type=Path,
         help="Optional JSON output path under research/bench-records/live-bench/.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.windows_ports = [normalize_windows_port(port) for port in args.windows_ports]
+    if args.windows_ports != DEFAULT_WINDOWS_PORTS:
+        raise SystemExit(
+            "this gate currently requires exactly COM4 COM5 COM6 in that order"
+        )
+    return args
 
 
 def main() -> int:

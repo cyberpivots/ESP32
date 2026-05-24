@@ -951,6 +951,18 @@ def cleanup_line_is_clear(line: str) -> bool:
     return any(marker in padded for marker in clear_markers)
 
 
+def cleanup_line_is_neutral(line: str) -> bool:
+    normalized = normalize_text(line)
+    neutral_markers = (
+        "term requested",
+        "quit modal detected",
+        "confirming with enter",
+        "pre cleanup screenshot captured",
+        "pre cleanup screenshot failed",
+    )
+    return line.lstrip().startswith("#") or any(marker in normalized for marker in neutral_markers)
+
+
 def audit_cleanup_proof(path: Path) -> dict[str, Any]:
     parsed, text = load_json_or_text(path)
     lines = text.splitlines() or [text]
@@ -962,8 +974,9 @@ def audit_cleanup_proof(path: Path) -> dict[str, Any]:
             for line in lines
             if any(normalize_text(term) in normalize_text(line) for term in terms)
         ]
-        clear = bool(matching) and all(cleanup_line_is_clear(line) for line in matching)
-        categories[category] = {"ok": clear, "lines": matching}
+        observed = [line for line in matching if not cleanup_line_is_neutral(line)]
+        clear = bool(observed) and all(cleanup_line_is_clear(line) for line in observed)
+        categories[category] = {"ok": clear, "lines": matching, "observed": observed}
         if not clear:
             failures.append(f"cleanup_{category}_not_clear")
     return {

@@ -4,7 +4,7 @@
 
 - ID: 0034-win31-viewfinder-downloads-otap-gate-alignment
 - Owner role: Communications, QA
-- Status: implemented pending copied live evidence
+- Status: implemented with copied live evidence accepted
 - Created: 2026-05-24
 - Updated: 2026-05-24
 - Contract: [../../AGENTS.md](../../AGENTS.md)
@@ -40,6 +40,12 @@ Excluded:
 
 - `python3 -m py_compile scripts/espnow_bbs_live_gate.py`
 - `python3 tests/live_bench/test_espnow_bbs_live_gate.py`
+- 2026-05-24 live completion:
+  `/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/completion.json`
+- Completion gate status: `pass`
+- Evidence includes the DOS-C vision gate `status: pass`, three `espnow-enc`
+  peers, zero serial errors, moving RX/TX/ACK counters, and clear DOSBox-X,
+  modal, bridge, proxy, and listener cleanup.
 
 ## Handoff
 

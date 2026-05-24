@@ -1,6 +1,6 @@
 # Win31 Dashboard ML Live Gate Source Ledger
 
-Date: 2026-05-23
+Date: 2026-05-23, updated 2026-05-24
 
 Source index: [../source-index.md](../source-index.md)
 
@@ -27,6 +27,9 @@ Source index: [../source-index.md](../source-index.md)
 - The DOS-C vision gate hashes copied screenshots, runs deterministic
   preprocessing plus Tesseract OCR, classifies required OPCON views, and fails
   closed when evidence is incomplete.
+- The updated acceptance set includes Downloads and gated OTAP visible states,
+  plus transcript evidence for `download_list`, `download_status`,
+  `otap_status`, and non-executing `otap_intent`.
 - The bridge transcript remains authoritative for BBS behavior; screenshots
   corroborate visible UI state only.
 - Local fixture tests cover pass, missing-view, weak-OCR,
@@ -43,6 +46,8 @@ Source index: [../source-index.md](../source-index.md)
 - No fresh live screenshot set has been scored by the gate.
 - No new board identity, flash, radio, or cleanup evidence was captured by this
   task.
+- No live mesh file delivery or live OTAP flashing is proven by the updated
+  dashboard/protocol surface.
 - PaddleOCR and hosted vision APIs remain unevaluated for this evidence set.
 
 ## Stop Gate

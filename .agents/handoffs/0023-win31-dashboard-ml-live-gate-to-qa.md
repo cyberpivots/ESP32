@@ -17,9 +17,11 @@ Task: [../TASK_LOG/0033-win31-dashboard-ml-live-gate.md](../TASK_LOG/0033-win31-
 - Fresh same-session identity, power/USB-only state, backups, build hashes,
   manifest, recovery commands, write/verify evidence, bridge transcript,
   screenshot hashes, and cleanup proof.
-- OPCON splash/dashboard, Peers, Message Board, Network, Diagnostics/Safety,
-  disabled unsafe controls, Program Manager item when present, three
-  `espnow-enc` peers, zero serial errors, and moving RX/TX/ACK counters.
+- OPCON splash/dashboard, Peers, Message Board, Downloads, Network, OTAP,
+  Diagnostics/Safety, disabled unsafe controls, Program Manager item when
+  present, three `espnow-enc` peers, zero serial errors, moving RX/TX/ACK
+  counters, `download_list`, `download_status`, `otap_status`, and
+  non-executing `otap_intent`.
 - Final proof that DOSBox-X, warning/quit modals, bridge process, and listeners
   on `31331`, `31332`, and `8080` are closed.
 

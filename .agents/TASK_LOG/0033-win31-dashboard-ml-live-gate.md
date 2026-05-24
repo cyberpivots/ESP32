@@ -6,7 +6,7 @@
 - Owner role: Tooling, Communications, QA
 - Status: tooling implemented pending copied live evidence
 - Created: 2026-05-23
-- Updated: 2026-05-23
+- Updated: 2026-05-24
 - Contract: [../../AGENTS.md](../../AGENTS.md)
 
 ## Goal
@@ -22,7 +22,8 @@ Included:
 - Project-local `.codex` config, custom agents, and lean skills.
 - `scripts/espnow_bbs_live_gate.py complete` for manifest, flash-evidence,
   transcript, cleanup, and DOS-C vision-gate JSON review.
-- Paired DOS-C screenshot vision gate and fixture tests.
+- Paired DOS-C screenshot vision gate and fixture tests, now including
+  Downloads and gated OTAP dashboard states.
 - Source index, source ledger, project documentation, task record, and handoff.
 
 Excluded:
@@ -60,7 +61,8 @@ Excluded:
 - `python3 tests/live_bench/test_multipeer_preflight.py`
 - `python3 scripts/verify_scaffold.py`
 - Paired DOS-C validation recorded in
-  `/mnt/h/dos-c/.agents/tasks/0013-win31-dashboard-vision-gate.md`.
+  `/mnt/h/dos-c/.agents/tasks/0013-win31-dashboard-vision-gate.md` and
+  `/mnt/h/dos-c/.agents/tasks/0014-win31-viewfinder-downloads-otap.md`.
 
 ## Handoff
 

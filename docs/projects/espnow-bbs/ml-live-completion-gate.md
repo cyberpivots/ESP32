@@ -70,7 +70,8 @@ paired DOS-C screenshot vision-gate JSON.
 - Flash evidence proving all four roles completed write and verification steps.
 - The authoritative bridge transcript showing `hello`, `state_get`,
   `peer_list`, `diag_get`, `fw_inventory`, `msg_post`, `msg_pull`,
-  `msg_search`, and `msg_ack`.
+  `msg_search`, `msg_ack`, `download_list`, `download_status`, `otap_status`,
+  and non-executing `otap_intent`.
 - Cleanup proof for DOSBox-X, warning/quit modals, the Pi bridge process, and
   listeners on `31331`, `31332`, and `8080`.
 - DOS-C `win31_dashboard_vision_gate.py` JSON with screenshot hashes,
@@ -84,7 +85,9 @@ The screenshot gate must corroborate:
 - OPCON splash or dashboard.
 - Peers view with `peer01`, `peer02`, `peer03`, and `espnow-enc`.
 - Message Board view.
+- Downloads view.
 - Network view.
+- OTAP view.
 - Diagnostics and Safety views.
 - Disabled unsafe controls.
 - Program Manager item when that screenshot is present.

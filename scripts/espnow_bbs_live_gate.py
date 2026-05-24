@@ -44,6 +44,10 @@ COMPLETE_REQUIRED_TRANSCRIPT_TYPES = {
     "msg_pull",
     "msg_search",
     "msg_ack",
+    "download_list",
+    "download_status",
+    "otap_status",
+    "otap_intent",
 }
 COMPLETE_REQUIRED_PEERS = {"peer01", "peer02", "peer03"}
 COMPLETE_CLEANUP_CATEGORIES = {

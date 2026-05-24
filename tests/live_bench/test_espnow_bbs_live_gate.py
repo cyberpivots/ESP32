@@ -143,6 +143,10 @@ def completion_transcript() -> list[dict[str, object]]:
         {"request": {"type": "msg_pull"}, "response": {"type": "msg_pull", "messages": []}},
         {"request": {"type": "msg_search"}, "response": {"type": "msg_search", "messages": []}},
         {"request": {"type": "msg_ack"}, "response": {"type": "ack", "message": "msg_ack"}},
+        {"request": {"type": "download_list"}, "response": {"type": "download_list", "files": []}},
+        {"request": {"type": "download_status"}, "response": {"type": "download_status", "file_queued": 0}},
+        {"request": {"type": "otap_status"}, "response": {"type": "otap_status", "ready": False}},
+        {"request": {"type": "otap_intent"}, "response": {"type": "ack", "message": "otap_intent", "executed": False}},
     ]
 
 
@@ -236,7 +240,9 @@ class CompletionGateTests(unittest.TestCase):
                     "opcon_dashboard": {"ok": vision_ok, "required": True},
                     "peers": {"ok": True, "required": True},
                     "message_board": {"ok": True, "required": True},
+                    "downloads": {"ok": True, "required": True},
                     "network": {"ok": True, "required": True},
+                    "otap": {"ok": True, "required": True},
                     "diagnostics": {"ok": True, "required": True},
                     "safety": {"ok": True, "required": True},
                     "disabled_unsafe_controls": {"ok": True, "required": True},

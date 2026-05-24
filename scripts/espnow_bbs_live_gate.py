@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -32,6 +33,24 @@ FORBIDDEN_FLASH_ARGS = {
     "erase_flash",
     "erase-region",
     "erase_region",
+}
+COMPLETE_REQUIRED_TRANSCRIPT_TYPES = {
+    "hello",
+    "state_get",
+    "peer_list",
+    "diag_get",
+    "fw_inventory",
+    "msg_post",
+    "msg_pull",
+    "msg_search",
+    "msg_ack",
+}
+COMPLETE_REQUIRED_PEERS = {"peer01", "peer02", "peer03"}
+COMPLETE_CLEANUP_CATEGORIES = {
+    "dosbox": ("dosbox-x", "dosbox"),
+    "modal": ("zenity", "modal", "warning"),
+    "bridge": ("espnow_bbs_bridge.py", "bridge process"),
+    "listeners": ("31331", "31332", "8080", "listener"),
 }
 
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -783,6 +802,332 @@ def command_flash(args: argparse.Namespace) -> int:
     return 0
 
 
+def normalize_text(text: str) -> str:
+    text = text.lower().replace("_", " ").replace("-", " ")
+    return re.sub(r"\s+", " ", text)
+
+
+def load_json_or_text(path: Path) -> tuple[Any | None, str]:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    try:
+        return json.loads(text), text
+    except json.JSONDecodeError:
+        parsed_lines = []
+        for line in text.splitlines():
+            try:
+                parsed_lines.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+        return (parsed_lines if parsed_lines else None), text
+
+
+def iter_dicts(value: Any) -> Any:
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from iter_dicts(child)
+    elif isinstance(value, list):
+        for item in value:
+            yield from iter_dicts(item)
+
+
+def extract_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str) and re.fullmatch(r"-?\d+", value.strip()):
+        return int(value.strip())
+    return None
+
+
+def collect_counter_triples(parsed: Any | None, text: str) -> list[tuple[int, int, int]]:
+    triples: list[tuple[int, int, int]] = []
+    for item in iter_dicts(parsed):
+        lowered = {str(key).lower(): value for key, value in item.items()}
+        rx = extract_int(lowered.get("rx"))
+        tx = extract_int(lowered.get("tx"))
+        ack = None
+        for key in ("acks", "ack", "app_acks", "appacks"):
+            ack = extract_int(lowered.get(key))
+            if ack is not None:
+                break
+        if rx is not None and tx is not None and ack is not None:
+            triples.append((rx, tx, ack))
+
+    for match in re.finditer(
+        r"rx[^0-9]{0,10}(\d+)[^a-z0-9]{1,10}tx[^0-9]{0,10}(\d+)"
+        r"[^a-z0-9]{1,10}a(?:ck|cks)?[^0-9]{0,10}(\d+)",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        triples.append(tuple(int(part) for part in match.groups()))
+    for match in re.finditer(r"\b(\d+)\s*/\s*(\d+)\s*/\s*(\d+)\b", text):
+        triples.append(tuple(int(part) for part in match.groups()))
+    return triples
+
+
+def audit_bridge_transcript(path: Path) -> dict[str, Any]:
+    parsed, text = load_json_or_text(path)
+    normalized = normalize_text(text)
+    failures: list[str] = []
+
+    missing = sorted(
+        request
+        for request in COMPLETE_REQUIRED_TRANSCRIPT_TYPES
+        if request.replace("_", " ") not in normalized
+    )
+    if missing:
+        failures.append("missing_transcript_types:" + ",".join(missing))
+
+    peer_ids = sorted(peer for peer in COMPLETE_REQUIRED_PEERS if peer in normalized.replace(" ", ""))
+    espnow_count = normalized.count("espnow enc")
+    if set(peer_ids) != COMPLETE_REQUIRED_PEERS or espnow_count < 3:
+        failures.append("transcript_peer_mismatch")
+
+    serial_errors: list[int] = []
+    for item in iter_dicts(parsed):
+        for key, value in item.items():
+            lowered_key = str(key).lower()
+            if "serial" in lowered_key and ("err" in lowered_key or "error" in lowered_key):
+                parsed_int = extract_int(value)
+                if parsed_int is not None:
+                    serial_errors.append(parsed_int)
+    for match in re.finditer(r"serial[^\n]{0,30}err(?:or|ors)?[^0-9]{0,10}(\d+)", text, re.I):
+        serial_errors.append(int(match.group(1)))
+    if not serial_errors:
+        failures.append("missing_serial_error_evidence")
+    elif any(value != 0 for value in serial_errors):
+        failures.append("serial_errors_nonzero")
+
+    triples = collect_counter_triples(parsed, text)
+    moving = False
+    if len(triples) >= 2:
+        rx_values = [item[0] for item in triples]
+        tx_values = [item[1] for item in triples]
+        ack_values = [item[2] for item in triples]
+        moving = (
+            max(rx_values) > min(rx_values)
+            and max(tx_values) > min(tx_values)
+            and max(ack_values) > min(ack_values)
+        )
+    if not moving:
+        failures.append("counters_not_moving")
+
+    return {
+        "ok": not failures,
+        "path": str(path),
+        "sha256": sha256_file(path),
+        "requiredTypes": sorted(COMPLETE_REQUIRED_TRANSCRIPT_TYPES),
+        "peerIds": peer_ids,
+        "espnowEncMentions": espnow_count,
+        "serialErrors": serial_errors,
+        "counterTriples": triples,
+        "failures": failures,
+    }
+
+
+def cleanup_line_is_clear(line: str) -> bool:
+    normalized = normalize_text(line)
+    padded = f" {normalized} "
+    clear_markers = (
+        " no ",
+        "none",
+        "not found",
+        "absent",
+        "closed",
+        "cleanup ok",
+        "pass",
+        "0 process",
+        "0 listener",
+        "not listening",
+    )
+    return any(marker in padded for marker in clear_markers)
+
+
+def audit_cleanup_proof(path: Path) -> dict[str, Any]:
+    parsed, text = load_json_or_text(path)
+    lines = text.splitlines() or [text]
+    failures: list[str] = []
+    categories: dict[str, Any] = {}
+    for category, terms in COMPLETE_CLEANUP_CATEGORIES.items():
+        matching = [
+            line.strip()
+            for line in lines
+            if any(normalize_text(term) in normalize_text(line) for term in terms)
+        ]
+        clear = bool(matching) and all(cleanup_line_is_clear(line) for line in matching)
+        categories[category] = {"ok": clear, "lines": matching}
+        if not clear:
+            failures.append(f"cleanup_{category}_not_clear")
+    return {
+        "ok": not failures,
+        "path": str(path),
+        "sha256": sha256_file(path),
+        "categories": categories,
+        "failures": failures,
+        "jsonParsed": parsed is not None,
+    }
+
+
+def audit_completion_manifest(manifest: dict[str, Any], manifest_path: Path) -> dict[str, Any]:
+    failures: list[str] = []
+    warnings: list[str] = []
+    for section in ["devices", "backups", "builds"]:
+        if not isinstance(manifest.get(section), dict):
+            failures.append(f"manifest_missing_{section}")
+            continue
+        missing_roles = [role for role in FLASH_ORDER if role not in manifest[section]]
+        if missing_roles:
+            failures.append(f"manifest_{section}_missing_roles:" + ",".join(missing_roles))
+
+    flash_gate = manifest.get("flashGate", {})
+    if flash_gate.get("requiresConfirmWriteFlash") is not True:
+        failures.append("manifest_flash_gate_missing_confirm_write")
+    if flash_gate.get("flashOrder") != FLASH_ORDER:
+        failures.append("manifest_flash_order_mismatch")
+
+    for role, backup in manifest.get("backups", {}).items():
+        if not backup.get("sha256") or not backup.get("bytes"):
+            failures.append(f"manifest_backup_incomplete:{role}")
+        path = Path(str(backup.get("path", "")))
+        if path.exists() and sha256_file(path) != backup.get("sha256"):
+            failures.append(f"manifest_backup_hash_mismatch:{role}")
+        elif not path.exists():
+            warnings.append(f"backup_not_rechecked:{role}")
+
+    for role, build in manifest.get("builds", {}).items():
+        try:
+            reject_forbidden_flash_args(list(build.get("writeFlashArgs", [])))
+        except SystemExit:
+            failures.append(f"manifest_forbidden_flash_args:{role}")
+        for item in build.get("files", []):
+            if not item.get("sha256") or not item.get("bytes") or not item.get("offset"):
+                failures.append(f"manifest_build_file_incomplete:{role}")
+            path = Path(str(item.get("path", "")))
+            if path.exists() and sha256_file(path) != item.get("sha256"):
+                failures.append(f"manifest_build_hash_mismatch:{role}")
+            elif not path.exists():
+                warnings.append(f"build_not_rechecked:{role}:{path.name}")
+
+    return {
+        "ok": not failures,
+        "path": str(manifest_path),
+        "sha256": sha256_file(manifest_path),
+        "failures": failures,
+        "warnings": warnings,
+    }
+
+
+def audit_flash_evidence(evidence: dict[str, Any], evidence_path: Path, manifest_path: Path) -> dict[str, Any]:
+    failures: list[str] = []
+    if evidence.get("ok") is not True:
+        failures.append("flash_evidence_not_ok")
+    evidence_manifest = evidence.get("manifest")
+    if evidence_manifest:
+        try:
+            if Path(evidence_manifest).resolve() != manifest_path.resolve():
+                failures.append("flash_evidence_manifest_mismatch")
+        except OSError:
+            failures.append("flash_evidence_manifest_mismatch")
+    else:
+        failures.append("flash_evidence_missing_manifest")
+
+    results = evidence.get("results", {})
+    if not isinstance(results, dict):
+        failures.append("flash_evidence_missing_results")
+        results = {}
+    for role in FLASH_ORDER:
+        role_result = results.get(role)
+        if not isinstance(role_result, dict):
+            failures.append(f"flash_evidence_missing_role:{role}")
+            continue
+        for key in ["writeFlash", "verifyFlash"]:
+            command = role_result.get(key)
+            if not isinstance(command, dict) or command.get("returncode") != 0:
+                failures.append(f"flash_evidence_{key}_failed:{role}")
+
+    return {
+        "ok": not failures,
+        "path": str(evidence_path),
+        "sha256": sha256_file(evidence_path),
+        "failures": failures,
+    }
+
+
+def audit_vision_gate(path: Path) -> dict[str, Any]:
+    payload = json_load(path)
+    failures: list[str] = []
+    if payload.get("ok") is not True or payload.get("status") != "pass":
+        failures.append("vision_gate_not_pass")
+    views = payload.get("views", {})
+    if not isinstance(views, dict):
+        failures.append("vision_gate_missing_views")
+        views = {}
+    for view, result in views.items():
+        if isinstance(result, dict) and result.get("required") and not result.get("ok"):
+            failures.append(f"vision_gate_missing_view:{view}")
+    for section in ["transcript", "cleanup"]:
+        result = payload.get(section)
+        if not isinstance(result, dict) or result.get("ok") is not True:
+            failures.append(f"vision_gate_{section}_not_ok")
+    if not payload.get("screenshots"):
+        failures.append("vision_gate_missing_screenshot_hashes")
+    return {
+        "ok": not failures,
+        "path": str(path),
+        "sha256": sha256_file(path),
+        "status": payload.get("status"),
+        "failures": failures,
+    }
+
+
+def command_complete(args: argparse.Namespace) -> int:
+    manifest_path = args.manifest.resolve()
+    flash_evidence_path = args.flash_evidence.resolve()
+    bridge_transcript_path = args.bridge_transcript.resolve()
+    cleanup_proof_path = args.cleanup_proof.resolve()
+    vision_gate_path = args.vision_gate.resolve()
+
+    manifest = json_load(manifest_path)
+    flash_evidence = json_load(flash_evidence_path)
+    manifest_audit = audit_completion_manifest(manifest, manifest_path)
+    flash_audit = audit_flash_evidence(flash_evidence, flash_evidence_path, manifest_path)
+    transcript_audit = audit_bridge_transcript(bridge_transcript_path)
+    cleanup_audit = audit_cleanup_proof(cleanup_proof_path)
+    vision_audit = audit_vision_gate(vision_gate_path)
+
+    failures = []
+    for audit in [manifest_audit, flash_audit, transcript_audit, cleanup_audit, vision_audit]:
+        failures.extend(audit.get("failures", []))
+    status = "pass" if not failures else "needs_manual_review"
+    payload = {
+        "ok": status == "pass",
+        "status": status,
+        "generatedAt": utc_now(),
+        "tool": "scripts/espnow_bbs_live_gate.py complete",
+        "inputs": {
+            "manifest": str(manifest_path),
+            "flashEvidence": str(flash_evidence_path),
+            "bridgeTranscript": str(bridge_transcript_path),
+            "cleanupProof": str(cleanup_proof_path),
+            "visionGate": str(vision_gate_path),
+        },
+        "manifest": manifest_audit,
+        "flashEvidence": flash_audit,
+        "transcript": transcript_audit,
+        "cleanup": cleanup_audit,
+        "visionGate": vision_audit,
+        "failures": failures,
+    }
+    out = args.out.resolve() if args.out else manifest_path.parent / f"completion-evidence-{utc_stamp()}.json"
+    json_write(out, payload)
+    print(json.dumps({"ok": payload["ok"], "status": status, "evidence": str(out)}, indent=2))
+    return 0 if payload["ok"] else 2
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -799,6 +1144,15 @@ def parse_args() -> argparse.Namespace:
     flash_parser.add_argument("--manifest", type=Path, required=True)
     flash_parser.add_argument("--confirm-write-flash", action="store_true")
     flash_parser.set_defaults(func=command_flash)
+
+    complete_parser = sub.add_parser("complete", help="Audit post-run transcript, cleanup, and vision evidence.")
+    complete_parser.add_argument("--manifest", type=Path, required=True)
+    complete_parser.add_argument("--flash-evidence", type=Path, required=True)
+    complete_parser.add_argument("--bridge-transcript", type=Path, required=True)
+    complete_parser.add_argument("--cleanup-proof", type=Path, required=True)
+    complete_parser.add_argument("--vision-gate", type=Path, required=True)
+    complete_parser.add_argument("--out", type=Path)
+    complete_parser.set_defaults(func=command_complete)
 
     return parser.parse_args()
 

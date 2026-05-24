@@ -1,0 +1,37 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+[agents.governance-cartographer]
+description = "Read-only mapper for repo governance, docs index coverage, ownership boundaries, and task-log continuity."
+config_file = "agents/governance-cartographer.toml"
+
+[agents.evidence-record-auditor]
+description = "Read-only auditor for source-index coverage, verified fact boundaries, evidence hashes, and handoff completeness."
+config_file = "agents/evidence-record-auditor.toml"
+
+[agents.live-bench-gate-reviewer]
+description = "Read-only reviewer for ESP32 live-bench preflight, manifest, flash, cleanup, and stop-gate evidence."
+config_file = "agents/live-bench-gate-reviewer.toml"
+
+[agents.win31-dashboard-vision-gate]
+description = "Read-only reviewer for Win31 OPCON screenshot OCR/CV corroboration and bridge transcript alignment."
+config_file = "agents/win31-dashboard-vision-gate.toml"
+
+[agents.ui-code-protocol-analyst]
+description = "Read-only analyst for Win31 UI code, bridge protocol code, bounded line formats, and test coverage."
+config_file = "agents/ui-code-protocol-analyst.toml"
+
+[agents.source-skill-curator]
+description = "Read-only curator for concise repo-local skills, one-level references, and source-backed operating guidance."
+config_file = "agents/source-skill-curator.toml"
+
+[agents.prompt-token-triage]
+description = "Read-only prompt triage role for decomposing fragile work, preserving gates, and minimizing context load."
+config_file = "agents/prompt-token-triage.toml"
+
+[[skills.config]]
+path = "skills/esp32-live-gate-coordinator"
+enabled = true
+
+[[skills.config]]
+path = "skills/win31-dashboard-vision-gate"
+enabled = true

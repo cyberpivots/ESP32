@@ -81,6 +81,7 @@
 - [ESP-NOW BBS custom wireless protocol Gate E bridge ABI source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-e-bridge-abi.md)
 - [ESP-NOW BBS custom wireless protocol Gate G analytics source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-g-analytics.md)
 - [ESP-NOW BBS custom wireless protocol Gate H live attempt source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-live-attempt.md)
+- [ESP-NOW BBS custom wireless protocol Gate H troubleshooting source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-troubleshooting.md)
 - [Win31 dashboard ML live gate source ledger](../knowledge-base/source-ledger/2026-05-23-win31-dashboard-ml-live-gate.md)
 - [Win31 dashboard legibility research source ledger](../knowledge-base/source-ledger/2026-05-24-win31-dashboard-legibility-research.md)
 - [Client UI live gate source ledger](../knowledge-base/source-ledger/2026-05-24-client-ui-live-gate.md)
@@ -97,4 +98,5 @@
 - [Windows ICS to Netgear WNR1000 bench record](../research/bench-records/live-bench/2026-05-23-windows-ics-netgear-wnr1000.md)
 - [ESP-NOW BBS three-peer live proof bench record](../research/bench-records/live-bench/2026-05-23-espnow-bbs-three-peer-live-attempt.md)
 - [ESP-NOW BBS custom wireless protocol Gate H live attempt bench record](../research/bench-records/live-bench/2026-05-25-custom-wireless-protocol-gate-h-live-attempt.md)
+- [ESP-NOW BBS custom wireless protocol Gate H troubleshooting bench record](../research/bench-records/live-bench/2026-05-25-custom-wireless-protocol-gate-h-troubleshooting.md)
 - [Available skills](../research/skills/available-skills.md)

@@ -19,6 +19,7 @@ SPEC.loader.exec_module(live_bench_preflight)
 
 
 PORTS = ["COM4", "COM5", "COM6"]
+REMAP_PORTS = ["COM9", "COM6", "COM7"]
 
 
 def serial_entry(port: str) -> dict[str, object]:
@@ -137,6 +138,50 @@ class MultiPeerPreflightTests(unittest.TestCase):
         self.assertEqual(record["peerMap"]["peer02"]["windowsPort"], "COM5")
         self.assertEqual(record["peerMap"]["peer03"]["windowsPort"], "COM6")
         self.assertEqual(record["coordinatorMap"]["mac"], "78:e3:6d:10:4d:6c")
+
+    def test_accepted_mac_remap_maps_roles_by_mac(self) -> None:
+        record = base_record()
+        parsed = {"serialPorts": [serial_entry(port) for port in REMAP_PORTS]}
+        record["expectedPeerPorts"] = REMAP_PORTS
+        record["peerPortPolicy"] = {
+            "mode": "accepted_mac_remap",
+            "acceptedPeerRoleMacs": live_bench_preflight.ACCEPTED_PEER_ROLE_MACS,
+        }
+        record["windowsPeerInventory"]["parsed"] = parsed
+        record["windowsPeerInventory"]["expectedChecks"] = (
+            live_bench_preflight.check_windows_peers(parsed, REMAP_PORTS)
+        )
+        record["peerEsp32Identities"]["ports"] = {
+            "COM9": identity("94:b9:7e:da:17:d0"),
+            "COM6": identity("78:e3:6d:0a:90:14"),
+            "COM7": identity("94:b9:7e:da:9a:50"),
+        }
+        checked = live_bench_preflight.validate_preflight_record(record)
+        self.assertTrue(checked["ok"])
+        self.assertEqual(checked["peerMap"]["peer01"]["windowsPort"], "COM9")
+        self.assertEqual(checked["peerMap"]["peer02"]["windowsPort"], "COM6")
+        self.assertEqual(checked["peerMap"]["peer03"]["windowsPort"], "COM7")
+
+    def test_accepted_mac_remap_rejects_unexpected_mac_set(self) -> None:
+        record = base_record()
+        parsed = {"serialPorts": [serial_entry(port) for port in REMAP_PORTS]}
+        record["expectedPeerPorts"] = REMAP_PORTS
+        record["peerPortPolicy"] = {
+            "mode": "accepted_mac_remap",
+            "acceptedPeerRoleMacs": live_bench_preflight.ACCEPTED_PEER_ROLE_MACS,
+        }
+        record["windowsPeerInventory"]["parsed"] = parsed
+        record["windowsPeerInventory"]["expectedChecks"] = (
+            live_bench_preflight.check_windows_peers(parsed, REMAP_PORTS)
+        )
+        record["peerEsp32Identities"]["ports"] = {
+            "COM9": identity("94:b9:7e:da:17:d0"),
+            "COM6": identity("78:e3:6d:0a:90:14"),
+            "COM7": identity("78:e3:6d:0a:90:17"),
+        }
+        checked = live_bench_preflight.validate_preflight_record(record)
+        self.assertFalse(checked["ok"])
+        self.assertIn("unexpectedPeerMacSet", failure_codes(checked))
 
     def test_summary_reports_ready_gate_without_command_logs(self) -> None:
         record = live_bench_preflight.validate_preflight_record(base_record())

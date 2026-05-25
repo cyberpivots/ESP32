@@ -30,6 +30,11 @@ DEFAULT_PI_USER = "dospi"
 DEFAULT_PI_HOST = "172.16.0.2"
 ACCEPTED_PI_ACCESS_HOSTS = {DEFAULT_PI_HOST, "192.168.137.93"}
 DEFAULT_COORDINATOR_PORT = "/dev/ttyUSB0"
+ACCEPTED_PEER_ROLE_MACS = {
+    "peer01": "94:b9:7e:da:17:d0",
+    "peer02": "78:e3:6d:0a:90:14",
+    "peer03": "94:b9:7e:da:9a:50",
+}
 
 EXPECTED_USB = {
     "descriptionContains": "CP210x",
@@ -287,9 +292,13 @@ def check_windows_peers(parsed: Any, expected_ports: list[str]) -> dict[str, Any
     items: list[dict[str, Any]] = [
         {
             "name": "exactCp210xPortSet",
-            "ok": cp210x_ports == expected,
-            "code": "unexpectedWindowsPeerSet" if cp210x_ports != expected else None,
-            "expected": expected,
+            "ok": cp210x_ports == sorted(expected),
+            "code": (
+                "unexpectedWindowsPeerSet"
+                if cp210x_ports != sorted(expected)
+                else None
+            ),
+            "expected": sorted(expected),
             "value": cp210x_ports,
         }
     ]
@@ -992,6 +1001,8 @@ def validate_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
         normalize_windows_port(port)
         for port in record.get("expectedPeerPorts", DEFAULT_WINDOWS_PORTS)
     ]
+    peer_port_policy = record.get("peerPortPolicy", {})
+    peer_port_policy_mode = peer_port_policy.get("mode", "default_com_order")
 
     windows_checks = record.get("windowsPeerInventory", {}).get("expectedChecks")
     if not windows_checks or not windows_checks.get("ok"):
@@ -1003,7 +1014,9 @@ def validate_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
         )
     else:
         verified_facts.append(
-            "Windows inventory contains exactly COM4, COM5, and COM6 CP210x VID:PID 10C4:EA60 peers."
+            "Windows inventory contains exactly "
+            + ", ".join(expected_ports)
+            + " CP210x VID:PID 10C4:EA60 peers."
         )
 
     peer_identities = record.get("peerEsp32Identities", {}).get("ports", {})
@@ -1059,9 +1072,38 @@ def validate_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
                 "value": duplicate_macs,
             }
         )
+    elif (
+        peer_port_policy_mode == "accepted_mac_remap"
+        and len(peer_macs) == len(expected_ports)
+        and not malformed_peer
+    ):
+        expected_role_macs = {
+            str(role): str(mac).lower()
+            for role, mac in peer_port_policy.get(
+                "acceptedPeerRoleMacs", ACCEPTED_PEER_ROLE_MACS
+            ).items()
+        }
+        observed_macs = set(peer_macs.values())
+        expected_macs = set(expected_role_macs.values())
+        if observed_macs != expected_macs:
+            failures.append(
+                {
+                    "section": "peerEsp32Identities",
+                    "name": "acceptedPeerRoleMacs",
+                    "code": "unexpectedPeerMacSet",
+                    "expected": expected_role_macs,
+                    "value": peer_macs,
+                }
+            )
+        else:
+            verified_facts.append(
+                "Read-only esptool identity matched the accepted peer role MACs on current Windows COM ports."
+            )
     elif len(peer_macs) == len(expected_ports) and not malformed_peer:
         verified_facts.append(
-            "Read-only esptool identity passed for COM4, COM5, and COM6 with distinct ESP32 MACs."
+            "Read-only esptool identity passed for "
+            + ", ".join(expected_ports)
+            + " with distinct ESP32 MACs."
         )
 
     pi_identity = record.get("piIdentity", {})
@@ -1150,8 +1192,22 @@ def validate_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
 
     peer_map: dict[str, Any] = {}
     if not failures and len(peer_macs) == len(expected_ports) and coordinator_mac:
-        for index, port in enumerate(expected_ports, start=1):
-            peer_id = f"peer{index:02d}"
+        if peer_port_policy_mode == "accepted_mac_remap":
+            role_for_mac = {
+                str(mac).lower(): str(role)
+                for role, mac in peer_port_policy.get(
+                    "acceptedPeerRoleMacs", ACCEPTED_PEER_ROLE_MACS
+                ).items()
+            }
+            peer_ports = [
+                (role_for_mac[peer_macs[port]], port) for port in expected_ports
+            ]
+        else:
+            peer_ports = [
+                (f"peer{index:02d}", port)
+                for index, port in enumerate(expected_ports, start=1)
+            ]
+        for peer_id, port in sorted(peer_ports):
             identity = peer_identities[port]
             peer_map[peer_id] = {
                 "windowsPort": port,
@@ -1295,6 +1351,16 @@ def build_record(args: argparse.Namespace) -> dict[str, Any]:
         "tool": "scripts/live_bench_preflight.py",
         "workspace": str(ROOT),
         "expectedPeerPorts": ports,
+        "peerPortPolicy": {
+            "mode": (
+                "accepted_mac_remap"
+                if args.allow_peer_port_remap
+                else "default_com_order"
+            ),
+            "acceptedPeerRoleMacs": (
+                ACCEPTED_PEER_ROLE_MACS if args.allow_peer_port_remap else {}
+            ),
+        },
         "coordinatorPort": args.coordinator_port,
         "readOnlyBoundary": {
             "noFlash": True,
@@ -1307,8 +1373,8 @@ def build_record(args: argparse.Namespace) -> dict[str, Any]:
             "noPiPersistentBridge": True,
         },
         "assumptions": [
-            "COM4, COM5, and COM6 are only candidate ESP32 peers until fresh read-only identity and physical bench evidence match.",
-            "Peer IDs are assigned by Windows port order only after the full gate passes: COM4=peer01, COM5=peer02, COM6=peer03.",
+            "Default peer IDs are assigned by Windows port order only after the full gate passes: COM4=peer01, COM5=peer02, COM6=peer03.",
+            "When --allow-peer-port-remap is used, peer IDs are assigned only by the accepted role MAC set after fresh read-only identity passes.",
             "The Pi target is accepted only when fresh host-key and identity checks match.",
         ],
         "unknowns": [
@@ -1368,6 +1434,14 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_WINDOWS_PORTS,
         help="Expected Windows CP210x peer ports in peer order.",
     )
+    parser.add_argument(
+        "--allow-peer-port-remap",
+        action="store_true",
+        help=(
+            "Allow a non-default Windows COM map only when read-only identity "
+            "matches the accepted peer role MACs."
+        ),
+    )
     parser.add_argument("--pi-user", default=DEFAULT_PI_USER)
     parser.add_argument(
         "--pi-host",
@@ -1410,9 +1484,16 @@ def parse_args() -> argparse.Namespace:
     )
     args = parser.parse_args()
     args.windows_ports = [normalize_windows_port(port) for port in args.windows_ports]
-    if args.windows_ports != DEFAULT_WINDOWS_PORTS:
+    if args.windows_ports != DEFAULT_WINDOWS_PORTS and not args.allow_peer_port_remap:
         raise SystemExit(
-            "this gate currently requires exactly COM4 COM5 COM6 in that order"
+            "this gate currently requires exactly COM4 COM5 COM6 unless "
+            "--allow-peer-port-remap is set"
+        )
+    if args.allow_peer_port_remap and len(args.windows_ports) != len(
+        ACCEPTED_PEER_ROLE_MACS
+    ):
+        raise SystemExit(
+            "--allow-peer-port-remap requires exactly three Windows peer ports"
         )
     return args
 

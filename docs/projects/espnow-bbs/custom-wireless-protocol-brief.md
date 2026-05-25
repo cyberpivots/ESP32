@@ -177,8 +177,11 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
   through compact bridge responses that fit the Win31 line budget.
 - [assumption] Client/user reporting and analytics are generated from bridge
   records first, not from ESP32 firmware state.
-- [unknown] No accepted analytics storage format, dashboard report shape, or
-  export policy exists.
+- [repo-verified] Gate G adds simulator-only analytics report generation for
+  counters, custody rollups, file rollups, telemetry rollups, and fixture-only
+  client/user summary fields.
+- [unknown] No accepted analytics storage format, dashboard report shape,
+  retention rule, privacy policy, or export policy exists.
 
 ## 9. Test and Acceptance Plan
 

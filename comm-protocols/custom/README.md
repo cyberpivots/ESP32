@@ -32,6 +32,9 @@ Verified boundaries:
   `version_invalid`, `line_too_long`, `non_ascii`, `json_invalid`,
   `payload_invalid`, `field_type_invalid`, `hex_invalid`,
   `message_type_unknown`, and `state_changing_command_blocked`.
+- Gate G analytics reports are simulator-only and include boundary fields for
+  `simulator_only`, `privacy_policy: unreviewed`, and
+  `retention: unresolved`.
 
 Still unresolved:
 
@@ -39,5 +42,7 @@ Still unresolved:
   accepted by this simulator.
 - No live hardware, serial, radio, actual bridge runtime, or Win31/OPCON state
   is proven by these tests.
+- No analytics retention, export, privacy, or live dashboard reporting policy
+  is accepted by Gate G.
 - Agricultural sensor, GPS, and reporting schemas remain blocked on
   source-backed hardware profiles and owner review.

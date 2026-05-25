@@ -332,6 +332,90 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertFalse(non_ascii["accepted"])
         self.assertEqual(non_ascii["reason"], "non_ascii")
 
+    def test_gate_g_analytics_report_is_simulator_only(self) -> None:
+        simulator = ProtocolSimulator()
+        post = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "msg_post",
+                "from": "sysop",
+                "to": "peer01",
+                "body": "analytics fixture",
+            },
+            simulator,
+        )
+        queued = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "download_queue",
+                "id": 88,
+                "peer": "peer02",
+                "content": "file",
+            },
+            simulator,
+        )
+        telemetry = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "telemetry_report",
+                "node": "soil01",
+                "class": "soil_moisture",
+                "values": {"vwc": 31},
+            },
+            simulator,
+        )
+        node = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "node_status",
+                "node": "peer01",
+                "link": "espnow-enc",
+                "rssi": -60,
+                "seen_ms": 100,
+            },
+            simulator,
+        )
+        control = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "control_intent",
+                "peer": "peer01",
+                "action": "relay_set",
+            },
+            simulator,
+        )
+        blocked = process_bridge_request(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "relay_set", "peer": "peer01"},
+            simulator,
+        )
+        simulator.apply_ack(make_custody_ack(queued["id"], "acked", "peer02", "coord01", 21))
+        report = simulator.analytics_report()
+
+        self.assertTrue(post["accepted"])
+        self.assertTrue(queued["accepted"])
+        self.assertEqual(telemetry["status"], "delivered")
+        self.assertEqual(node["status"], "delivered")
+        self.assertFalse(control["executed"])
+        self.assertFalse(blocked["accepted"])
+        self.assertTrue(report["simulator_only"])
+        self.assertEqual(report["privacy_policy"], "unreviewed")
+        self.assertEqual(report["retention"], "unresolved")
+        self.assertEqual(report["counters"]["direct_messages"], 1)
+        self.assertEqual(report["counters"]["files"], 1)
+        self.assertEqual(report["counters"]["telemetry_reports"], 1)
+        self.assertEqual(report["counters"]["node_status_reports"], 1)
+        self.assertEqual(report["counters"]["custody_acks"], 1)
+        self.assertEqual(report["counters"]["control_intents"], 1)
+        self.assertEqual(report["counters"]["blocked_state_changing_requests"], 1)
+        self.assertEqual(report["custody"]["acked"], 1)
+        self.assertEqual(report["files"]["completed"]["count"], 1)
+        self.assertEqual(report["files"]["completed"]["bytes"], 4)
+        self.assertEqual(report["telemetry"]["classes"]["soil_moisture"], 1)
+        self.assertEqual(report["telemetry"]["node_count"], 1)
+        self.assertEqual(report["client_user_summary"]["source"], "simulator_fixtures_only")
+        self.assertEqual(report["client_user_summary"]["identity_policy"], "unreviewed")
+        self.assertEqual(report["export_boundary"]["simulator_only"], True)
+
 
 if __name__ == "__main__":
     unittest.main()

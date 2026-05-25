@@ -159,9 +159,14 @@ class ProtocolSimulator:
     next_message_id: int = 1000
     custody: dict[int, CustodyRecord] = field(default_factory=dict)
     duplicate_window: DuplicateWindow = field(default_factory=DuplicateWindow)
+    direct_messages: list[dict[str, Any]] = field(default_factory=list)
     telemetry_reports: list[dict[str, Any]] = field(default_factory=list)
+    node_status_reports: list[dict[str, Any]] = field(default_factory=list)
     file_requests: dict[int, dict[str, Any]] = field(default_factory=dict)
     control_intents: list[dict[str, Any]] = field(default_factory=list)
+    client_user_labels: set[str] = field(default_factory=set)
+    custody_ack_count: int = 0
+    blocked_state_changing_requests: int = 0
 
     def allocate_message_id(self) -> int:
         self.next_message_id += 1
@@ -194,6 +199,14 @@ class ProtocolSimulator:
             service="direct_message",
             destination=to_peer,
         )
+        self.direct_messages.append(
+            {
+                "from": sender,
+                "to": to_peer,
+                "bytes": len(payload),
+            }
+        )
+        self.client_user_labels.add(sender)
         return packets
 
     def queue_file(self, file_id: int, to_peer: str, content: bytes) -> list[WirelessPacket]:
@@ -248,14 +261,14 @@ class ProtocolSimulator:
         return packet
 
     def record_node_status(self, node_id: str, link: str, rssi: int, seen_ms: int) -> WirelessPacket:
-        body = compact_json_bytes(
-            {
-                "node": node_id,
-                "link": link,
-                "rssi": rssi,
-                "seen_ms": seen_ms,
-            }
-        )
+        payload = {
+            "node": node_id,
+            "link": link,
+            "rssi": rssi,
+            "seen_ms": seen_ms,
+        }
+        body = compact_json_bytes(payload)
+        self.node_status_reports.append(payload)
         return WirelessPacket(
             service="node_status",
             seq=self.allocate_seq(),
@@ -293,6 +306,7 @@ class ProtocolSimulator:
         if record is None:
             raise ProtocolError("custody_missing", str(ack_id))
         record.mark_ack(status, reason)
+        self.custody_ack_count += 1
         if record.service == "file_chunk" and ack_id in self.file_requests:
             self.file_requests[ack_id]["status"] = status
 
@@ -309,6 +323,64 @@ class ProtocolSimulator:
             "telemetry": len(self.telemetry_reports),
             "files": len(self.file_requests),
             "control_intents": len(self.control_intents),
+        }
+
+    def analytics_report(self) -> dict[str, Any]:
+        custody_rollup = {status: 0 for status in CUSTODY_CODES}
+        for record in self.custody.values():
+            custody_rollup[record.status] = custody_rollup.get(record.status, 0) + 1
+
+        file_rollup = {
+            "queued": {"count": 0, "bytes": 0},
+            "completed": {"count": 0, "bytes": 0},
+            "failed": {"count": 0, "bytes": 0},
+        }
+        for request in self.file_requests.values():
+            status = str(request.get("status", "queued"))
+            bucket = _file_status_bucket(status)
+            file_rollup[bucket]["count"] += 1
+            file_rollup[bucket]["bytes"] += int(request.get("bytes", 0))
+
+        telemetry_classes: dict[str, int] = {}
+        telemetry_nodes: set[str] = set()
+        for report in self.telemetry_reports:
+            report_class = str(report.get("class", "unknown"))
+            telemetry_classes[report_class] = telemetry_classes.get(report_class, 0) + 1
+            telemetry_nodes.add(str(report.get("node", "unknown")))
+
+        return {
+            "type": "analytics_report",
+            "status": "sim",
+            "node": self.node_id,
+            "simulator_only": True,
+            "privacy_policy": "unreviewed",
+            "retention": "unresolved",
+            "counters": {
+                "direct_messages": len(self.direct_messages),
+                "files": len(self.file_requests),
+                "telemetry_reports": len(self.telemetry_reports),
+                "node_status_reports": len(self.node_status_reports),
+                "custody_acks": self.custody_ack_count,
+                "control_intents": len(self.control_intents),
+                "blocked_state_changing_requests": self.blocked_state_changing_requests,
+            },
+            "custody": custody_rollup,
+            "files": file_rollup,
+            "telemetry": {
+                "classes": telemetry_classes,
+                "node_count": len(telemetry_nodes),
+            },
+            "client_user_summary": {
+                "source": "simulator_fixtures_only",
+                "fixture_label_count": len(self.client_user_labels),
+                "direct_message_count": len(self.direct_messages),
+                "identity_policy": "unreviewed",
+            },
+            "export_boundary": {
+                "simulator_only": True,
+                "privacy_policy": "unreviewed",
+                "retention": "unresolved",
+            },
         }
 
 
@@ -330,6 +402,8 @@ def process_bridge_request(
         encode_bridge_frame(response)
         return response
     except ProtocolError as exc:
+        if exc.reason == "state_changing_command_blocked":
+            simulator.blocked_state_changing_requests += 1
         response: dict[str, Any] = {
             "v": BRIDGE_PROTOCOL_VERSION,
             "type": "error",
@@ -730,6 +804,14 @@ def _bridge_ack(request_type: str, **extra: Any) -> dict[str, Any]:
     return ack
 
 
+def _file_status_bucket(status: str) -> str:
+    if status in {"delivered", "acked"}:
+        return "completed"
+    if status in {"failed", "expired"}:
+        return "failed"
+    return "queued"
+
+
 def _validate_bridge_version(frame: Mapping[str, Any], allow_legacy_unversioned: bool) -> None:
     if "v" not in frame:
         if allow_legacy_unversioned:
@@ -753,8 +835,13 @@ def _with_bridge_version(response: Mapping[str, Any]) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--demo", action="store_true", help="print one compact simulator report")
+    parser.add_argument(
+        "--analytics-demo",
+        action="store_true",
+        help="print one simulator-only analytics report",
+    )
     args = parser.parse_args()
-    if args.demo:
+    if args.demo or args.analytics_demo:
         simulator = ProtocolSimulator()
         packets = simulator.queue_direct_message("peer01", "sysop", "hello")
         simulator.mark_sent(packets[0])
@@ -770,7 +857,23 @@ def main() -> int:
             },
             simulator,
         )
-        print(encode_bridge_frame(simulator.reporting_frame()).decode("ascii"), end="")
+        if args.analytics_demo:
+            process_bridge_request(
+                {
+                    "v": BRIDGE_PROTOCOL_VERSION,
+                    "type": "control_intent",
+                    "peer": "peer01",
+                    "action": "relay_set",
+                },
+                simulator,
+            )
+            process_bridge_request(
+                {"v": BRIDGE_PROTOCOL_VERSION, "type": "relay_set", "peer": "peer01"},
+                simulator,
+            )
+            print(compact_json_bytes(simulator.analytics_report()).decode("ascii"))
+        else:
+            print(encode_bridge_frame(simulator.reporting_frame()).decode("ascii"), end="")
     return 0
 
 

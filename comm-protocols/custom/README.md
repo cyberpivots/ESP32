@@ -32,9 +32,9 @@ Verified boundaries:
   `version_invalid`, `line_too_long`, `non_ascii`, `json_invalid`,
   `payload_invalid`, `field_type_invalid`, `hex_invalid`,
   `message_type_unknown`, and `state_changing_command_blocked`.
-- Gate G analytics reports are simulator-only and include boundary fields for
-  `simulator_only`, `privacy_policy: unreviewed`, and
-  `retention: unresolved`.
+- Gate G analytics reports are simulator-only and now reference accepted
+  ADR-0005 policy fields: `privacy_policy:
+  adr-0005-redacted-local-operator-v1` and `retention: 7_days`.
 
 Still unresolved:
 
@@ -42,7 +42,8 @@ Still unresolved:
   accepted by this simulator.
 - No live hardware, serial, radio, actual bridge runtime, or Win31/OPCON state
   is proven by these tests.
-- No analytics retention, export, privacy, or live dashboard reporting policy
-  is accepted by Gate G.
+- Gate G live export is accepted only as a local-admin redacted JSON export
+  from the DOS-C/Pi bridge spool. No Win31/OPCON export UI, firmware export ABI,
+  or bridge export request type is accepted.
 - Agricultural sensor, GPS, and reporting schemas remain blocked on
   source-backed hardware profiles and owner review.

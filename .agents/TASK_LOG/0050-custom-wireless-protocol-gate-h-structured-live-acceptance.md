@@ -18,8 +18,8 @@ manual-review transcript caveat.
 ## Verified Facts
 
 - Same-session Gate H live authorization was present.
-- Same-session Gate G authorization did not accept `ADR-0005`; live analytics
-  export remains disabled.
+- At the time of this Gate H proof, same-session Gate G authorization did not
+  accept `ADR-0005`; live analytics export remained disabled.
 - Ready preflight
   `research/bench-records/live-bench/espnow-bbs-gate-h-structured-live-preflight-20260525T155413Z.json`
   reported `ok:true`.
@@ -46,8 +46,15 @@ manual-review transcript caveat.
 ## Unknowns
 
 - Firmware ABI remains unresolved.
-- Gate G live export remains closed until `ADR-0005` is accepted with concrete
-  retention, privacy/redaction, format, storage, access, and cleanup policy.
+- At the time of this Gate H proof, Gate G live export remained closed until
+  `ADR-0005` was accepted with concrete retention, privacy/redaction, format,
+  storage, access, and cleanup policy.
+
+## Supersession
+
+- Later on 2026-05-25, `ADR-0005` was accepted and Gate G local-admin redacted
+  JSON export was implemented in
+  [0051-custom-wireless-protocol-gate-g-live-export-implementation.md](0051-custom-wireless-protocol-gate-g-live-export-implementation.md).
 
 ## Sources
 

@@ -180,11 +180,14 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 - [repo-verified] Gate G adds simulator-only analytics report generation for
   counters, custody rollups, file rollups, telemetry rollups, and fixture-only
   client/user summary fields.
-- [repo-verified] `ADR-0005` is proposed as the live analytics export policy
-  gate. It is not accepted.
-- [unknown] No accepted analytics storage format, dashboard report shape,
-  retention rule, privacy policy, or export policy exists. Gate G remains
-  prepare-live-export only until `ADR-0005` accepts those fields.
+- [repo-verified] `ADR-0005` is accepted as the Gate G live analytics export
+  policy. It allows only local-admin redacted JSON export using
+  `gate-g.analytics.v1` and `adr-0005-redacted-local-operator-v1`, with 7-day
+  stale-export cleanup.
+- [repo-verified] Gate G live export remains closed to Win31/OPCON controls,
+  firmware ABI/runtime export behavior, and bridge request types. The first
+  live surface is the DOS-C/Pi local-admin export from a file-backed bridge
+  spool into ignored proof/runtime roots.
 
 ## 9. Test and Acceptance Plan
 

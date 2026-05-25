@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "simulators" / "custom_wireless_protocol"))
 
 from espnow_bbs_custom_protocol import (  # noqa: E402
+    ANALYTICS_POLICY,
+    ANALYTICS_RETENTION,
+    ANALYTICS_SCHEMA_VERSION,
     BRIDGE_MAX_LINE_BYTES,
     BRIDGE_PROTOCOL_VERSION,
     BRIDGE_STABLE_ERROR_REASONS,
@@ -397,9 +400,13 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertEqual(node["status"], "delivered")
         self.assertFalse(control["executed"])
         self.assertFalse(blocked["accepted"])
+        self.assertEqual(report["schema_version"], ANALYTICS_SCHEMA_VERSION)
         self.assertTrue(report["simulator_only"])
-        self.assertEqual(report["privacy_policy"], "unreviewed")
-        self.assertEqual(report["retention"], "unresolved")
+        self.assertEqual(report["privacy_policy"], ANALYTICS_POLICY)
+        self.assertEqual(report["retention"], ANALYTICS_RETENTION)
+        self.assertEqual(report["policy"]["adr"], "ADR-0005")
+        self.assertEqual(report["policy"]["status"], "accepted")
+        self.assertEqual(report["policy"]["access"], "local_operator_only")
         self.assertEqual(report["counters"]["direct_messages"], 1)
         self.assertEqual(report["counters"]["files"], 1)
         self.assertEqual(report["counters"]["telemetry_reports"], 1)
@@ -413,8 +420,14 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertEqual(report["telemetry"]["classes"]["soil_moisture"], 1)
         self.assertEqual(report["telemetry"]["node_count"], 1)
         self.assertEqual(report["client_user_summary"]["source"], "simulator_fixtures_only")
-        self.assertEqual(report["client_user_summary"]["identity_policy"], "unreviewed")
+        self.assertEqual(
+            report["client_user_summary"]["identity_policy"],
+            "salted_sha256_required_for_live_export",
+        )
         self.assertEqual(report["export_boundary"]["simulator_only"], True)
+        self.assertEqual(report["export_boundary"]["privacy_policy"], ANALYTICS_POLICY)
+        self.assertEqual(report["export_boundary"]["win31_control"], "absent")
+        self.assertEqual(report["export_boundary"]["firmware_request"], "absent")
 
 
 if __name__ == "__main__":

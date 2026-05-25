@@ -81,6 +81,7 @@
 - [ESP-NOW BBS custom wireless protocol Gate E bridge ABI source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-e-bridge-abi.md)
 - [ESP-NOW BBS custom wireless protocol Gate G analytics source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-g-analytics.md)
 - [ESP-NOW BBS Gate G live export policy source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-g-live-export-policy.md)
+- [ESP-NOW BBS Gate G live export implementation source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-g-live-export-implementation.md)
 - [ESP-NOW BBS custom wireless protocol Gate H live attempt source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-live-attempt.md)
 - [ESP-NOW BBS custom wireless protocol Gate H troubleshooting source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-troubleshooting.md)
 - [ESP-NOW BBS custom wireless protocol Gate H live acceptance source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-live-acceptance.md)
@@ -105,4 +106,5 @@
 - [ESP-NOW BBS custom wireless protocol Gate H troubleshooting bench record](../research/bench-records/live-bench/2026-05-25-custom-wireless-protocol-gate-h-troubleshooting.md)
 - [ESP-NOW BBS custom wireless protocol Gate H live acceptance bench record](../research/bench-records/live-bench/2026-05-25-custom-wireless-protocol-gate-h-live-acceptance.md)
 - [ESP-NOW BBS custom wireless protocol Gate H structured live acceptance bench record](../research/bench-records/live-bench/2026-05-25-custom-wireless-protocol-gate-h-structured-live-acceptance.md)
+- [ESP-NOW BBS custom wireless protocol Gate G live export bench record](../research/bench-records/live-bench/2026-05-25-custom-wireless-protocol-gate-g-live-export.md)
 - [Available skills](../research/skills/available-skills.md)

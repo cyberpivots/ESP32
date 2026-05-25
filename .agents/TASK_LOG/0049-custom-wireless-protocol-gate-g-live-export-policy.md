@@ -4,7 +4,7 @@
 
 - ID: 0049-custom-wireless-protocol-gate-g-live-export-policy
 - Owner role: Communications, QA
-- Status: proposed policy gate; live export disabled
+- Status: superseded by accepted ADR-0005 and task 0051
 - Created: 2026-05-25
 - Updated: 2026-05-25
 - Contract: [../../AGENTS.md](../../AGENTS.md)
@@ -16,11 +16,11 @@ or enabling any live export surface.
 
 ## Verified Facts
 
-- Gate G remains simulator-only.
-- `ADR-0005` is proposed, not accepted.
-- `ADR-0005` requires accepted retention period, privacy/redaction rules,
-  export format, storage location, operator access, and cleanup expectations
-  before live analytics export can be implemented.
+- At the time of this task, Gate G remained simulator-only.
+- At the time of this task, `ADR-0005` was proposed, not accepted.
+- At the time of this task, `ADR-0005` required accepted retention period,
+  privacy/redaction rules, export format, storage location, operator access,
+  and cleanup expectations before live analytics export could be implemented.
 - No bridge request, Win31/OPCON export control, firmware ABI, live export
   file, live hardware action, prepare, flash, erase, monitor, PCAP,
   router/admin mutation, BLE, mesh, relay, XBee, TFT, MicroSD, load, mains, or
@@ -53,3 +53,9 @@ or enabling any live export surface.
 
 Continue with
 [../handoffs/0038-custom-wireless-protocol-gate-g-live-export-policy-to-qa.md](../handoffs/0038-custom-wireless-protocol-gate-g-live-export-policy-to-qa.md).
+
+## Supersession
+
+- `ADR-0005` was accepted on 2026-05-25 for local-admin redacted JSON export.
+- Implementation is tracked in
+  [0051-custom-wireless-protocol-gate-g-live-export-implementation.md](0051-custom-wireless-protocol-gate-g-live-export-implementation.md).

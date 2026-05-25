@@ -37,7 +37,9 @@ Status: Draft Gate E candidate; not accepted as final firmware ABI.
 
 - Final firmware packet structure, firmware job queues, and runtime migration
   policy are not accepted by this draft.
-- Analytics retention, export boundaries, and privacy policy remain unresolved.
+- Gate G local-admin redacted analytics export policy is accepted separately in
+  `ADR-0005`; live bridge export requests and firmware export ABI remain
+  unresolved.
 - No new live bridge transcript, Win31/OPCON screenshot, ESP32 identity,
   flashing, radio, file-transfer, or physical serial proof was produced by
   Gate E.

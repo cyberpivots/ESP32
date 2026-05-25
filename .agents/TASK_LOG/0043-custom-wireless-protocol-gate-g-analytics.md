@@ -32,6 +32,12 @@ Included:
 - Simulator tests, README updates, source ledger, source-index entry, known-gap
   update, and QA handoff.
 
+Supersession:
+
+- Later on 2026-05-25, `ADR-0005` was accepted and simulator analytics policy
+  fields were updated by task 0051. This task remains the original
+  simulator-only Gate G analytics record.
+
 Excluded:
 
 - Live bridge request handlers, live export surfaces, accepted retention or

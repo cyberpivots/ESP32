@@ -20,6 +20,12 @@ Date: 2026-05-25
 - [repo-verified] Gate G does not add an analytics bridge request or wire
   analytics into a live bridge/export surface.
 - [repo-verified] `ADR-0005` is proposed as the future live export policy gate.
+
+## Supersession
+
+- Later on 2026-05-25, `ADR-0005` was accepted and simulator analytics policy
+  fields were updated by
+  `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25`.
   It is not accepted.
 
 ## Assumptions

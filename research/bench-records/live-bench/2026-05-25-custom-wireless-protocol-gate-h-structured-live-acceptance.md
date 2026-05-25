@@ -9,15 +9,15 @@ completion gate both passed from `bridge-transcript.jsonl`.
 Accepted path:
 `OPCON.EXE -> COM1 -> DOSBox-X nullmodem -> Pi bridge -> /dev/ttyUSB0 -> ESP32 coordinator`.
 
-Gate G live export was not opened. `ADR-0005` remains proposed, so live
-analytics export remains disabled.
+Gate G live export was not opened during this Gate H proof. At that time,
+`ADR-0005` remained proposed, so live analytics export was disabled.
 
 ## Verified Facts
 
 - Same-session authorization for live Gate H was present on 2026-05-25.
-- Same-session authorization for Gate G did not accept `ADR-0005`; no live
-  export surface, export artifact, bridge export request, Win31 export control,
-  or firmware export ABI was added.
+- Same-session authorization for Gate G did not accept `ADR-0005` during this
+  Gate H proof; no live export surface, export artifact, bridge export request,
+  Win31 export control, or firmware export ABI was added.
 - Fresh ready preflight:
   `research/bench-records/live-bench/espnow-bbs-gate-h-structured-live-preflight-20260525T155413Z.json`
   reported `ok:true`.
@@ -57,8 +57,10 @@ analytics export remains disabled.
 ## Unknowns
 
 - Firmware ABI remains unresolved.
-- Gate G live export remains unresolved until `ADR-0005` is accepted with
-  retention, privacy/redaction, format, storage, access, and cleanup policy.
+- Gate G live export remained unresolved during this Gate H proof until
+  `ADR-0005` accepted retention, privacy/redaction, format, storage, access,
+  and cleanup policy. It was later opened only for local-admin redacted JSON by
+  task 0051.
 - Physical wiring beyond the USB-only/no-load live-gate boundary remains
   unproven.
 

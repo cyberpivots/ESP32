@@ -43,6 +43,9 @@ RADIO_MAX_PAYLOAD_BYTES = 250
 RADIO_HEADER_BYTES = 32
 RADIO_MAX_BODY_BYTES = 190
 RADIO_MAX_FRAGMENT_COUNT = 16
+ANALYTICS_SCHEMA_VERSION = "gate-g.analytics.v1"
+ANALYTICS_POLICY = "adr-0005-redacted-local-operator-v1"
+ANALYTICS_RETENTION = "7_days"
 
 SERVICE_CODES = {
     "direct_message": 1,
@@ -349,12 +352,21 @@ class ProtocolSimulator:
             telemetry_nodes.add(str(report.get("node", "unknown")))
 
         return {
+            "schema_version": ANALYTICS_SCHEMA_VERSION,
             "type": "analytics_report",
             "status": "sim",
             "node": self.node_id,
             "simulator_only": True,
-            "privacy_policy": "unreviewed",
-            "retention": "unresolved",
+            "privacy_policy": ANALYTICS_POLICY,
+            "retention": ANALYTICS_RETENTION,
+            "policy": {
+                "adr": "ADR-0005",
+                "status": "accepted",
+                "name": ANALYTICS_POLICY,
+                "retention_days": 7,
+                "access": "local_operator_only",
+                "storage": "ignored_local_proof_packet",
+            },
             "counters": {
                 "direct_messages": len(self.direct_messages),
                 "files": len(self.file_requests),
@@ -374,12 +386,15 @@ class ProtocolSimulator:
                 "source": "simulator_fixtures_only",
                 "fixture_label_count": len(self.client_user_labels),
                 "direct_message_count": len(self.direct_messages),
-                "identity_policy": "unreviewed",
+                "identity_policy": "salted_sha256_required_for_live_export",
             },
             "export_boundary": {
                 "simulator_only": True,
-                "privacy_policy": "unreviewed",
-                "retention": "unresolved",
+                "privacy_policy": ANALYTICS_POLICY,
+                "retention": ANALYTICS_RETENTION,
+                "live_bridge_request": "absent",
+                "win31_control": "absent",
+                "firmware_request": "absent",
             },
         }
 

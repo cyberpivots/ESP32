@@ -40,9 +40,11 @@ The simulator covers:
 The draft ABI is recorded in
 `docs/projects/espnow-bbs/bridge-abi-draft.md`. It is not final firmware ABI
 and does not authorize live bridge, serial, radio, or hardware changes.
-Analytics reports are also simulator-only; their export boundary fields remain
-`simulator_only: true`, `privacy_policy: unreviewed`, and
-`retention: unresolved`.
+Analytics reports are also simulator-only, but their policy fields now reference
+accepted ADR-0005: `privacy_policy: adr-0005-redacted-local-operator-v1` and
+`retention: 7_days`. Simulator reports still record
+`simulator_only: true`, no live bridge request, no Win31 export control, and no
+firmware export request.
 
 Run:
 

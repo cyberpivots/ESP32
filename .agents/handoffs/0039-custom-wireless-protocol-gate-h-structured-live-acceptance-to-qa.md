@@ -22,11 +22,14 @@ serial-nullmodem path.
   three `espnow-enc` peers, and moving RX/TX/ACK triples.
 - DOS-C `vision-gate.json` reported `status: pass`.
 - ESP32 `esp32-completion.json` reported `status: pass`.
-- Gate G live export remains disabled because `ADR-0005` is still proposed.
+- At the time of this Gate H proof, Gate G live export remained disabled
+  because `ADR-0005` was still proposed. It was later opened only for
+  local-admin redacted JSON by task 0051.
 
 ## Closed Gates
 
-Keep Gate G live export, firmware ABI export behavior, flashing, serial
-writes, radio setting changes, PCAP, router/admin mutation, BLE,
+Keep firmware ABI export behavior, flashing, serial writes, radio setting
+changes, PCAP, router/admin mutation, BLE,
 ESP-WIFI-MESH live action, relay, XBee, TFT, MicroSD, load, mains, erase, and
-monitor lanes closed unless a later accepted gate opens them.
+monitor lanes closed unless a later accepted gate opens them. Gate G export is
+open only for the local-admin redacted JSON surface from task 0051.

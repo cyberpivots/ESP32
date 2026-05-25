@@ -12,8 +12,8 @@ Authorized Gate H live rerun using the accepted serial-nullmodem path and the
 structured bridge JSONL transcript:
 `OPCON.EXE -> COM1 -> DOSBox-X nullmodem -> Pi bridge -> /dev/ttyUSB0 -> ESP32 coordinator`.
 
-Gate G live analytics export remains disabled because `ADR-0005` is proposed,
-not accepted.
+At the time of this Gate H proof, Gate G live analytics export remained
+disabled because `ADR-0005` was proposed, not accepted.
 
 ## Evidence
 
@@ -64,7 +64,9 @@ not accepted.
 ## Unknowns
 
 - Firmware ABI remains unresolved.
-- Gate G live export policy remains unresolved until `ADR-0005` is accepted.
+- At the time of this Gate H proof, Gate G live export policy remained
+  unresolved until `ADR-0005` was accepted. It was later opened only for
+  local-admin redacted JSON by task 0051.
 - Physical wiring outside the USB-only/no-load live-gate boundary remains
   unproven.
 

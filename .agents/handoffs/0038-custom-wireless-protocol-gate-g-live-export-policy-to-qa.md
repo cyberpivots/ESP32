@@ -5,22 +5,24 @@ Task:
 
 ## Status
 
-Gate G is prepared for future live export review, but live analytics export
-remains disabled. `ADR-0005` is proposed only.
+Gate G was prepared for future live export review by this handoff. It has since
+been superseded: `ADR-0005` is accepted and implementation is tracked in
+task 0051.
 
 ## Verified Facts
 
-- Owner review must accept retention period, privacy/redaction rules, export
-  format, storage location, operator access, and cleanup expectations before a
-  live analytics export surface is implemented.
-- Until `ADR-0005` is accepted, reject live bridge/export requests, Win31/OPCON
-  export controls, firmware ABI export behavior, and copied live export
-  artifacts as out of scope.
-- Simulator analytics tests remain the only Gate G execution surface.
+- At the time of this handoff, owner review still needed to accept retention
+  period, privacy/redaction rules, export format, storage location, operator
+  access, and cleanup expectations before implementation.
+- At the time of this handoff, live bridge/export requests, Win31/OPCON export
+  controls, firmware ABI export behavior, and copied live export artifacts were
+  out of scope.
+- This handoff is superseded by task 0051 for the local-admin redacted JSON
+  export surface.
 
 ## Closed Gates
 
-Keep live bridge/export surfaces, flashing, serial writes, radio setting
-changes, PCAP, router/admin mutation, BLE, ESP-WIFI-MESH live action, relay,
-XBee, TFT, MicroSD, load, mains, erase, monitor, and accepted retention/privacy
-policy closed unless a later explicit gate opens them.
+Keep flashing, serial writes, radio setting changes, PCAP, router/admin
+mutation, BLE, ESP-WIFI-MESH live action, relay, XBee, TFT, MicroSD, load,
+mains, erase, and monitor closed unless a later explicit gate opens them. Gate G
+export is open only for the local-admin redacted JSON surface from task 0051.

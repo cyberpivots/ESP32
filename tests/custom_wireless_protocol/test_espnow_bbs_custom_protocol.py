@@ -14,6 +14,8 @@ sys.path.insert(0, str(ROOT / "tools" / "simulators" / "custom_wireless_protocol
 
 from espnow_bbs_custom_protocol import (  # noqa: E402
     BRIDGE_MAX_LINE_BYTES,
+    BRIDGE_PROTOCOL_VERSION,
+    BRIDGE_STABLE_ERROR_REASONS,
     RADIO_HEADER_BYTES,
     RADIO_MAX_BODY_BYTES,
     RADIO_MAX_FRAGMENT_COUNT,
@@ -38,7 +40,12 @@ from espnow_bbs_custom_protocol import (  # noqa: E402
 
 class CustomWirelessProtocolTests(unittest.TestCase):
     def test_bridge_frame_bounds_and_ascii(self) -> None:
-        frame = {"type": "protocol_report", "status": "sim", "node": "coord01"}
+        frame = {
+            "v": BRIDGE_PROTOCOL_VERSION,
+            "type": "protocol_report",
+            "status": "sim",
+            "node": "coord01",
+        }
         encoded = encode_bridge_frame(frame)
         self.assertLessEqual(len(encoded) - 1, BRIDGE_MAX_LINE_BYTES)
         self.assertEqual(decode_bridge_frame(encoded), frame)
@@ -49,6 +56,46 @@ class CustomWirelessProtocolTests(unittest.TestCase):
             encode_bridge_frame({"type": "protocol_report", "body": "snowman-\u2603"})
         with self.assertRaisesRegex(ProtocolError, "payload_invalid"):
             decode_bridge_frame(b"[1,2,3]")
+
+    def test_gate_e_bridge_abi_versioning_and_stable_errors(self) -> None:
+        self.assertEqual(BRIDGE_PROTOCOL_VERSION, 1)
+        self.assertTrue(
+            {
+                "version_required",
+                "version_invalid",
+                "line_too_long",
+                "non_ascii",
+                "json_invalid",
+                "payload_invalid",
+                "field_type_invalid",
+                "hex_invalid",
+                "message_type_unknown",
+                "state_changing_command_blocked",
+            }.issubset(BRIDGE_STABLE_ERROR_REASONS)
+        )
+        simulator = ProtocolSimulator()
+
+        missing_version = process_bridge_request({"type": "protocol_report"}, simulator)
+        self.assertFalse(missing_version["accepted"])
+        self.assertEqual(missing_version["v"], BRIDGE_PROTOCOL_VERSION)
+        self.assertEqual(missing_version["reason"], "version_required")
+
+        invalid_version = process_bridge_request(
+            {"v": 2, "type": "protocol_report"},
+            simulator,
+        )
+        self.assertFalse(invalid_version["accepted"])
+        self.assertEqual(invalid_version["reason"], "version_invalid")
+
+    def test_legacy_gate_b_c_unversioned_request_is_explicit(self) -> None:
+        simulator = ProtocolSimulator()
+        response = process_bridge_request(
+            {"type": "protocol_report"},
+            simulator,
+            allow_legacy_unversioned=True,
+        )
+        self.assertEqual(response["v"], BRIDGE_PROTOCOL_VERSION)
+        self.assertEqual(response["type"], "protocol_report")
 
     def test_radio_packet_encode_decode_and_bounds(self) -> None:
         packet = WirelessPacket(
@@ -190,6 +237,7 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         simulator = ProtocolSimulator()
         post = process_bridge_request(
             {
+                "v": BRIDGE_PROTOCOL_VERSION,
                 "type": "msg_post",
                 "from": "sysop",
                 "to": "peer01",
@@ -206,6 +254,7 @@ class CustomWirelessProtocolTests(unittest.TestCase):
 
         queued = process_bridge_request(
             {
+                "v": BRIDGE_PROTOCOL_VERSION,
                 "type": "download_queue",
                 "id": 88,
                 "peer": "peer02",
@@ -223,6 +272,7 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         simulator = ProtocolSimulator()
         telemetry = process_bridge_request(
             {
+                "v": BRIDGE_PROTOCOL_VERSION,
                 "type": "telemetry_report",
                 "node": "soil01",
                 "class": "soil_moisture",
@@ -233,6 +283,7 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         )
         status = process_bridge_request(
             {
+                "v": BRIDGE_PROTOCOL_VERSION,
                 "type": "node_status",
                 "node": "peer01",
                 "link": "espnow-enc",
@@ -241,13 +292,17 @@ class CustomWirelessProtocolTests(unittest.TestCase):
             },
             simulator,
         )
-        report = process_bridge_request({"type": "protocol_report"}, simulator)
+        report = process_bridge_request(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "protocol_report"},
+            simulator,
+        )
         self.assertEqual(telemetry["service"], "telemetry_report")
         self.assertEqual(status["service"], "node_status")
         self.assertEqual(report["telemetry"], 1)
 
         control = process_bridge_request(
             {
+                "v": BRIDGE_PROTOCOL_VERSION,
                 "type": "control_intent",
                 "peer": "peer01",
                 "action": "relay_set",
@@ -257,12 +312,16 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertTrue(control["accepted"])
         self.assertFalse(control["executed"])
 
-        blocked = process_bridge_request({"type": "relay_set", "peer": "peer01"}, simulator)
+        blocked = process_bridge_request(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "relay_set", "peer": "peer01"},
+            simulator,
+        )
         self.assertFalse(blocked["accepted"])
         self.assertEqual(blocked["reason"], "state_changing_command_blocked")
 
         non_ascii = process_bridge_request(
             {
+                "v": BRIDGE_PROTOCOL_VERSION,
                 "type": "msg_post",
                 "from": "sysop",
                 "to": "peer01",

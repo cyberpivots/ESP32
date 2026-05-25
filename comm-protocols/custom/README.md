@@ -15,6 +15,9 @@ Verified boundaries:
   `OPCON.EXE -> COM1 -> DOSBox-X nullmodem -> Pi bridge -> /dev/ttyUSB0 -> ESP32 coordinator`.
 - Bridge frames stay newline-delimited ASCII JSON and fit the 512-byte line
   budget.
+- Gate E draft bridge ABI fixtures require `v:1` on new simulator requests.
+  Legacy unversioned requests are accepted only through the explicitly marked
+  Gate B/C compatibility test path.
 - Radio packets stay v1-compatible with a 250-byte payload budget, 32-byte
   header, 190-byte body, and 16-fragment limit.
 - Direct messages, file chunks, interval telemetry, node status, custody ACKs,
@@ -25,10 +28,15 @@ Verified boundaries:
   `control_intent` frames into packetized simulator work or reporting frames.
 - State-changing bridge request names such as `relay_set`, `flash`, `erase`,
   and `radio_set` are rejected by the simulator adapter.
+- The Gate E draft stable error-reason set is `version_required`,
+  `version_invalid`, `line_too_long`, `non_ascii`, `json_invalid`,
+  `payload_invalid`, `field_type_invalid`, `hex_invalid`,
+  `message_type_unknown`, and `state_changing_command_blocked`.
 
 Still unresolved:
 
-- No firmware interface is accepted by this simulator.
+- Gate E is a draft bridge ABI freeze candidate only. No firmware interface is
+  accepted by this simulator.
 - No live hardware, serial, radio, actual bridge runtime, or Win31/OPCON state
   is proven by these tests.
 - Agricultural sensor, GPS, and reporting schemas remain blocked on

@@ -1,7 +1,7 @@
 # Custom Wireless Protocol Simulator
 
 This directory contains simulator-only helpers for the ESP-NOW BBS custom
-wireless protocol Gate B and Gate C.
+wireless protocol Gate B, Gate C, and the Gate E draft bridge ABI candidate.
 
 ## Boundaries
 
@@ -17,7 +17,8 @@ wireless protocol Gate B and Gate C.
 The simulator covers:
 
 - 512-byte bridge line enforcement.
-- ASCII JSON bridge frame validation.
+- ASCII JSON bridge frame validation with `v:1` required by default on new
+  simulator bridge requests.
 - 250-byte ESP-NOW-v1-compatible radio packet budgeting.
 - 32-byte header and 190-byte body constraints.
 - Fragmentation, reassembly, missing-fragment detection, duplicate rejection,
@@ -28,6 +29,14 @@ The simulator covers:
   `control_intent` frames.
 - Explicit simulator rejection for state-changing bridge requests such as
   `relay_set`, `flash`, `erase`, and `radio_set`.
+- Draft stable bridge error reasons for Gate E owner review:
+  `version_required`, `version_invalid`, `line_too_long`, `non_ascii`,
+  `json_invalid`, `payload_invalid`, `field_type_invalid`, `hex_invalid`,
+  `message_type_unknown`, and `state_changing_command_blocked`.
+
+The draft ABI is recorded in
+`docs/projects/espnow-bbs/bridge-abi-draft.md`. It is not final firmware ABI
+and does not authorize live bridge, serial, radio, or hardware changes.
 
 Run:
 

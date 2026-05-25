@@ -12,6 +12,32 @@ from typing import Any
 
 
 BRIDGE_MAX_LINE_BYTES = 512
+BRIDGE_PROTOCOL_VERSION = 1
+BRIDGE_REQUEST_TYPES = frozenset(
+    {
+        "msg_post",
+        "download_queue",
+        "telemetry_report",
+        "node_status",
+        "protocol_report",
+        "state_get",
+        "control_intent",
+    }
+)
+BRIDGE_STABLE_ERROR_REASONS = frozenset(
+    {
+        "version_required",
+        "version_invalid",
+        "line_too_long",
+        "non_ascii",
+        "json_invalid",
+        "payload_invalid",
+        "field_type_invalid",
+        "hex_invalid",
+        "message_type_unknown",
+        "state_changing_command_blocked",
+    }
+)
 RADIO_PROTOCOL_VERSION = 1
 RADIO_MAX_PAYLOAD_BYTES = 250
 RADIO_HEADER_BYTES = 32
@@ -275,6 +301,7 @@ class ProtocolSimulator:
         for record in self.custody.values():
             custody_counts[record.status] = custody_counts.get(record.status, 0) + 1
         return {
+            "v": BRIDGE_PROTOCOL_VERSION,
             "type": "protocol_report",
             "status": "sim",
             "node": self.node_id,
@@ -285,15 +312,26 @@ class ProtocolSimulator:
         }
 
 
-def process_bridge_request(frame: Mapping[str, Any], simulator: ProtocolSimulator) -> dict[str, Any]:
+def process_bridge_request(
+    frame: Mapping[str, Any],
+    simulator: ProtocolSimulator,
+    *,
+    allow_legacy_unversioned: bool = False,
+) -> dict[str, Any]:
     """Translate one compact bridge request into simulator-only protocol work."""
 
     try:
-        response = _process_bridge_request(frame, simulator)
+        response = _process_bridge_request(
+            frame,
+            simulator,
+            allow_legacy_unversioned=allow_legacy_unversioned,
+        )
+        response = _with_bridge_version(response)
         encode_bridge_frame(response)
         return response
     except ProtocolError as exc:
         response: dict[str, Any] = {
+            "v": BRIDGE_PROTOCOL_VERSION,
             "type": "error",
             "accepted": False,
             "reason": exc.reason,
@@ -307,9 +345,12 @@ def process_bridge_request(frame: Mapping[str, Any], simulator: ProtocolSimulato
 def _process_bridge_request(
     frame: Mapping[str, Any],
     simulator: ProtocolSimulator,
+    *,
+    allow_legacy_unversioned: bool = False,
 ) -> dict[str, Any]:
     if not isinstance(frame, Mapping):
         raise ProtocolError("payload_invalid", "frame must be an object")
+    _validate_bridge_version(frame, allow_legacy_unversioned)
     message_type = _require_str(frame, "type")
     if message_type in {"protocol_report", "state_get"}:
         return simulator.reporting_frame()
@@ -689,6 +730,26 @@ def _bridge_ack(request_type: str, **extra: Any) -> dict[str, Any]:
     return ack
 
 
+def _validate_bridge_version(frame: Mapping[str, Any], allow_legacy_unversioned: bool) -> None:
+    if "v" not in frame:
+        if allow_legacy_unversioned:
+            return
+        raise ProtocolError("version_required", "v")
+    version = frame.get("v")
+    if (
+        not isinstance(version, int)
+        or isinstance(version, bool)
+        or version != BRIDGE_PROTOCOL_VERSION
+    ):
+        raise ProtocolError("version_invalid", str(version))
+
+
+def _with_bridge_version(response: Mapping[str, Any]) -> dict[str, Any]:
+    versioned = dict(response)
+    versioned.setdefault("v", BRIDGE_PROTOCOL_VERSION)
+    return versioned
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--demo", action="store_true", help="print one compact simulator report")
@@ -700,6 +761,7 @@ def main() -> int:
         simulator.apply_ack(make_custody_ack(packets[0].message_id, "acked", "peer01", "coord01", 9))
         process_bridge_request(
             {
+                "v": BRIDGE_PROTOCOL_VERSION,
                 "type": "telemetry_report",
                 "node": "soil01",
                 "class": "soil_moisture",

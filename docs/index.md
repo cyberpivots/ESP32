@@ -76,6 +76,7 @@
 - [ESP-NOW BBS custom wireless protocol source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-brief.md)
 - [ESP-NOW BBS custom wireless protocol simulator source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-simulator.md)
 - [ESP-NOW BBS custom wireless protocol bridge-adapter source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-bridge-adapter.md)
+- [ESP-NOW BBS custom wireless protocol Gate D DOS-C pairing source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-d-dosc-pairing.md)
 - [Win31 dashboard ML live gate source ledger](../knowledge-base/source-ledger/2026-05-23-win31-dashboard-ml-live-gate.md)
 - [Win31 dashboard legibility research source ledger](../knowledge-base/source-ledger/2026-05-24-win31-dashboard-legibility-research.md)
 - [Client UI live gate source ledger](../knowledge-base/source-ledger/2026-05-24-client-ui-live-gate.md)

@@ -125,6 +125,7 @@ class MultiPeerPreflightTests(unittest.TestCase):
     def test_forwarded_pi_host_uses_expected_identity_profile(self) -> None:
         self.assertTrue(live_bench_preflight.uses_expected_pi_profile("172.16.0.2"))
         self.assertTrue(live_bench_preflight.uses_expected_pi_profile("192.168.137.93"))
+        self.assertTrue(live_bench_preflight.uses_expected_pi_profile("192.168.137.105"))
         self.assertFalse(live_bench_preflight.uses_expected_pi_profile("192.168.200.104"))
 
     def test_pi_coordinator_identity_uses_no_stub(self) -> None:

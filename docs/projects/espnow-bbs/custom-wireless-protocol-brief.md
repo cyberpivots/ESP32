@@ -196,8 +196,12 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 - [assumption] Live acceptance requires transcript evidence for direct message,
   file transfer, interval telemetry, node status, error handling, zero serial
   errors, and expected moving counters.
-- [unknown] No live acceptance can be claimed from this brief because no live
-  hardware or bridge runtime was touched.
+- [repo-verified] Gate H live acceptance is recorded separately in
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-H-LIVE-ACCEPTANCE-2026-05-25`
+  for the accepted serial-nullmodem path after fresh preflight and cleanup
+  proof. The deterministic screenshot/completion gate still needs a transcript
+  export that carries full serial-error and counter triples for machine-pass
+  visual corroboration.
 
 ## 10. Risks / Non-Goals
 

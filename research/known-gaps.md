@@ -70,6 +70,26 @@
   `idf.py`, and isolated per-role `SDKCONFIG`. Corrected evidence records
   complete backups, manifest, flash/verify, three `espnow-enc` peers, moving
   RX/TX/ACK counters, Win31 runtime captures, and cleanup.
+- Define the custom wireless protocol implementation gate after the
+  documentation-only brief: direct-message schema, file-transfer chunk/custody
+  schema, interval telemetry schema, node-status schema, reporting/analytics
+  retention, simulator fixtures, and live acceptance transcript requirements.
+- Select and verify agricultural telemetry hardware profiles before treating
+  center-pivot controllers, soil probes, SDI-12 adapters, Modbus adapters, GPS
+  pivot positioning, or GPS asset tracking as implementation targets. Required
+  records must include source links, power, voltage, boot-pin, isolation,
+  connector, protocol, and calibration/units notes.
+- Define the cross-project client UI live-gate target before implementation:
+  selected board, current identity, Wi-Fi mode, browser support matrix, phone
+  and laptop proof packet, safety-supervisor state model, authentication,
+  monotonic sequence policy, and command-log retention.
+- Select and verify the first dummy-output fixture before any live control:
+  exact GPIO, boot-pin risk, inactive state, LED or logic-analyzer fixture,
+  observation method, all-off behavior, safety-lock rejection, and proof that no
+  relay module, load, or mains path is attached.
+- Keep BLE, Web Bluetooth, Web Serial, and raw Serial/UART client work blocked
+  behind separate live gates for UUIDs, Android permissions, browser support,
+  UART framing, pairing/security, coexistence evidence, rollback, and cleanup.
 - Resolved on 2026-05-22 for bounded coordinator scope: live Pi USB serial
   visibility, private flash backup, coordinator flash, `hello`/`state`/`diag`
   UART proof, and Windows 3.1 OPCON physical coordinator dashboard proof passed.
@@ -115,6 +135,9 @@
 | Qualified mains package | Qualified-review package for load type, enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, separation, labels/disconnect, and test record. |
 | First flashing target board | Flash target and recovery record with exact board, boot/recovery method, toolchain proof, and rollback path. |
 | ESP-NOW BBS coordinator/client lane | Closed for the first one-coordinator/one-peer encrypted proof by `SRC-LOCAL-ESPNOW-ENCRYPTED-PEER-2026-05-22`. `SRC-LOCAL-ESPNOW-LIVE-GATE-TOOLING-2026-05-23` adds tooling for the three-peer gate, `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23` records the initial coordinator backup CRC/checksum blocker plus the corrected USB-only three-peer live completion with backups, build hashes, flash/verify evidence, three `espnow-enc` peers, moving RX/TX/ACK counters, and cleanup, and `SRC-LOCAL-WIN31-DASHBOARD-ML-LIVE-GATE-2026-05-23` adds a copied-evidence completion gate only. Future evidence is still required for chunked message delivery, provisioning UX, BLE, ESP-WIFI-MESH, any physical wiring beyond USB-only, or any new live acceptance claim. |
+| Custom wireless protocol implementation | Simulator proof for direct message, file chunk/resume, interval telemetry, node status, custody ACK, reporting fixtures, and bridge transcript expectations, followed by owner review before any firmware or live-gate work. |
+| Agricultural telemetry hardware profiles | Source-backed records for selected center-pivot controller, soil probes, SDI-12/Modbus adapter, GPS pivot positioning device, GPS asset tracker, power/voltage/isolation limits, connector pinout, protocol, calibration, units, and live-proof plan. |
+| Cross-project client UI live gate | Stage 1 static or simulated phone/laptop UI proof; Stage 2 selected-board Wi-Fi read-only proof with identity, power, voltage, boot-pin, isolation, recovery, browser screenshot, and cleanup evidence; Stage 3 exact dummy-output GPIO/fixture proof with no relay/load/mains path, sequence logs, all-off, safety-lock rejection, and observed dummy output. |
 | DOS-C Windows 3.1 TCP bridge | SLIRP acceptance record showing guest ICMP/TCP path to the Pi simulator and operator-console state proof, with generated screenshots and captures kept out of Git. |
 | DOSBox-X PCAP bridge | Pi identity record, wired `eth0` evidence, capability setup and restore evidence, redacted packet-flow proof, and rollback result. |
 

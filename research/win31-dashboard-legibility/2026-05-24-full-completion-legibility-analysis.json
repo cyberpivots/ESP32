@@ -1,0 +1,4511 @@
+{
+  "advisoryOnly": true,
+  "aggregate": {
+    "lowestLayoutBottomMarginPx": 0,
+    "lowestLayoutRightMarginPx": 9,
+    "lowestOcrConfidence": 48.21,
+    "mappedTargetViewCount": 10,
+    "medianOcrConfidence": 50.63,
+    "riskCounts": {
+      "color_complexity": 17,
+      "console_fit_risk": 17,
+      "contrast_risk": 17,
+      "decorative_ocr_noise": 6,
+      "edge_noise_load": 17,
+      "excessive_text_density": 4,
+      "excessive_visual_density": 17,
+      "high:console_fit_risk": 17,
+      "high:contrast_risk": 17,
+      "high:edge_noise_load": 2,
+      "high:excessive_text_density": 4,
+      "high:excessive_visual_density": 2,
+      "high:log_region_overflow": 17,
+      "high:overflow_margin_risk": 17,
+      "high:weak_ocr_confidence": 6,
+      "log_region_overflow": 17,
+      "medium:color_complexity": 17,
+      "medium:decorative_ocr_noise": 6,
+      "medium:edge_noise_load": 15,
+      "medium:excessive_visual_density": 15,
+      "medium:navigation_label_gap": 15,
+      "medium:weak_ocr_confidence": 9,
+      "navigation_label_gap": 15,
+      "overflow_margin_risk": 17,
+      "weak_ocr_confidence": 15
+    },
+    "screenCount": 17,
+    "targetViewCount": 10,
+    "totalOcrWords": 2964,
+    "visionGateFailures": [],
+    "visionGateOk": true,
+    "visionGateStatus": "pass"
+  },
+  "analysisDate": "2026-05-24",
+  "assumptions": [
+    "Tesseract OCR confidence and word count are useful legibility proxies, not human usability proof.",
+    "Pixel-level contrast and density heuristics should be compared across revisions, not used alone for acceptance.",
+    "Estimated Win31 client regions are derived from local foreground pixels and must be compared against live screenshots."
+  ],
+  "evidenceRoot": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z",
+  "extraViews": {
+    "Devices": {
+      "lowestOcrConfidence": 53.44,
+      "maxRiskScore": 25,
+      "maxWordCount": 254,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "edge_noise_load": 1,
+        "excessive_text_density": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "navigation_label_gap": 1,
+        "overflow_margin_risk": 1,
+        "weak_ocr_confidence": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "08-devices.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 53.44.",
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "Launch": {
+      "lowestOcrConfidence": 48.3,
+      "maxRiskScore": 25,
+      "maxWordCount": 161,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "decorative_ocr_noise": 1,
+        "edge_noise_load": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "navigation_label_gap": 1,
+        "overflow_margin_risk": 1,
+        "weak_ocr_confidence": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "00-maximized-launch-compact.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 48.30.",
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "Navigation": {
+      "lowestOcrConfidence": 70.2,
+      "maxRiskScore": 19,
+      "maxWordCount": 117,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "edge_noise_load": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "overflow_margin_risk": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "02-views-dropdown.png"
+      ],
+      "weakSpots": [
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin."
+      ]
+    }
+  },
+  "rankedBacklog": [
+    {
+      "acceptance": "Every target screen keeps layout bottom margin >= 16px, right margin >= 4px, no console_fit_risk, no log_region_overflow, and the existing DOS-C vision gate passes.",
+      "finding": "17/17 screens had estimated client fit risk; 17/17 had log-region bottom overflow.",
+      "hypothesis": "Shrink the drawn shell and log/footer region so the whole OPCON client stays inside the 1024x600 proof capture with a visible quiet zone.",
+      "measurement": "Track layout.safeMarginsPx, consoleLog region bounds, region overlaps, and DOS-C vision-gate status on before/after screenshots.",
+      "rank": 1,
+      "score": 204,
+      "sourceIds": [
+        "SRC-LOCAL-WIN31-DASHBOARD-LEGIBILITY-RESEARCH-2026-05-24",
+        "SRC-OPENCV-TEMPLATE-MATCHING-2026-05-23"
+      ],
+      "title": "Make the full Win31 console fit in the capture"
+    },
+    {
+      "acceptance": "Target views reach median contrast ratio >= 4.5, lowContrastForegroundShare <= 0.25, and mean OCR confidence >= 60 without weakening the existing gate.",
+      "finding": "17/17 screens had estimated contrast risk; 15/17 had OCR confidence below 60.",
+      "hypothesis": "Use fewer dim foreground colors for body text and reserve low-contrast cyan/amber treatments for decoration or inactive hints.",
+      "measurement": "Track median foreground/background contrast ratio, lowContrastForegroundShare, and OCR confidence by view.",
+      "rank": 2,
+      "score": 113,
+      "sourceIds": [
+        "SRC-WCAG-CONTRAST-MINIMUM-2026-05-24",
+        "SRC-TESSERACT-IMAGE-QUALITY-2026-05-23"
+      ],
+      "title": "Raise contrast floor for operational text"
+    },
+    {
+      "acceptance": "Target screens keep bottomMarginPx >= 16 and rightMarginPx >= 4 while preserving the accepted transcript-first proof path.",
+      "finding": "17/17 screens had tight bottom or right quiet-zone margins.",
+      "hypothesis": "Give the status/action strip a fixed quiet zone and move transient log lines away from the bottom edge.",
+      "measurement": "Measure bottomMarginPx, rightMarginPx, foregroundRatio, and OCR word count on every captured view.",
+      "rank": 3,
+      "score": 85,
+      "sourceIds": [
+        "SRC-MICROSOFT-WIN32-UI-PRINCIPLES-2026-05-24",
+        "SRC-TESSERACT-IMAGE-QUALITY-2026-05-23"
+      ],
+      "title": "Preserve screenshot quiet zones"
+    },
+    {
+      "acceptance": "Every target view stays gate-passable, decorativeNoiseTokenRatio is below 0.07 on target screens, and no target screen has edgeRatio above 0.105.",
+      "finding": "6/17 screens produced decorative OCR noise and 17/17 exceeded edge-load thresholds.",
+      "hypothesis": "Keep the retro ANSI style but reserve repeated glyph borders for section boundaries so OCR and human scanning see fewer false words.",
+      "measurement": "Compare edgeRatio, decorativeNoiseTokenRatio, Tesseract meanConfidence, and required view detection before and after a layout revision.",
+      "rank": 4,
+      "score": 75,
+      "sourceIds": [
+        "SRC-OPENCV-TEMPLATE-MATCHING-2026-05-23",
+        "SRC-TESSERACT-IMAGE-QUALITY-2026-05-23"
+      ],
+      "title": "Reduce ASCII border and decoration density"
+    },
+    {
+      "acceptance": "The analyzer detects the same plain label for Home, BBS, Downloads, Network, Peers, OTAP, Settings, Wizard, Diagnostics, and Safety in both navigation and page title regions.",
+      "finding": "The baseline includes abbreviated tab/menu labels while view titles and tasks use longer names such as Message Board, Downloads, Diagnostics, and Safety.",
+      "hypothesis": "Recognition improves when the menu, tab, card title, and action label all use the same task name.",
+      "measurement": "OCR each navigation area and compare normalized menu/tab labels against expected task names for every target view.",
+      "rank": 5,
+      "score": 42,
+      "sourceIds": [
+        "SRC-MICROSOFT-MENU-GUIDELINES-2026-05-24",
+        "SRC-NNG-HEURISTICS-SUMMARY-2026-05-24"
+      ],
+      "title": "Use the same plain task names in menus, tabs, cards, and buttons"
+    },
+    {
+      "acceptance": "Each high-risk concept has a readable plain-language phrase on the relevant target view and the footer uses those phrases consistently.",
+      "finding": "High-risk terms observed in OCR include OTAP, gate, serial-readonly, PCAP, mesh state.",
+      "hypothesis": "Plain-language helper text should translate OTAP, gate, serial-readonly, PCAP, and mesh state into user-visible operational meaning.",
+      "measurement": "Check OCR for approved phrase pairs such as OTAP -> update request only and serial-readonly -> hardware writes disabled.",
+      "rank": 6,
+      "score": 20,
+      "sourceIds": [
+        "SRC-MICROSOFT-WIN32-UI-PRINCIPLES-2026-05-24",
+        "SRC-NNG-HEURISTICS-SUMMARY-2026-05-24"
+      ],
+      "title": "Add novice wording for high-risk concepts"
+    },
+    {
+      "acceptance": "Each target view exposes one readable view title, one health summary, one primary task region, and one safety/action region in local CV templates.",
+      "finding": "4/17 screens were text-dense and 0/17 target screens had weak title OCR; 0/17 had tight estimated region spacing.",
+      "hypothesis": "Separate current view, system health, safe actions, and primary task into predictable regions with stronger headings.",
+      "measurement": "Use template matching for heading/control regions, OCR title detection, word count per region, and screenshot bounds checks.",
+      "rank": 7,
+      "score": 12,
+      "sourceIds": [
+        "SRC-MICROSOFT-WIN32-UI-PRINCIPLES-2026-05-24",
+        "SRC-NNG-HEURISTICS-SUMMARY-2026-05-24",
+        "SRC-OPENCV-TEMPLATE-MATCHING-2026-05-23"
+      ],
+      "title": "Make view hierarchy obvious at a glance"
+    },
+    {
+      "acceptance": "Each disabled control exposes a readable reason and owner path while live hardware mutation remains outside this advisory analyzer.",
+      "finding": "The baseline footer repeats disabled/gated control names; the Safety view has the clearest explanation but the footer remains terse.",
+      "hypothesis": "Disabled Relay, Flash, Serial, and PCAP controls should state why they are disabled and which external path owns the action.",
+      "measurement": "OCR footer/control regions for disabled control name, reason phrase, and owner path phrase.",
+      "rank": 8,
+      "score": 10,
+      "sourceIds": [
+        "SRC-MICROSOFT-WIN32-UI-PRINCIPLES-2026-05-24",
+        "SRC-NNG-HEURISTICS-SUMMARY-2026-05-24"
+      ],
+      "title": "Explain disabled controls where they appear"
+    },
+    {
+      "acceptance": "A later UI-change task includes before/after analyzer JSON, the existing DOS-C vision gate result, ESP32 completion gate result, and no live bench mutation outside the approved lane.",
+      "finding": "The current pass/fail gate is transcript-first; this analyzer adds advisory metrics that can compare later UI revisions without changing acceptance.",
+      "hypothesis": "A stable local JSON/Markdown report lets design revisions improve legibility while preserving the existing completion gate.",
+      "measurement": "Run this analyzer on each copied packet and diff screen metrics, view summaries, and ranked backlog scores.",
+      "rank": 9,
+      "score": 8,
+      "sourceIds": [
+        "SRC-LOCAL-WIN31-DASHBOARD-ML-LIVE-GATE-2026-05-23",
+        "SRC-LOCAL-WIN31-DASHBOARD-LEGIBILITY-RESEARCH-2026-05-24"
+      ],
+      "title": "Keep a local revision comparison harness"
+    }
+  ],
+  "screens": [
+    {
+      "file": "00-maximized-launch-compact.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Downloads, Network, Settings, Wizard, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Downloads",
+          "Network",
+          "Settings",
+          "Wizard",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": true,
+          "Downloads": false,
+          "Home": true,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 48.3,
+        "wordCount": 161
+      },
+      "ocrNoise": {
+        "examples": [
+          "SELEEEEEEEES",
+          "peereeereee",
+          "speeeerecee",
+          "spebeeeeeeee",
+          "SEEEEEEEEEES",
+          "peeeeeee"
+        ],
+        "noiseTokenCount": 12,
+        "noiseTokenRatio": 0.0828,
+        "tokenCount": 145
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/00-maximized-launch-compact.png",
+      "riskScore": 25,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 48.30 is below 50",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.338 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.124 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "decorative_ocr_noise",
+          "detail": "Decorative/noise token ratio 0.083 is above 0.07",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.95, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 164 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Downloads, Network, Settings, Wizard, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "ba834f7d64fdb5b03825ae4406a52e82385b2d4262dc6022a9940c212618e289",
+      "view": "Launch",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 666,
+        "contrastRatioMedian": 1.951,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1639,
+        "edgeRatio": 0.1245,
+        "foregroundColorClusters": 164,
+        "foregroundRatio": 0.3379,
+        "height": 600,
+        "highChromaForegroundShare": 0.6399,
+        "lowContrastForegroundShare": 0.6976,
+        "width": 1024
+      }
+    },
+    {
+      "file": "00-opcon-dashboard-maximized-compact.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Downloads, Network, Settings, Wizard, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Downloads",
+          "Network",
+          "Settings",
+          "Wizard",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": true,
+          "Downloads": false,
+          "Home": true,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 48.3,
+        "wordCount": 161
+      },
+      "ocrNoise": {
+        "examples": [
+          "SELEEEEEEEES",
+          "peereeereee",
+          "speeeerecee",
+          "spebeeeeeeee",
+          "SEEEEEEEEEES",
+          "peeeeeee"
+        ],
+        "noiseTokenCount": 12,
+        "noiseTokenRatio": 0.0828,
+        "tokenCount": 145
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/00-opcon-dashboard-maximized-compact.png",
+      "riskScore": 25,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 48.30 is below 50",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.338 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.124 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "decorative_ocr_noise",
+          "detail": "Decorative/noise token ratio 0.083 is above 0.07",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.95, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 164 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Downloads, Network, Settings, Wizard, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "ba834f7d64fdb5b03825ae4406a52e82385b2d4262dc6022a9940c212618e289",
+      "view": "Home",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 666,
+        "contrastRatioMedian": 1.951,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1639,
+        "edgeRatio": 0.1245,
+        "foregroundColorClusters": 164,
+        "foregroundRatio": 0.3379,
+        "height": 600,
+        "highChromaForegroundShare": 0.6399,
+        "lowContrastForegroundShare": 0.6976,
+        "width": 1024
+      }
+    },
+    {
+      "file": "01-message-board-actions.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Home, Network, Settings, Wizard, Diagnostics, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Home",
+          "Network",
+          "Settings",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": false,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 51.32,
+        "wordCount": 167
+      },
+      "ocrNoise": {
+        "examples": [
+          "SEEREEEEEE",
+          "SSREEEEEEES",
+          "SEEEDEEEE",
+          "sTEsEodotototototeEeEetetodetotototetetetetetetetetetotetetetetetetetetetetetetetetetetetetetetetetede:",
+          "SbEEEEEE",
+          "EEEEEEEEEEEEED"
+        ],
+        "noiseTokenCount": 6,
+        "noiseTokenRatio": 0.0403,
+        "tokenCount": 149
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/01-message-board-actions.png",
+      "riskScore": 22,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 51.32 is below 60",
+          "severity": "medium"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.332 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.120 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.92, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 170 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Home, Network, Settings, Wizard, Diagnostics, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "3babbf97e676fb5ea6dfb30bc5f047f2deb1d1dd549f6eba2761f9b16b11c49d",
+      "view": "BBS",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 633,
+        "contrastRatioMedian": 1.916,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1687,
+        "edgeRatio": 0.1204,
+        "foregroundColorClusters": 170,
+        "foregroundRatio": 0.3315,
+        "height": 600,
+        "highChromaForegroundShare": 0.6354,
+        "lowContrastForegroundShare": 0.7048,
+        "width": 1024
+      }
+    },
+    {
+      "file": "02-views-dropdown.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 546,
+          "left": 9,
+          "right": 1014,
+          "top": 54,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": true,
+          "Downloads": true,
+          "Home": true,
+          "Network": true,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": true,
+          "Settings": true,
+          "Wizard": true
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 42,
+            "left": 12,
+            "right": 1011,
+            "top": 87,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 86,
+            "height": 33,
+            "left": 15,
+            "right": 1011,
+            "top": 54,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 53,
+            "height": 54,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 54
+        }
+      },
+      "ocr": {
+        "meanConfidence": 70.2,
+        "wordCount": 117
+      },
+      "ocrNoise": {
+        "examples": [],
+        "noiseTokenCount": 0,
+        "noiseTokenRatio": 0.0,
+        "tokenCount": 108
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/02-views-dropdown.png",
+      "riskScore": 19,
+      "risks": [
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.392 is above 0.36",
+          "severity": "high"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.122 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 2.45, low-contrast share 0.61",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 157 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        }
+      ],
+      "sha256": "1af61e204b0a9d34f5b8caf59a7f2b1006b474fc19c286e7d2a608b457a197ec",
+      "view": "Navigation",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 560,
+        "contrastRatioMedian": 2.449,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.2342,
+        "edgeRatio": 0.1222,
+        "foregroundColorClusters": 157,
+        "foregroundRatio": 0.3915,
+        "height": 600,
+        "highChromaForegroundShare": 0.5192,
+        "lowContrastForegroundShare": 0.6058,
+        "width": 1024
+      }
+    },
+    {
+      "file": "03-home-dashboard.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Network, Settings, Wizard, Diagnostics, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Network",
+          "Settings",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": true,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 50.02,
+        "wordCount": 157
+      },
+      "ocrNoise": {
+        "examples": [
+          "SELEEEEEEEES",
+          "peereeereee",
+          "speeeerecee",
+          "SEEEEEEEEEES",
+          "SEEEEEEEEEES",
+          "CEEEEEEETES"
+        ],
+        "noiseTokenCount": 11,
+        "noiseTokenRatio": 0.0764,
+        "tokenCount": 144
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/03-home-dashboard.png",
+      "riskScore": 24,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 50.02 is below 60",
+          "severity": "medium"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.338 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.124 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "decorative_ocr_noise",
+          "detail": "Decorative/noise token ratio 0.076 is above 0.07",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.95, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 164 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Network, Settings, Wizard, Diagnostics, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "bb2aac68a2ba43bc0023c71c3ffe72d9b9ee48f422e3d5d16e072a1756715c42",
+      "view": "Home",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 664,
+        "contrastRatioMedian": 1.948,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1656,
+        "edgeRatio": 0.124,
+        "foregroundColorClusters": 164,
+        "foregroundRatio": 0.3376,
+        "height": 600,
+        "highChromaForegroundShare": 0.6401,
+        "lowContrastForegroundShare": 0.6992,
+        "width": 1024
+      }
+    },
+    {
+      "file": "04-message-board.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Home, Network, Peers, Settings, Wizard, Diagnostics",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Home",
+          "Network",
+          "Peers",
+          "Settings",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": false,
+          "Network": false,
+          "OTAP": true,
+          "Peers": false,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 53.44,
+        "wordCount": 254
+      },
+      "ocrNoise": {
+        "examples": [
+          "SELEEEEEEEES",
+          "peereeereee",
+          "LEEEEEEEES",
+          "peereeereee",
+          "EEEEEEEE",
+          "EEEEEEEEEED"
+        ],
+        "noiseTokenCount": 10,
+        "noiseTokenRatio": 0.0433,
+        "tokenCount": 231
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/04-message-board.png",
+      "riskScore": 25,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 53.44 is below 60",
+          "severity": "medium"
+        },
+        {
+          "code": "excessive_text_density",
+          "detail": "OCR found 254 words on one 1024x600 screen",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.338 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.124 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.95, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 173 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Home, Network, Peers, Settings, Wizard, Diagnostics",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "672b1d7cfe3512fb0b431c8eab29b6acffe07b3119957ee62de600cb0a261395",
+      "view": "BBS",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 651,
+        "contrastRatioMedian": 1.951,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1655,
+        "edgeRatio": 0.124,
+        "foregroundColorClusters": 173,
+        "foregroundRatio": 0.3378,
+        "height": 600,
+        "highChromaForegroundShare": 0.6401,
+        "lowContrastForegroundShare": 0.6996,
+        "width": 1024
+      }
+    },
+    {
+      "file": "05-downloads.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 546,
+          "left": 9,
+          "right": 1014,
+          "top": 54,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": true,
+          "Downloads": true,
+          "Home": true,
+          "Network": true,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": true,
+          "Settings": true,
+          "Wizard": true
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 42,
+            "left": 12,
+            "right": 1011,
+            "top": 87,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 86,
+            "height": 33,
+            "left": 15,
+            "right": 1011,
+            "top": 54,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 53,
+            "height": 54,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 54
+        }
+      },
+      "ocr": {
+        "meanConfidence": 72.82,
+        "wordCount": 122
+      },
+      "ocrNoise": {
+        "examples": [],
+        "noiseTokenCount": 0,
+        "noiseTokenRatio": 0.0,
+        "tokenCount": 110
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/05-downloads.png",
+      "riskScore": 19,
+      "risks": [
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.393 is above 0.36",
+          "severity": "high"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.123 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 2.48, low-contrast share 0.60",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 157 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        }
+      ],
+      "sha256": "0d5b180b93f05fe524f744dd7be552d51ae6674924da091d144946c32dd2a316",
+      "view": "Downloads",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 546,
+        "contrastRatioMedian": 2.484,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.2349,
+        "edgeRatio": 0.1233,
+        "foregroundColorClusters": 157,
+        "foregroundRatio": 0.3926,
+        "height": 600,
+        "highChromaForegroundShare": 0.5192,
+        "lowContrastForegroundShare": 0.6024,
+        "width": 1024
+      }
+    },
+    {
+      "file": "06-network.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Home, Settings, Wizard, Diagnostics, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Home",
+          "Settings",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": false,
+          "Network": true,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 49.19,
+        "wordCount": 161
+      },
+      "ocrNoise": {
+        "examples": [
+          "SEEREEEEEE",
+          "peereeereee",
+          "SEEEEEEEE",
+          "SEEEEEEEE",
+          "SESEEEES",
+          "BESEEEES"
+        ],
+        "noiseTokenCount": 11,
+        "noiseTokenRatio": 0.0738,
+        "tokenCount": 149
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/06-network.png",
+      "riskScore": 25,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 49.19 is below 50",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.328 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.119 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "decorative_ocr_noise",
+          "detail": "Decorative/noise token ratio 0.074 is above 0.07",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.92, low-contrast share 0.71",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 155 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Home, Settings, Wizard, Diagnostics, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "a938576fdefdc564a811698f37d192b53e6a445a447f535cac96b6221222c23d",
+      "view": "Network",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 606,
+        "contrastRatioMedian": 1.916,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1704,
+        "edgeRatio": 0.1186,
+        "foregroundColorClusters": 155,
+        "foregroundRatio": 0.3282,
+        "height": 600,
+        "highChromaForegroundShare": 0.6333,
+        "lowContrastForegroundShare": 0.7058,
+        "width": 1024
+      }
+    },
+    {
+      "file": "07-peers.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Home, Network, Settings, Wizard, Diagnostics, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Home",
+          "Network",
+          "Settings",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": false,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 48.21,
+        "wordCount": 227
+      },
+      "ocrNoise": {
+        "examples": [
+          "SELEEEEEEEES",
+          "peereeereee",
+          "SEEEEEEEEEER",
+          "SpeeEEEEEE:",
+          "PEEEEEEE",
+          "SEEEEEEEEEEE"
+        ],
+        "noiseTokenCount": 9,
+        "noiseTokenRatio": 0.0437,
+        "tokenCount": 206
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/07-peers.png",
+      "riskScore": 27,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 48.21 is below 50",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_text_density",
+          "detail": "OCR found 227 words on one 1024x600 screen",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.348 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.130 is above 0.125",
+          "severity": "high"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 2.00, low-contrast share 0.69",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 170 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Home, Network, Settings, Wizard, Diagnostics, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "a78c88c8768328b9ae9b6a7a94abad269ed1f2db9c48553f4988f1c65f2eab03",
+      "view": "Peers",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 738,
+        "contrastRatioMedian": 1.998,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1608,
+        "edgeRatio": 0.13,
+        "foregroundColorClusters": 170,
+        "foregroundRatio": 0.3477,
+        "height": 600,
+        "highChromaForegroundShare": 0.6469,
+        "lowContrastForegroundShare": 0.692,
+        "width": 1024
+      }
+    },
+    {
+      "file": "08-devices.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Home, Network, Peers, Settings, Wizard, Diagnostics",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Home",
+          "Network",
+          "Peers",
+          "Settings",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": false,
+          "Network": false,
+          "OTAP": true,
+          "Peers": false,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 53.44,
+        "wordCount": 254
+      },
+      "ocrNoise": {
+        "examples": [
+          "SELEEEEEEEES",
+          "peereeereee",
+          "LEEEEEEEES",
+          "peereeereee",
+          "EEEEEEEE",
+          "EEEEEEEEEED"
+        ],
+        "noiseTokenCount": 10,
+        "noiseTokenRatio": 0.0433,
+        "tokenCount": 231
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/08-devices.png",
+      "riskScore": 25,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 53.44 is below 60",
+          "severity": "medium"
+        },
+        {
+          "code": "excessive_text_density",
+          "detail": "OCR found 254 words on one 1024x600 screen",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.338 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.124 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.95, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 173 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Home, Network, Peers, Settings, Wizard, Diagnostics",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "672b1d7cfe3512fb0b431c8eab29b6acffe07b3119957ee62de600cb0a261395",
+      "view": "Devices",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 651,
+        "contrastRatioMedian": 1.951,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1655,
+        "edgeRatio": 0.124,
+        "foregroundColorClusters": 173,
+        "foregroundRatio": 0.3378,
+        "height": 600,
+        "highChromaForegroundShare": 0.6401,
+        "lowContrastForegroundShare": 0.6996,
+        "width": 1024
+      }
+    },
+    {
+      "file": "09-otap.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Home, Network, Settings, Wizard, Diagnostics, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Home",
+          "Network",
+          "Settings",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": false,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 51.32,
+        "wordCount": 167
+      },
+      "ocrNoise": {
+        "examples": [
+          "SEEREEEEEE",
+          "SSREEEEEEES",
+          "SEEEDEEEE",
+          "sTEsEodotototototeEeEetetodetotototetetetetetetetetetotetetetetetetetetetetetetetetetetetetetetetetede:",
+          "SbEEEEEE",
+          "EEEEEEEEEEEEED"
+        ],
+        "noiseTokenCount": 6,
+        "noiseTokenRatio": 0.0403,
+        "tokenCount": 149
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/09-otap.png",
+      "riskScore": 22,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 51.32 is below 60",
+          "severity": "medium"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.332 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.120 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.92, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 170 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Home, Network, Settings, Wizard, Diagnostics, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "3babbf97e676fb5ea6dfb30bc5f047f2deb1d1dd549f6eba2761f9b16b11c49d",
+      "view": "OTAP",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 633,
+        "contrastRatioMedian": 1.916,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1687,
+        "edgeRatio": 0.1204,
+        "foregroundColorClusters": 170,
+        "foregroundRatio": 0.3315,
+        "height": 600,
+        "highChromaForegroundShare": 0.6354,
+        "lowContrastForegroundShare": 0.7048,
+        "width": 1024
+      }
+    },
+    {
+      "file": "10-settings.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Home, Wizard, Diagnostics, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Home",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": false,
+          "Network": true,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": true,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 51.16,
+        "wordCount": 168
+      },
+      "ocrNoise": {
+        "examples": [
+          "SLEEEEEESS",
+          "EEpEEEEEEES",
+          "EEpEEEEEEES",
+          "SRReEEEE"
+        ],
+        "noiseTokenCount": 4,
+        "noiseTokenRatio": 0.026,
+        "tokenCount": 154
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/10-settings.png",
+      "riskScore": 22,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 51.16 is below 60",
+          "severity": "medium"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.319 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.114 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.86, low-contrast share 0.71",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 154 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Home, Wizard, Diagnostics, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "269db5567a4d4142fc73147d32161460d7dabe8a04c1187fa42d4f44324fc298",
+      "view": "Settings",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 567,
+        "contrastRatioMedian": 1.862,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1752,
+        "edgeRatio": 0.1137,
+        "foregroundColorClusters": 154,
+        "foregroundRatio": 0.3191,
+        "height": 600,
+        "highChromaForegroundShare": 0.6257,
+        "lowContrastForegroundShare": 0.7131,
+        "width": 1024
+      }
+    },
+    {
+      "file": "11-wizard.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Network, Diagnostics, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Network",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": true,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": true,
+          "Wizard": true
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 55.33,
+        "wordCount": 150
+      },
+      "ocrNoise": {
+        "examples": [
+          "SEEREEEEEE",
+          "SSREEEEEEES",
+          "SbEEEEEE",
+          "EEEEEEEEEEEEED"
+        ],
+        "noiseTokenCount": 4,
+        "noiseTokenRatio": 0.0284,
+        "tokenCount": 141
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/11-wizard.png",
+      "riskScore": 22,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 55.33 is below 60",
+          "severity": "medium"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.327 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.118 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.92, low-contrast share 0.71",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 154 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Network, Diagnostics, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "7f96a8be74e442a47427af1b4a811397f07661b87481683f445d5c587a3d4d4b",
+      "view": "Wizard",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 614,
+        "contrastRatioMedian": 1.916,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1711,
+        "edgeRatio": 0.1181,
+        "foregroundColorClusters": 154,
+        "foregroundRatio": 0.3267,
+        "height": 600,
+        "highChromaForegroundShare": 0.6323,
+        "lowContrastForegroundShare": 0.7066,
+        "width": 1024
+      }
+    },
+    {
+      "file": "12-diagnostics.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Home, Wizard, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Home",
+          "Wizard",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": true,
+          "Downloads": true,
+          "Home": false,
+          "Network": true,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": true,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 50.33,
+        "wordCount": 231
+      },
+      "ocrNoise": {
+        "examples": [
+          "SELEEEEEEEES",
+          "EREEEEEEEES",
+          "SEEEEEEEE",
+          "SEEEEEEE",
+          "SEEEEEEEE",
+          "PEEEEEREEEE"
+        ],
+        "noiseTokenCount": 6,
+        "noiseTokenRatio": 0.0282,
+        "tokenCount": 213
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/12-diagnostics.png",
+      "riskScore": 26,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 50.33 is below 60",
+          "severity": "medium"
+        },
+        {
+          "code": "excessive_text_density",
+          "detail": "OCR found 231 words on one 1024x600 screen",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.343 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.127 is above 0.125",
+          "severity": "high"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.97, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 155 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Home, Wizard, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "1f37d2ab6e5fd88a607200ad21be6f427adda6bde9946850c7fa8137ad1dc39c",
+      "view": "Diagnostics",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 697,
+        "contrastRatioMedian": 1.972,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1629,
+        "edgeRatio": 0.1273,
+        "foregroundColorClusters": 155,
+        "foregroundRatio": 0.3432,
+        "height": 600,
+        "highChromaForegroundShare": 0.6438,
+        "lowContrastForegroundShare": 0.6955,
+        "width": 1024
+      }
+    },
+    {
+      "file": "13-safety.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Home, Network, Settings, Wizard, Diagnostics",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Home",
+          "Network",
+          "Settings",
+          "Wizard",
+          "Diagnostics"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": false,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": true,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 50.63,
+        "wordCount": 153
+      },
+      "ocrNoise": {
+        "examples": [
+          "SEEREEEEEE",
+          "SEREREEE",
+          "PEEESSEEE",
+          "nerenerenrrenrren",
+          "EREEEEEEEEE",
+          "SbEEEEEE"
+        ],
+        "noiseTokenCount": 7,
+        "noiseTokenRatio": 0.0483,
+        "tokenCount": 145
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/13-safety.png",
+      "riskScore": 22,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 50.63 is below 60",
+          "severity": "medium"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.334 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.122 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.93, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 162 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Home, Network, Settings, Wizard, Diagnostics",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "8ca14171dfd41d9edcf11e87e854544da3c18426b9734bab86a49aa9cfb31cf2",
+      "view": "Safety",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 647,
+        "contrastRatioMedian": 1.927,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.1676,
+        "edgeRatio": 0.1219,
+        "foregroundColorClusters": 162,
+        "foregroundRatio": 0.3335,
+        "height": 600,
+        "highChromaForegroundShare": 0.6365,
+        "lowContrastForegroundShare": 0.703,
+        "width": 1024
+      }
+    },
+    {
+      "file": "14-final-refresh.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Network, Settings, Wizard, Diagnostics, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Network",
+          "Settings",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": true,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 49.2,
+        "wordCount": 157
+      },
+      "ocrNoise": {
+        "examples": [
+          "SELEEEEEEEES",
+          "peereeereee",
+          "speeeerecee",
+          "SEEEEEEEEEES",
+          "SEEEEEEEEEES",
+          "CEEEEEEETES"
+        ],
+        "noiseTokenCount": 11,
+        "noiseTokenRatio": 0.0769,
+        "tokenCount": 143
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/14-final-refresh.png",
+      "riskScore": 25,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 49.20 is below 50",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.338 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.124 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "decorative_ocr_noise",
+          "detail": "Decorative/noise token ratio 0.077 is above 0.07",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.95, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 164 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Network, Settings, Wizard, Diagnostics, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "e87ec7fb6f6ab7467238ec7f784d66f0ae9157cc58ca1dba490ef1ef81b62ff3",
+      "view": "Home",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 663,
+        "contrastRatioMedian": 1.949,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.166,
+        "edgeRatio": 0.1241,
+        "foregroundColorClusters": 164,
+        "foregroundRatio": 0.3384,
+        "height": 600,
+        "highChromaForegroundShare": 0.6409,
+        "lowContrastForegroundShare": 0.6992,
+        "width": 1024
+      }
+    },
+    {
+      "file": "15-pre-cleanup.png",
+      "layout": {
+        "appBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "assumption": "Bounds are estimated from local pixel foreground regions; this is advisory CV evidence.",
+        "available": true,
+        "clientBounds": {
+          "bottom": 599,
+          "height": 543,
+          "left": 9,
+          "right": 1014,
+          "top": 57,
+          "width": 1006
+        },
+        "desktopStartY": null,
+        "fitRisks": [
+          {
+            "code": "console_fit_risk",
+            "detail": "Client content leaves bottom margin 0px and right margin 9px",
+            "severity": "high"
+          },
+          {
+            "code": "log_region_overflow",
+            "detail": "Console log reaches bottom margin 0px",
+            "severity": "high"
+          },
+          {
+            "code": "navigation_label_gap",
+            "detail": "Navigation OCR missed labels: Network, Settings, Wizard, Diagnostics, Safety",
+            "severity": "medium"
+          }
+        ],
+        "frameBounds": {
+          "bottom": 599,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "top": 0,
+          "width": 1024
+        },
+        "minVerticalRegionGapPx": 0,
+        "missingNavigationLabels": [
+          "Network",
+          "Settings",
+          "Wizard",
+          "Diagnostics",
+          "Safety"
+        ],
+        "navigationLabels": {
+          "BBS": true,
+          "Devices": true,
+          "Diagnostics": false,
+          "Downloads": true,
+          "Home": true,
+          "Network": false,
+          "OTAP": true,
+          "Peers": true,
+          "Safety": false,
+          "Settings": false,
+          "Wizard": false
+        },
+        "regionOverlaps": [],
+        "regions": {
+          "actionStrip": {
+            "bottom": 413,
+            "height": 84,
+            "left": 12,
+            "right": 1011,
+            "top": 330,
+            "width": 1000
+          },
+          "consoleLog": {
+            "bottom": 599,
+            "height": 186,
+            "left": 9,
+            "right": 1014,
+            "top": 414,
+            "width": 1006
+          },
+          "mainContent": {
+            "bottom": 329,
+            "height": 177,
+            "left": 12,
+            "right": 1011,
+            "top": 153,
+            "width": 1000
+          },
+          "navigationTabs": {
+            "bottom": 128,
+            "height": 40,
+            "left": 12,
+            "right": 1011,
+            "top": 89,
+            "width": 1000
+          },
+          "statusStrip": {
+            "bottom": 82,
+            "height": 26,
+            "left": 15,
+            "right": 1011,
+            "top": 57,
+            "width": 997
+          },
+          "viewTitle": {
+            "bottom": 152,
+            "height": 24,
+            "left": 12,
+            "right": 1011,
+            "top": 129,
+            "width": 1000
+          },
+          "windowChrome": {
+            "bottom": 46,
+            "height": 47,
+            "left": 0,
+            "right": 1023,
+            "top": 0,
+            "width": 1024
+          }
+        },
+        "safeMarginsPx": {
+          "bottom": 0,
+          "left": 9,
+          "right": 9,
+          "top": 57
+        }
+      },
+      "ocr": {
+        "meanConfidence": 49.2,
+        "wordCount": 157
+      },
+      "ocrNoise": {
+        "examples": [
+          "SELEEEEEEEES",
+          "peereeereee",
+          "speeeerecee",
+          "SEEEEEEEEEES",
+          "SEEEEEEEEEES",
+          "CEEEEEEETES"
+        ],
+        "noiseTokenCount": 11,
+        "noiseTokenRatio": 0.0769,
+        "tokenCount": 143
+      },
+      "path": "/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-24-win31-viewfinder-full-completion/full-completion-20260524T135020Z/screenshots/15-pre-cleanup.png",
+      "riskScore": 25,
+      "risks": [
+        {
+          "code": "weak_ocr_confidence",
+          "detail": "OCR confidence 49.20 is below 50",
+          "severity": "high"
+        },
+        {
+          "code": "excessive_visual_density",
+          "detail": "Foreground ratio 0.338 is above 0.30",
+          "severity": "medium"
+        },
+        {
+          "code": "edge_noise_load",
+          "detail": "Edge ratio 0.124 is above 0.105",
+          "severity": "medium"
+        },
+        {
+          "code": "decorative_ocr_noise",
+          "detail": "Decorative/noise token ratio 0.077 is above 0.07",
+          "severity": "medium"
+        },
+        {
+          "code": "contrast_risk",
+          "detail": "Median contrast 1.95, low-contrast share 0.70",
+          "severity": "high"
+        },
+        {
+          "code": "color_complexity",
+          "detail": "Foreground quantized color clusters 164 are high for OCR comparison",
+          "severity": "medium"
+        },
+        {
+          "code": "overflow_margin_risk",
+          "detail": "Foreground reaches bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "console_fit_risk",
+          "detail": "Client content leaves bottom margin 0px and right margin 9px",
+          "severity": "high"
+        },
+        {
+          "code": "log_region_overflow",
+          "detail": "Console log reaches bottom margin 0px",
+          "severity": "high"
+        },
+        {
+          "code": "navigation_label_gap",
+          "detail": "Navigation OCR missed labels: Network, Settings, Wizard, Diagnostics, Safety",
+          "severity": "medium"
+        }
+      ],
+      "sha256": "e87ec7fb6f6ab7467238ec7f784d66f0ae9157cc58ca1dba490ef1ef81b62ff3",
+      "view": "Home",
+      "visual": {
+        "available": true,
+        "bounds": {
+          "bottom": 599,
+          "bottomMarginPx": 0,
+          "height": 600,
+          "left": 0,
+          "right": 1023,
+          "rightMarginPx": 0,
+          "top": 0,
+          "width": 1024
+        },
+        "componentCount": 663,
+        "contrastRatioMedian": 1.949,
+        "desktopStartY": null,
+        "dominantBackgroundRgb": [
+          8,
+          8,
+          8
+        ],
+        "dominantForegroundClusterShare": 0.166,
+        "edgeRatio": 0.1241,
+        "foregroundColorClusters": 164,
+        "foregroundRatio": 0.3384,
+        "height": 600,
+        "highChromaForegroundShare": 0.6409,
+        "lowContrastForegroundShare": 0.6992,
+        "width": 1024
+      }
+    }
+  ],
+  "sources": [
+    "SRC-LOCAL-WIN31-DASHBOARD-ML-LIVE-GATE-2026-05-23",
+    "SRC-LOCAL-WIN31-DASHBOARD-LEGIBILITY-RESEARCH-2026-05-24",
+    "SRC-OPENCV-TEMPLATE-MATCHING-2026-05-23",
+    "SRC-TESSERACT-IMAGE-QUALITY-2026-05-23",
+    "SRC-WCAG-CONTRAST-MINIMUM-2026-05-24",
+    "SRC-MICROSOFT-WIN32-UI-PRINCIPLES-2026-05-24",
+    "SRC-MICROSOFT-MENU-GUIDELINES-2026-05-24",
+    "SRC-NNG-HEURISTICS-SUMMARY-2026-05-24"
+  ],
+  "tool": "scripts/win31_dashboard_legibility_analyzer.py",
+  "unknowns": [
+    "No revised UI screenshot packet has been measured by this task.",
+    "No user study, PaddleOCR benchmark, or hosted vision critique is approved by this task."
+  ],
+  "verifiedFacts": [
+    "The input packet is copied local evidence; no live bench mutation is performed.",
+    "The existing DOS-C vision gate remains the pass/fail screenshot gate.",
+    "This analyzer reports advisory legibility and layout-fit metrics for backlog ranking only."
+  ],
+  "viewSummary": {
+    "BBS": {
+      "lowestOcrConfidence": 51.32,
+      "maxRiskScore": 25,
+      "maxWordCount": 254,
+      "riskCounts": {
+        "color_complexity": 2,
+        "console_fit_risk": 2,
+        "contrast_risk": 2,
+        "edge_noise_load": 2,
+        "excessive_text_density": 1,
+        "excessive_visual_density": 2,
+        "log_region_overflow": 2,
+        "navigation_label_gap": 2,
+        "overflow_margin_risk": 2,
+        "weak_ocr_confidence": 2
+      },
+      "screenCount": 2,
+      "screens": [
+        "01-message-board-actions.png",
+        "04-message-board.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 51.32.",
+        "Contrast risk appears on 2 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "Diagnostics": {
+      "lowestOcrConfidence": 50.33,
+      "maxRiskScore": 26,
+      "maxWordCount": 231,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "edge_noise_load": 1,
+        "excessive_text_density": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "navigation_label_gap": 1,
+        "overflow_margin_risk": 1,
+        "weak_ocr_confidence": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "12-diagnostics.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 50.33.",
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "Downloads": {
+      "lowestOcrConfidence": 72.82,
+      "maxRiskScore": 19,
+      "maxWordCount": 122,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "edge_noise_load": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "overflow_margin_risk": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "05-downloads.png"
+      ],
+      "weakSpots": [
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin."
+      ]
+    },
+    "Home": {
+      "lowestOcrConfidence": 48.3,
+      "maxRiskScore": 25,
+      "maxWordCount": 161,
+      "riskCounts": {
+        "color_complexity": 4,
+        "console_fit_risk": 4,
+        "contrast_risk": 4,
+        "decorative_ocr_noise": 4,
+        "edge_noise_load": 4,
+        "excessive_visual_density": 4,
+        "log_region_overflow": 4,
+        "navigation_label_gap": 4,
+        "overflow_margin_risk": 4,
+        "weak_ocr_confidence": 4
+      },
+      "screenCount": 4,
+      "screens": [
+        "00-opcon-dashboard-maximized-compact.png",
+        "03-home-dashboard.png",
+        "14-final-refresh.png",
+        "15-pre-cleanup.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 48.30.",
+        "Contrast risk appears on 4 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "Network": {
+      "lowestOcrConfidence": 49.19,
+      "maxRiskScore": 25,
+      "maxWordCount": 161,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "decorative_ocr_noise": 1,
+        "edge_noise_load": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "navigation_label_gap": 1,
+        "overflow_margin_risk": 1,
+        "weak_ocr_confidence": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "06-network.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 49.19.",
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "OTAP": {
+      "lowestOcrConfidence": 51.32,
+      "maxRiskScore": 22,
+      "maxWordCount": 167,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "edge_noise_load": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "navigation_label_gap": 1,
+        "overflow_margin_risk": 1,
+        "weak_ocr_confidence": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "09-otap.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 51.32.",
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "Peers": {
+      "lowestOcrConfidence": 48.21,
+      "maxRiskScore": 27,
+      "maxWordCount": 227,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "edge_noise_load": 1,
+        "excessive_text_density": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "navigation_label_gap": 1,
+        "overflow_margin_risk": 1,
+        "weak_ocr_confidence": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "07-peers.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 48.21.",
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "Safety": {
+      "lowestOcrConfidence": 50.63,
+      "maxRiskScore": 22,
+      "maxWordCount": 153,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "edge_noise_load": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "navigation_label_gap": 1,
+        "overflow_margin_risk": 1,
+        "weak_ocr_confidence": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "13-safety.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 50.63.",
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "Settings": {
+      "lowestOcrConfidence": 51.16,
+      "maxRiskScore": 22,
+      "maxWordCount": 168,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "edge_noise_load": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "navigation_label_gap": 1,
+        "overflow_margin_risk": 1,
+        "weak_ocr_confidence": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "10-settings.png"
+      ],
+      "weakSpots": [
+        "OCR confidence floor is 51.16.",
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    },
+    "Wizard": {
+      "lowestOcrConfidence": 55.33,
+      "maxRiskScore": 22,
+      "maxWordCount": 150,
+      "riskCounts": {
+        "color_complexity": 1,
+        "console_fit_risk": 1,
+        "contrast_risk": 1,
+        "edge_noise_load": 1,
+        "excessive_visual_density": 1,
+        "log_region_overflow": 1,
+        "navigation_label_gap": 1,
+        "overflow_margin_risk": 1,
+        "weak_ocr_confidence": 1
+      },
+      "screenCount": 1,
+      "screens": [
+        "11-wizard.png"
+      ],
+      "weakSpots": [
+        "Contrast risk appears on 1 screen(s).",
+        "ASCII/decorative edge load competes with readable text.",
+        "Text or foreground density is high enough to slow scanning.",
+        "Screenshot quiet-zone margins are tight.",
+        "Estimated client/log regions do not preserve the required safe margin.",
+        "Navigation labels were not consistently readable in OCR."
+      ]
+    }
+  }
+}

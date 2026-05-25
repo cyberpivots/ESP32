@@ -180,8 +180,11 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 - [repo-verified] Gate G adds simulator-only analytics report generation for
   counters, custody rollups, file rollups, telemetry rollups, and fixture-only
   client/user summary fields.
+- [repo-verified] `ADR-0005` is proposed as the live analytics export policy
+  gate. It is not accepted.
 - [unknown] No accepted analytics storage format, dashboard report shape,
-  retention rule, privacy policy, or export policy exists.
+  retention rule, privacy policy, or export policy exists. Gate G remains
+  prepare-live-export only until `ADR-0005` accepts those fields.
 
 ## 9. Test and Acceptance Plan
 
@@ -199,9 +202,9 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 - [repo-verified] Gate H live acceptance is recorded separately in
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-H-LIVE-ACCEPTANCE-2026-05-25`
   for the accepted serial-nullmodem path after fresh preflight and cleanup
-  proof. The deterministic screenshot/completion gate still needs a transcript
-  export that carries full serial-error and counter triples for machine-pass
-  visual corroboration.
+  proof. Future deterministic screenshot/completion gate reruns should use the
+  structured `bridge-transcript.jsonl` evidence shape from
+  `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-TRANSCRIPT-2026-05-25`.
 
 ## 10. Risks / Non-Goals
 
@@ -213,7 +216,8 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
   isolation, protocol, connector, or environmental assumptions unless hardware
   profiles are sourced first.
 - [risk] Analytics/reporting can expose operational or client data unless
-  retention, export, and authorization policy is accepted.
+  retention, redaction, export, storage, operator access, and cleanup policy is
+  accepted.
 - [non-goal] This brief does not authorize flashing, serial writes, relay
   control, XBee work, router/admin action, PCAP, BLE pairing, ESP-WIFI-MESH
   live action, erased flash, monitor automation, or framework migration.

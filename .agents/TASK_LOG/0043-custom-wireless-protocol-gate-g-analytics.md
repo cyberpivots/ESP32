@@ -27,16 +27,18 @@ Included:
 - Explicit export boundary fields:
   `simulator_only: true`, `privacy_policy: unreviewed`, and
   `retention: unresolved`.
+- Proposed `ADR-0005` as the future live export policy gate. It is not
+  accepted, and live export remains disabled.
 - Simulator tests, README updates, source ledger, source-index entry, known-gap
   update, and QA handoff.
 
 Excluded:
 
 - Live bridge request handlers, live export surfaces, accepted retention or
-  privacy policy, firmware ABI/runtime migration, live Win31/OPCON proof,
-  flashing, serial writes, erase, monitor, radio setting changes, PCAP,
-  router/admin work, BLE, ESP-WIFI-MESH live action, relay, XBee, TFT,
-  MicroSD, load, or mains.
+  privacy/redaction policy, storage location, operator access, cleanup policy,
+  firmware ABI/runtime migration, live Win31/OPCON proof, flashing, serial
+  writes, erase, monitor, radio setting changes, PCAP, router/admin work, BLE,
+  ESP-WIFI-MESH live action, relay, XBee, TFT, MicroSD, load, or mains.
 
 ## Sources
 

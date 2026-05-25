@@ -52,10 +52,11 @@ Perform authorized Gate H live acceptance on the accepted path:
 
 ## Unknowns
 
-- The copied-evidence vision gate currently returns `needs_manual_review`
-  because the bridge summary does not include full serial-error and
-  moving-counter triples, even though screenshots and OCR identify the expected
-  views and disabled unsafe controls.
+- The copied-evidence vision gate for this historical packet returned
+  `needs_manual_review` because the packet used the older bridge summary shape.
+  Future reruns should use `bridge-transcript.jsonl` from the structured
+  transcript tooling so full serial-error and moving-counter triples are
+  machine-readable.
 - Gate G analytics retention/export/privacy policy remains unresolved.
 
 ## Result

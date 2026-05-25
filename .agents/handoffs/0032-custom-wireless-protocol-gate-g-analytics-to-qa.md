@@ -10,7 +10,11 @@ Task:
 - Review Gate G tests in
   [../../tests/custom_wireless_protocol/test_espnow_bbs_custom_protocol.py](../../tests/custom_wireless_protocol/test_espnow_bbs_custom_protocol.py).
 - Treat all analytics as simulator-only until owner review accepts retention,
-  privacy, authorization, and export policy.
+  privacy/redaction, authorization, export format, storage location, operator
+  access, and cleanup policy.
+- Review proposed
+  [../DECISIONS/ADR-0005-espnow-bbs-live-analytics-export-policy.md](../DECISIONS/ADR-0005-espnow-bbs-live-analytics-export-policy.md)
+  before any live export implementation.
 
 ## Required Evidence Before Acceptance
 

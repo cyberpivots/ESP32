@@ -150,6 +150,24 @@ def completion_transcript() -> list[dict[str, object]]:
     ]
 
 
+def completion_audit_jsonl_transcript() -> list[dict[str, object]]:
+    records = []
+    for index, record in enumerate(completion_transcript(), start=1):
+        request = record["request"]
+        response = record["response"]
+        records.append(
+            {
+                "ts_ms": 1_700_000_000_000 + index,
+                "transport": "serial-nullmodem",
+                "request": request,
+                "response": response,
+                "in_bytes": len(json.dumps(request, separators=(",", ":"))),
+                "out_bytes": len(json.dumps(response, separators=(",", ":"))) + 1,
+            }
+        )
+    return records
+
+
 class CompletionGateTests(unittest.TestCase):
     def write_completion_fixture(
         self,
@@ -267,6 +285,27 @@ class CompletionGateTests(unittest.TestCase):
             payload = json.loads(fixture.out.read_text(encoding="utf-8"))
         self.assertEqual(status, 0)
         self.assertTrue(payload["ok"], payload.get("failures"))
+
+    def test_complete_gate_passes_with_jsonl_audit_transcript(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixture = self.write_completion_fixture(root)
+            fixture.bridge_transcript = root / "bridge-transcript.jsonl"
+            fixture.bridge_transcript.write_text(
+                "\n".join(
+                    json.dumps(record) for record in completion_audit_jsonl_transcript()
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            status = espnow_bbs_live_gate.command_complete(fixture)
+            payload = json.loads(fixture.out.read_text(encoding="utf-8"))
+        self.assertEqual(status, 0)
+        self.assertTrue(payload["ok"], payload.get("failures"))
+        self.assertGreaterEqual(len(payload["transcript"]["serialErrors"]), 2)
+        self.assertTrue(all(value == 0 for value in payload["transcript"]["serialErrors"]))
+        self.assertIn([126, 126, 126], payload["transcript"]["counterTriples"])
+        self.assertIn([129, 129, 129], payload["transcript"]["counterTriples"])
 
     def test_complete_gate_fails_when_vision_gate_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -65,8 +65,8 @@ Accepted path:
   bridge process, or listeners on `31331`, `31332`, or `8080`.
 - Copied screenshot/OCR review found all expected OPCON views and disabled
   unsafe controls, but the deterministic vision gate reported
-  `needs_manual_review` because the bridge summary log does not include full
-  serial-error and moving-counter triples.
+  `needs_manual_review` because this historical packet used the older bridge
+  summary shape.
 
 ## Assumptions
 
@@ -78,10 +78,9 @@ Accepted path:
 
 ## Unknowns
 
-- The deterministic screenshot gate still needs an input format that records
-  full bridge response payloads, serial-error values, and counter triples if
-  future Gate H runs must produce a machine `pass` instead of manual-review
-  visual corroboration.
+- Future deterministic screenshot acceptance needs a fresh live packet captured
+  with `bridge-transcript.jsonl` so full bridge response payloads,
+  serial-error values, and counter triples are available to the machine gate.
 - Analytics retention/export/privacy policy remains unresolved; Gate G
   analytics stays simulator-only.
 

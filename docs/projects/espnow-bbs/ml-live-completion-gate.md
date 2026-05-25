@@ -71,12 +71,58 @@ paired DOS-C screenshot vision-gate JSON.
 - The authoritative bridge transcript showing `hello`, `state_get`,
   `peer_list`, `diag_get`, `fw_inventory`, `msg_post`, `msg_pull`,
   `msg_search`, `msg_ack`, `download_list`, `download_status`, `otap_status`,
-  and non-executing `otap_intent`.
+  and non-executing `otap_intent`. For Gate H and later live proof packets,
+  use the DOS-C bridge JSONL audit transcript
+  `<proof-dir>/bridge-transcript.jsonl`, not `summary.txt`, so full
+  request/response payloads, serial-error fields, and RX/TX/ACK counter
+  triples are machine-readable.
 - Cleanup proof for DOSBox-X, warning/quit modals, the Pi bridge process, and
   listeners on `31331`, `31332`, and `8080`.
 - DOS-C `win31_dashboard_vision_gate.py` JSON with screenshot hashes,
   required-view classification, transcript audit, cleanup audit, and
   fail-closed status.
+
+Gate H live proof collection should include two OPCON telemetry refresh cycles:
+one before BBS/download/OTAP actions and one after those actions. The bridge
+transcript remains authoritative; screenshots and OCR remain secondary
+corroboration.
+
+Copy/paste-ready command shape for a later authorized Gate H rerun:
+
+```bash
+DOSC_ROOT=/mnt/h/dos-c
+ESP32_ROOT=/mnt/h/ESP32
+PROOF_DIR=<proof-dir>
+
+python3 "$DOSC_ROOT/software/espnow-bbs-bridge/espnow_bbs_bridge.py" \
+  --transport serial-nullmodem \
+  --host 127.0.0.1 \
+  --port 31332 \
+  --spool "$PROOF_DIR/spool.sqlite3" \
+  --coordinator-backend serial \
+  --device /dev/ttyUSB0 \
+  --allow-physical-serial \
+  --read-only \
+  --audit-transcript "$PROOF_DIR/bridge-transcript.jsonl" \
+  > "$PROOF_DIR/bridge.log" 2>&1
+
+python3 "$DOSC_ROOT/scripts/win31_dashboard_vision_gate.py" \
+  --screenshot-dir "$PROOF_DIR" \
+  --bridge-transcript "$PROOF_DIR/bridge-transcript.jsonl" \
+  --cleanup-proof "$PROOF_DIR/cleanup.txt" \
+  --out "$PROOF_DIR/vision-gate.json"
+
+python3 "$ESP32_ROOT/scripts/espnow_bbs_live_gate.py" complete \
+  --manifest <manifest.json> \
+  --flash-evidence <flash-evidence.json> \
+  --bridge-transcript "$PROOF_DIR/bridge-transcript.jsonl" \
+  --cleanup-proof "$PROOF_DIR/cleanup.txt" \
+  --vision-gate "$PROOF_DIR/vision-gate.json" \
+  --out "$PROOF_DIR/esp32-completion.json"
+```
+
+`bridge.log` is human-readable only. The structured transcript and cleanup
+proof remain authoritative; screenshots and OCR/CV are corroborative.
 
 ## Required Visible States
 

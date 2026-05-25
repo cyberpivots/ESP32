@@ -19,6 +19,8 @@ Date: 2026-05-25
   `retention: unresolved`.
 - [repo-verified] Gate G does not add an analytics bridge request or wire
   analytics into a live bridge/export surface.
+- [repo-verified] `ADR-0005` is proposed as the future live export policy gate.
+  It is not accepted.
 
 ## Assumptions
 
@@ -30,8 +32,9 @@ Date: 2026-05-25
 ## Unknowns
 
 - [unknown] No accepted analytics storage format, dashboard report shape,
-  retention policy, export policy, authorization policy, or privacy policy
-  exists after Gate G.
+  retention policy, export policy, authorization policy, privacy policy,
+  storage location, operator access policy, or cleanup expectation exists after
+  Gate G.
 - [unknown] No live bridge transcript, Win31/OPCON visual proof, firmware proof,
   serial proof, or live analytics export proof was produced by Gate G.
 

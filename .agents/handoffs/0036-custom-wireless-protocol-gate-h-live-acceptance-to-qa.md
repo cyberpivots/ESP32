@@ -29,15 +29,17 @@ serial-nullmodem path after Pi/router reachability was restored at
 
 ## QA Notes
 
-- Treat `bridge.log` plus `summary.txt` as authoritative for operator behavior
-  and peer identity.
+- For this historical packet, treat `bridge.log` plus `summary.txt` as the
+  archived behavior evidence. For future reruns, feed
+  `<proof-dir>/bridge-transcript.jsonl` to the DOS-C vision gate and ESP32
+  completion gate.
 - Treat screenshots as secondary corroboration. The deterministic vision gate
   found all expected views and disabled unsafe controls but returned
-  `needs_manual_review` because `summary.txt` does not carry full
+  `needs_manual_review` because the archived packet did not carry full
   serial-error/counter triples.
-- Future live runs should capture full request/response payloads or export a
-  completion transcript JSON so the vision/completion gates can pass without
-  manual review.
+- Future live runs should start the bridge with
+  `--audit-transcript <proof-dir>/bridge-transcript.jsonl` and collect one
+  telemetry refresh cycle before BBS/download/OTAP actions plus one after.
 
 ## Closed Gates
 

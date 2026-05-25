@@ -57,8 +57,8 @@ serial-write expansion was run.
 - Cleanup proof after the corrected run showed no DOSBox-X process, modal,
   bridge process, or relevant listener.
 - The screenshot/OCR gate found all expected views and disabled unsafe
-  controls, but returned `needs_manual_review` because the available transcript
-  summary lacks full serial-error/counter triples.
+  controls, but returned `needs_manual_review` because this historical packet
+  used the older transcript summary shape.
 
 ## Assumptions
 
@@ -70,9 +70,9 @@ serial-write expansion was run.
 
 ## Unknowns
 
-- Future deterministic screenshot acceptance needs full bridge response
-  payloads or a transcript export format that includes serial-error and
-  counter triples.
+- Future deterministic screenshot acceptance needs a fresh live packet captured
+  with the structured bridge JSONL transcript so serial-error and counter
+  triples are machine-readable.
 - Analytics retention/export/privacy remains unresolved and simulator-only.
 
 ## Result

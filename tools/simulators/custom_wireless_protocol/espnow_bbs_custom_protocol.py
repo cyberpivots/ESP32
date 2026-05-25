@@ -1,0 +1,573 @@
+#!/usr/bin/env python3
+"""Simulator-only custom wireless protocol model for ESP-NOW BBS planning."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import struct
+from dataclasses import dataclass, field
+from typing import Any, Mapping
+
+
+BRIDGE_MAX_LINE_BYTES = 512
+RADIO_PROTOCOL_VERSION = 1
+RADIO_MAX_PAYLOAD_BYTES = 250
+RADIO_HEADER_BYTES = 32
+RADIO_MAX_BODY_BYTES = 190
+RADIO_MAX_FRAGMENT_COUNT = 16
+
+SERVICE_CODES = {
+    "direct_message": 1,
+    "file_chunk": 2,
+    "telemetry_report": 3,
+    "node_status": 4,
+    "custody_ack": 5,
+    "control_intent": 6,
+}
+CODE_SERVICES = {value: key for key, value in SERVICE_CODES.items()}
+
+CUSTODY_CODES = {
+    "none": 0,
+    "queued": 1,
+    "sent": 2,
+    "delivered": 3,
+    "acked": 4,
+    "failed": 5,
+    "expired": 6,
+}
+CODE_CUSTODY = {value: key for key, value in CUSTODY_CODES.items()}
+
+_HEADER = struct.Struct("!BBBBIIBB8s8sBB")
+
+
+class ProtocolError(ValueError):
+    """Raised when a simulator protocol frame is malformed or unsafe."""
+
+    def __init__(self, reason: str, detail: str | None = None) -> None:
+        self.reason = reason
+        self.detail = detail
+        message = reason if detail is None else f"{reason}: {detail}"
+        super().__init__(message)
+
+
+@dataclass(frozen=True)
+class WirelessPacket:
+    """Bounded packet for simulator-only custom service tests."""
+
+    service: str
+    seq: int
+    source: str
+    destination: str
+    message_id: int
+    body: bytes = b""
+    fragment_index: int = 0
+    fragment_count: int = 1
+    ttl: int = 4
+    custody: str = "none"
+    flags: int = 0
+
+    def duplicate_key(self) -> str:
+        return f"{self.source}:{self.destination}:{self.message_id}:{self.fragment_index}"
+
+    def with_ttl(self, ttl: int) -> "WirelessPacket":
+        return WirelessPacket(
+            service=self.service,
+            seq=self.seq,
+            source=self.source,
+            destination=self.destination,
+            message_id=self.message_id,
+            body=self.body,
+            fragment_index=self.fragment_index,
+            fragment_count=self.fragment_count,
+            ttl=ttl,
+            custody=self.custody,
+            flags=self.flags,
+        )
+
+
+@dataclass
+class CustodyRecord:
+    message_id: int
+    service: str
+    destination: str
+    status: str = "queued"
+    attempts: int = 0
+    reason: str = ""
+
+    def mark_sent(self) -> None:
+        self.attempts += 1
+        self.status = "sent"
+
+    def mark_ack(self, status: str = "acked", reason: str = "") -> None:
+        if status not in CUSTODY_CODES or status == "none":
+            raise ProtocolError("custody_status_invalid", status)
+        self.status = status
+        self.reason = reason
+
+    def should_retry(self, max_attempts: int = 3) -> bool:
+        return self.status in {"queued", "sent", "failed"} and self.attempts < max_attempts
+
+
+class DuplicateWindow:
+    """Small duplicate filter for simulator tests."""
+
+    def __init__(self) -> None:
+        self._seen: set[str] = set()
+
+    def accept(self, packet: WirelessPacket) -> bool:
+        key = packet.duplicate_key()
+        if key in self._seen:
+            return False
+        self._seen.add(key)
+        return True
+
+
+@dataclass
+class ProtocolSimulator:
+    """In-memory simulator for packet services behind the BBS bridge."""
+
+    node_id: str = "coord01"
+    next_seq: int = 1
+    next_message_id: int = 1000
+    custody: dict[int, CustodyRecord] = field(default_factory=dict)
+    duplicate_window: DuplicateWindow = field(default_factory=DuplicateWindow)
+    telemetry_reports: list[dict[str, Any]] = field(default_factory=list)
+    file_requests: dict[int, dict[str, Any]] = field(default_factory=dict)
+    control_intents: list[dict[str, Any]] = field(default_factory=list)
+
+    def allocate_message_id(self) -> int:
+        self.next_message_id += 1
+        return self.next_message_id
+
+    def allocate_seq(self) -> int:
+        self.next_seq += 1
+        return self.next_seq
+
+    def queue_direct_message(self, to_peer: str, sender: str, body: str) -> list[WirelessPacket]:
+        payload = compact_json_bytes(
+            {
+                "from": sender,
+                "to": to_peer,
+                "body": body,
+            }
+        )
+        message_id = self.allocate_message_id()
+        packets = fragment_body(
+            service="direct_message",
+            source=self.node_id,
+            destination=to_peer,
+            message_id=message_id,
+            seq=self.allocate_seq(),
+            body=payload,
+            custody="queued",
+        )
+        self.custody[message_id] = CustodyRecord(
+            message_id=message_id,
+            service="direct_message",
+            destination=to_peer,
+        )
+        return packets
+
+    def queue_file(self, file_id: int, to_peer: str, content: bytes) -> list[WirelessPacket]:
+        message_id = file_id
+        packets = fragment_body(
+            service="file_chunk",
+            source=self.node_id,
+            destination=to_peer,
+            message_id=message_id,
+            seq=self.allocate_seq(),
+            body=content,
+            custody="queued",
+        )
+        self.file_requests[file_id] = {
+            "peer": to_peer,
+            "bytes": len(content),
+            "fragments": len(packets),
+            "status": "queued",
+        }
+        self.custody[message_id] = CustodyRecord(
+            message_id=message_id,
+            service="file_chunk",
+            destination=to_peer,
+        )
+        return packets
+
+    def record_telemetry(
+        self,
+        node_id: str,
+        report_class: str,
+        values: Mapping[str, Any],
+        sensor_profile: str = "generic",
+    ) -> WirelessPacket:
+        payload = {
+            "node": node_id,
+            "class": report_class,
+            "sensor": sensor_profile,
+            "values": dict(values),
+        }
+        body = compact_json_bytes(payload)
+        packet = WirelessPacket(
+            service="telemetry_report",
+            seq=self.allocate_seq(),
+            source=node_id,
+            destination=self.node_id,
+            message_id=self.allocate_message_id(),
+            body=body,
+            custody="delivered",
+        )
+        encode_packet(packet)
+        self.telemetry_reports.append(payload)
+        return packet
+
+    def record_node_status(self, node_id: str, link: str, rssi: int, seen_ms: int) -> WirelessPacket:
+        body = compact_json_bytes(
+            {
+                "node": node_id,
+                "link": link,
+                "rssi": rssi,
+                "seen_ms": seen_ms,
+            }
+        )
+        return WirelessPacket(
+            service="node_status",
+            seq=self.allocate_seq(),
+            source=node_id,
+            destination=self.node_id,
+            message_id=self.allocate_message_id(),
+            body=body,
+            custody="delivered",
+        )
+
+    def record_control_intent(self, peer_id: str, action: str) -> dict[str, Any]:
+        intent = {
+            "peer": peer_id,
+            "action": action,
+            "executed": False,
+            "reason": "control_intent_non_executing",
+        }
+        self.control_intents.append(intent)
+        return intent
+
+    def mark_sent(self, packet: WirelessPacket) -> None:
+        record = self.custody.get(packet.message_id)
+        if record is None:
+            raise ProtocolError("custody_missing", str(packet.message_id))
+        record.mark_sent()
+
+    def apply_ack(self, packet: WirelessPacket) -> None:
+        if packet.service != "custody_ack":
+            raise ProtocolError("ack_service_invalid", packet.service)
+        payload = decode_packet_body(packet)
+        ack_id = _require_int(payload, "ack")
+        status = _require_str(payload, "status")
+        reason = str(payload.get("reason", ""))
+        record = self.custody.get(ack_id)
+        if record is None:
+            raise ProtocolError("custody_missing", str(ack_id))
+        record.mark_ack(status, reason)
+        if record.service == "file_chunk" and ack_id in self.file_requests:
+            self.file_requests[ack_id]["status"] = status
+
+    def reporting_frame(self) -> dict[str, Any]:
+        custody_counts = {status: 0 for status in CUSTODY_CODES if status != "none"}
+        for record in self.custody.values():
+            custody_counts[record.status] = custody_counts.get(record.status, 0) + 1
+        return {
+            "type": "protocol_report",
+            "status": "sim",
+            "node": self.node_id,
+            "custody": custody_counts,
+            "telemetry": len(self.telemetry_reports),
+            "files": len(self.file_requests),
+            "control_intents": len(self.control_intents),
+        }
+
+
+def compact_json_bytes(payload: Mapping[str, Any]) -> bytes:
+    try:
+        return json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    except UnicodeEncodeError as exc:
+        raise ProtocolError("non_ascii") from exc
+
+
+def encode_bridge_frame(frame: Mapping[str, Any]) -> bytes:
+    payload = compact_json_bytes(frame) + b"\n"
+    if len(payload) - 1 > BRIDGE_MAX_LINE_BYTES:
+        raise ProtocolError("line_too_long", str(len(payload) - 1))
+    return payload
+
+
+def decode_bridge_frame(line: bytes) -> dict[str, Any]:
+    if line.endswith(b"\n"):
+        line = line[:-1]
+    if line.endswith(b"\r"):
+        line = line[:-1]
+    if len(line) > BRIDGE_MAX_LINE_BYTES:
+        raise ProtocolError("line_too_long", str(len(line)))
+    try:
+        text = line.decode("ascii")
+    except UnicodeDecodeError as exc:
+        raise ProtocolError("non_ascii") from exc
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ProtocolError("json_invalid", str(exc)) from exc
+    if not isinstance(payload, dict):
+        raise ProtocolError("payload_invalid", "frame must be an object")
+    return payload
+
+
+def encode_packet(packet: WirelessPacket) -> bytes:
+    _validate_packet(packet)
+    header = _HEADER.pack(
+        RADIO_PROTOCOL_VERSION,
+        SERVICE_CODES[packet.service],
+        packet.flags,
+        packet.ttl,
+        packet.seq,
+        packet.message_id,
+        packet.fragment_index,
+        packet.fragment_count,
+        _pack_node(packet.source),
+        _pack_node(packet.destination),
+        len(packet.body),
+        CUSTODY_CODES[packet.custody],
+    )
+    payload = header + packet.body
+    if len(payload) > RADIO_MAX_PAYLOAD_BYTES:
+        raise ProtocolError("payload_too_large", str(len(payload)))
+    return payload
+
+
+def decode_packet(payload: bytes) -> WirelessPacket:
+    if len(payload) < RADIO_HEADER_BYTES:
+        raise ProtocolError("payload_too_short")
+    if len(payload) > RADIO_MAX_PAYLOAD_BYTES:
+        raise ProtocolError("payload_too_large", str(len(payload)))
+    (
+        version,
+        service_code,
+        flags,
+        ttl,
+        seq,
+        message_id,
+        fragment_index,
+        fragment_count,
+        raw_source,
+        raw_destination,
+        body_len,
+        custody_code,
+    ) = _HEADER.unpack(payload[:RADIO_HEADER_BYTES])
+    if version != RADIO_PROTOCOL_VERSION:
+        raise ProtocolError("version_unsupported", str(version))
+    if service_code not in CODE_SERVICES:
+        raise ProtocolError("service_unknown", str(service_code))
+    if custody_code not in CODE_CUSTODY:
+        raise ProtocolError("custody_status_unknown", str(custody_code))
+    body = payload[RADIO_HEADER_BYTES:]
+    if body_len != len(body):
+        raise ProtocolError("body_length_mismatch", str(body_len))
+    packet = WirelessPacket(
+        service=CODE_SERVICES[service_code],
+        seq=seq,
+        source=_unpack_node(raw_source),
+        destination=_unpack_node(raw_destination),
+        message_id=message_id,
+        body=body,
+        fragment_index=fragment_index,
+        fragment_count=fragment_count,
+        ttl=ttl,
+        custody=CODE_CUSTODY[custody_code],
+        flags=flags,
+    )
+    _validate_packet(packet)
+    return packet
+
+
+def fragment_body(
+    service: str,
+    source: str,
+    destination: str,
+    message_id: int,
+    seq: int,
+    body: bytes,
+    custody: str = "none",
+) -> list[WirelessPacket]:
+    if not body:
+        chunks = [b""]
+    else:
+        chunks = [
+            body[index : index + RADIO_MAX_BODY_BYTES]
+            for index in range(0, len(body), RADIO_MAX_BODY_BYTES)
+        ]
+    if len(chunks) > RADIO_MAX_FRAGMENT_COUNT:
+        raise ProtocolError("fragment_count_invalid", str(len(chunks)))
+    packets = [
+        WirelessPacket(
+            service=service,
+            seq=seq,
+            source=source,
+            destination=destination,
+            message_id=message_id,
+            body=chunk,
+            fragment_index=index,
+            fragment_count=len(chunks),
+            custody=custody,
+        )
+        for index, chunk in enumerate(chunks)
+    ]
+    for packet in packets:
+        encode_packet(packet)
+    return packets
+
+
+def reassemble_fragments(packets: list[WirelessPacket]) -> bytes:
+    if not packets:
+        raise ProtocolError("fragment_missing", "empty")
+    first = packets[0]
+    expected = first.fragment_count
+    seen: dict[int, WirelessPacket] = {}
+    for packet in packets:
+        if (
+            packet.service,
+            packet.source,
+            packet.destination,
+            packet.message_id,
+            packet.fragment_count,
+        ) != (
+            first.service,
+            first.source,
+            first.destination,
+            first.message_id,
+            expected,
+        ):
+            raise ProtocolError("fragment_group_mismatch")
+        if packet.fragment_index in seen:
+            raise ProtocolError("fragment_duplicate", str(packet.fragment_index))
+        seen[packet.fragment_index] = packet
+    missing = missing_fragment_indexes(packets)
+    if missing:
+        raise ProtocolError("fragment_missing", ",".join(str(index) for index in missing))
+    return b"".join(seen[index].body for index in range(expected))
+
+
+def missing_fragment_indexes(packets: list[WirelessPacket]) -> list[int]:
+    if not packets:
+        return []
+    expected = packets[0].fragment_count
+    present = {packet.fragment_index for packet in packets}
+    return [index for index in range(expected) if index not in present]
+
+
+def make_custody_ack(
+    ack_message_id: int,
+    status: str,
+    source: str,
+    destination: str,
+    seq: int,
+    reason: str = "",
+) -> WirelessPacket:
+    body = compact_json_bytes(
+        {
+            "ack": ack_message_id,
+            "status": status,
+            "reason": reason,
+        }
+    )
+    return WirelessPacket(
+        service="custody_ack",
+        seq=seq,
+        source=source,
+        destination=destination,
+        message_id=ack_message_id,
+        body=body,
+        custody=status,
+    )
+
+
+def forward_packet(packet: WirelessPacket) -> WirelessPacket:
+    if packet.ttl <= 1:
+        raise ProtocolError("ttl_expired")
+    return packet.with_ttl(packet.ttl - 1)
+
+
+def decode_packet_body(packet: WirelessPacket) -> dict[str, Any]:
+    try:
+        payload = json.loads(packet.body.decode("ascii"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ProtocolError("body_json_invalid", packet.service) from exc
+    if not isinstance(payload, dict):
+        raise ProtocolError("body_payload_invalid", packet.service)
+    return payload
+
+
+def _validate_packet(packet: WirelessPacket) -> None:
+    if packet.service not in SERVICE_CODES:
+        raise ProtocolError("service_unknown", packet.service)
+    if packet.custody not in CUSTODY_CODES:
+        raise ProtocolError("custody_status_unknown", packet.custody)
+    if packet.seq < 0 or packet.seq > 0xFFFFFFFF:
+        raise ProtocolError("sequence_invalid")
+    if packet.message_id < 0 or packet.message_id > 0xFFFFFFFF:
+        raise ProtocolError("message_id_invalid")
+    if packet.ttl <= 0 or packet.ttl > 15:
+        raise ProtocolError("ttl_invalid")
+    if packet.fragment_count < 1 or packet.fragment_count > RADIO_MAX_FRAGMENT_COUNT:
+        raise ProtocolError("fragment_count_invalid")
+    if packet.fragment_index < 0 or packet.fragment_index >= packet.fragment_count:
+        raise ProtocolError("fragment_index_invalid")
+    if len(packet.body) > RADIO_MAX_BODY_BYTES:
+        raise ProtocolError("body_too_large", str(len(packet.body)))
+    _pack_node(packet.source)
+    _pack_node(packet.destination)
+
+
+def _pack_node(node: str) -> bytes:
+    try:
+        encoded = node.encode("ascii")
+    except UnicodeEncodeError as exc:
+        raise ProtocolError("node_non_ascii", node[:16]) from exc
+    if not encoded or len(encoded) > 8:
+        raise ProtocolError("node_id_invalid", node[:16])
+    return encoded.ljust(8, b"\0")
+
+
+def _unpack_node(raw: bytes) -> str:
+    return raw.rstrip(b"\0").decode("ascii")
+
+
+def _require_int(payload: Mapping[str, Any], key: str) -> int:
+    value = payload.get(key)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ProtocolError("field_type_invalid", key)
+    return value
+
+
+def _require_str(payload: Mapping[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str):
+        raise ProtocolError("field_type_invalid", key)
+    return value
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--demo", action="store_true", help="print one compact simulator report")
+    args = parser.parse_args()
+    if args.demo:
+        simulator = ProtocolSimulator()
+        packets = simulator.queue_direct_message("peer01", "sysop", "hello")
+        simulator.mark_sent(packets[0])
+        simulator.apply_ack(make_custody_ack(packets[0].message_id, "acked", "peer01", "coord01", 9))
+        print(encode_bridge_frame(simulator.reporting_frame()).decode("ascii"), end="")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -74,6 +74,7 @@
 - [ESP-NOW BBS network live-gate source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-network-live-gate.md)
 - [ESP-NOW BBS three-peer live proof source ledger](../knowledge-base/source-ledger/2026-05-23-espnow-bbs-three-peer-live-attempt.md)
 - [ESP-NOW BBS custom wireless protocol source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-brief.md)
+- [ESP-NOW BBS custom wireless protocol simulator source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-simulator.md)
 - [Win31 dashboard ML live gate source ledger](../knowledge-base/source-ledger/2026-05-23-win31-dashboard-ml-live-gate.md)
 - [Win31 dashboard legibility research source ledger](../knowledge-base/source-ledger/2026-05-24-win31-dashboard-legibility-research.md)
 - [Client UI live gate source ledger](../knowledge-base/source-ledger/2026-05-24-client-ui-live-gate.md)

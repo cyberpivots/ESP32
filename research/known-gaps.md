@@ -77,7 +77,10 @@
   through the ESP32 Gate C adapter, a Gate E draft bridge ABI freeze candidate,
   and Gate G simulator-only analytics report generation. Firmware ABI,
   analytics retention/export/privacy policy, and live acceptance transcript
-  requirements still need owner review.
+  requirements still need owner review. A 2026-05-25 authorized Gate H attempt
+  stopped at read-only preflight because the Pi was unreachable on both
+  accepted addresses and the current CP210x port set did not match the required
+  `COM4`/`COM5`/`COM6` profile.
 - Select and verify agricultural telemetry hardware profiles before treating
   center-pivot controllers, soil probes, SDI-12 adapters, Modbus adapters, GPS
   pivot positioning, or GPS asset tracking as implementation targets. Required

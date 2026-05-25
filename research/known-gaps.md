@@ -70,12 +70,12 @@
   `idf.py`, and isolated per-role `SDKCONFIG`. Corrected evidence records
   complete backups, manifest, flash/verify, three `espnow-enc` peers, moving
   RX/TX/ACK counters, Win31 runtime captures, and cleanup.
-- Custom wireless protocol Gate B now has simulator-only proof for direct
-  messages, file chunks, interval telemetry, node status, custody ACKs,
-  duplicate suppression, TTL, compact reporting, and non-executing control
-  intents. Future bridge/operator integration, firmware ABI, analytics
-  retention, and live acceptance transcript requirements still need owner
-  review.
+- Custom wireless protocol Gate B and Gate C now have simulator-only proof for
+  direct messages, file chunks, interval telemetry, node status, custody ACKs,
+  duplicate suppression, TTL, compact reporting, non-executing control intents,
+  and compact simulated bridge-request translation. Future paired DOS-C
+  bridge/operator integration, firmware ABI, analytics retention, and live
+  acceptance transcript requirements still need owner review.
 - Select and verify agricultural telemetry hardware profiles before treating
   center-pivot controllers, soil probes, SDI-12 adapters, Modbus adapters, GPS
   pivot positioning, or GPS asset tracking as implementation targets. Required
@@ -137,7 +137,7 @@
 | Qualified mains package | Qualified-review package for load type, enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, separation, labels/disconnect, and test record. |
 | First flashing target board | Flash target and recovery record with exact board, boot/recovery method, toolchain proof, and rollback path. |
 | ESP-NOW BBS coordinator/client lane | Closed for the first one-coordinator/one-peer encrypted proof by `SRC-LOCAL-ESPNOW-ENCRYPTED-PEER-2026-05-22`. `SRC-LOCAL-ESPNOW-LIVE-GATE-TOOLING-2026-05-23` adds tooling for the three-peer gate, `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23` records the initial coordinator backup CRC/checksum blocker plus the corrected USB-only three-peer live completion with backups, build hashes, flash/verify evidence, three `espnow-enc` peers, moving RX/TX/ACK counters, and cleanup, and `SRC-LOCAL-WIN31-DASHBOARD-ML-LIVE-GATE-2026-05-23` adds a copied-evidence completion gate only. Future evidence is still required for chunked message delivery, provisioning UX, BLE, ESP-WIFI-MESH, any physical wiring beyond USB-only, or any new live acceptance claim. |
-| Custom wireless protocol implementation | Gate B simulator proof exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-SIM-2026-05-25`; future evidence is still required for bridge/operator integration, firmware ABI, analytics retention/export, and any live-gate proof. |
+| Custom wireless protocol implementation | Gate B simulator proof exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-SIM-2026-05-25`, and Gate C bridge-adapter proof exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-BRIDGE-SIM-2026-05-25`; future evidence is still required for paired DOS-C bridge/operator implementation, firmware ABI, analytics retention/export, and any live-gate proof. |
 | Agricultural telemetry hardware profiles | Source-backed records for selected center-pivot controller, soil probes, SDI-12/Modbus adapter, GPS pivot positioning device, GPS asset tracker, power/voltage/isolation limits, connector pinout, protocol, calibration, units, and live-proof plan. |
 | Cross-project client UI live gate | Stage 1 static or simulated phone/laptop UI proof; Stage 2 selected-board Wi-Fi read-only proof with identity, power, voltage, boot-pin, isolation, recovery, browser screenshot, and cleanup evidence; Stage 3 exact dummy-output GPIO/fixture proof with no relay/load/mains path, sequence logs, all-off, safety-lock rejection, and observed dummy output. |
 | DOS-C Windows 3.1 TCP bridge | SLIRP acceptance record showing guest ICMP/TCP path to the Pi simulator and operator-console state proof, with generated screenshots and captures kept out of Git. |

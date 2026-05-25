@@ -5,7 +5,7 @@ vectors.
 
 ## ESP-NOW BBS Custom Wireless Protocol
 
-The first simulator-only proof for the ESP-NOW BBS custom protocol lives under
+The simulator-only proof for the ESP-NOW BBS custom protocol lives under
 `tools/simulators/custom_wireless_protocol/` with regression tests in
 `tests/custom_wireless_protocol/`.
 
@@ -20,11 +20,16 @@ Verified boundaries:
 - Direct messages, file chunks, interval telemetry, node status, custody ACKs,
   and control intents are modeled as packetized services, not transparent
   streams.
+- Simulated bridge requests translate compact OPCON-style `msg_post`,
+  `download_queue`, `telemetry_report`, `node_status`, `protocol_report`, and
+  `control_intent` frames into packetized simulator work or reporting frames.
+- State-changing bridge request names such as `relay_set`, `flash`, `erase`,
+  and `radio_set` are rejected by the simulator adapter.
 
 Still unresolved:
 
 - No firmware interface is accepted by this simulator.
-- No live hardware, serial, radio, bridge runtime, or Win31/OPCON state is
-  proven by these tests.
+- No live hardware, serial, radio, actual bridge runtime, or Win31/OPCON state
+  is proven by these tests.
 - Agricultural sensor, GPS, and reporting schemas remain blocked on
   source-backed hardware profiles and owner review.

@@ -6,8 +6,9 @@ from __future__ import annotations
 import argparse
 import json
 import struct
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 
 BRIDGE_MAX_LINE_BYTES = 512
@@ -284,6 +285,104 @@ class ProtocolSimulator:
         }
 
 
+def process_bridge_request(frame: Mapping[str, Any], simulator: ProtocolSimulator) -> dict[str, Any]:
+    """Translate one compact bridge request into simulator-only protocol work."""
+
+    try:
+        response = _process_bridge_request(frame, simulator)
+        encode_bridge_frame(response)
+        return response
+    except ProtocolError as exc:
+        response: dict[str, Any] = {
+            "type": "error",
+            "accepted": False,
+            "reason": exc.reason,
+        }
+        if exc.detail:
+            response["detail"] = exc.detail
+        encode_bridge_frame(response)
+        return response
+
+
+def _process_bridge_request(
+    frame: Mapping[str, Any],
+    simulator: ProtocolSimulator,
+) -> dict[str, Any]:
+    if not isinstance(frame, Mapping):
+        raise ProtocolError("payload_invalid", "frame must be an object")
+    message_type = _require_str(frame, "type")
+    if message_type in {"protocol_report", "state_get"}:
+        return simulator.reporting_frame()
+    if message_type == "msg_post":
+        to_peer = _require_str(frame, "to")
+        sender = _require_str(frame, "from")
+        body = _require_str(frame, "body")
+        packets = simulator.queue_direct_message(to_peer, sender, body)
+        return _bridge_ack(
+            "msg_post",
+            id=packets[0].message_id,
+            service="direct_message",
+            status="queued",
+            fragments=len(packets),
+            packetized=True,
+        )
+    if message_type == "download_queue":
+        file_id = _require_int(frame, "id")
+        peer_id = _require_str(frame, "peer")
+        content = _bridge_content_bytes(frame)
+        packets = simulator.queue_file(file_id, peer_id, content)
+        return _bridge_ack(
+            "download_queue",
+            id=file_id,
+            service="file_chunk",
+            status="queued",
+            fragments=len(packets),
+            packetized=True,
+        )
+    if message_type == "telemetry_report":
+        node_id = _require_str(frame, "node")
+        report_class = _require_str(frame, "class")
+        values = _require_mapping(frame, "values")
+        sensor = _require_str(frame, "sensor") if "sensor" in frame else "generic"
+        packet = simulator.record_telemetry(node_id, report_class, values, sensor)
+        return _bridge_ack(
+            "telemetry_report",
+            id=packet.message_id,
+            service="telemetry_report",
+            status="delivered",
+            packetized=True,
+        )
+    if message_type == "node_status":
+        node_id = _require_str(frame, "node")
+        link = _require_str(frame, "link")
+        rssi = _require_int(frame, "rssi")
+        seen_ms = _require_int(frame, "seen_ms")
+        packet = simulator.record_node_status(node_id, link, rssi, seen_ms)
+        encode_packet(packet)
+        return _bridge_ack(
+            "node_status",
+            id=packet.message_id,
+            service="node_status",
+            status="delivered",
+            packetized=True,
+        )
+    if message_type == "control_intent":
+        peer_id = _require_str(frame, "peer")
+        action = _require_str(frame, "action")
+        intent = simulator.record_control_intent(peer_id, action)
+        return {
+            "type": "control_intent",
+            "accepted": True,
+            "executed": False,
+            "peer": intent["peer"],
+            "action": intent["action"],
+            "reason": intent["reason"],
+        }
+    if message_type in {"relay_set", "flash", "erase", "radio_set"}:
+        raise ProtocolError("state_changing_command_blocked", message_type)
+    raise ProtocolError("message_type_unknown", message_type)
+
+
 def compact_json_bytes(payload: Mapping[str, Any]) -> bytes:
     try:
         return json.dumps(
@@ -553,7 +652,41 @@ def _require_str(payload: Mapping[str, Any], key: str) -> str:
     value = payload.get(key)
     if not isinstance(value, str):
         raise ProtocolError("field_type_invalid", key)
+    try:
+        value.encode("ascii")
+    except UnicodeEncodeError as exc:
+        raise ProtocolError("non_ascii", key) from exc
     return value
+
+
+def _require_mapping(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = payload.get(key)
+    if not isinstance(value, Mapping):
+        raise ProtocolError("field_type_invalid", key)
+    compact_json_bytes(value)
+    return value
+
+
+def _bridge_content_bytes(frame: Mapping[str, Any]) -> bytes:
+    if "content" in frame:
+        return _require_str(frame, "content").encode("ascii")
+    if "content_hex" in frame:
+        raw = _require_str(frame, "content_hex")
+        try:
+            return bytes.fromhex(raw)
+        except ValueError as exc:
+            raise ProtocolError("hex_invalid", "content_hex") from exc
+    raise ProtocolError("field_type_invalid", "content")
+
+
+def _bridge_ack(request_type: str, **extra: Any) -> dict[str, Any]:
+    ack: dict[str, Any] = {
+        "type": f"{request_type}_ack",
+        "accepted": True,
+        "request": request_type,
+    }
+    ack.update(extra)
+    return ack
 
 
 def main() -> int:
@@ -565,6 +698,16 @@ def main() -> int:
         packets = simulator.queue_direct_message("peer01", "sysop", "hello")
         simulator.mark_sent(packets[0])
         simulator.apply_ack(make_custody_ack(packets[0].message_id, "acked", "peer01", "coord01", 9))
+        process_bridge_request(
+            {
+                "type": "telemetry_report",
+                "node": "soil01",
+                "class": "soil_moisture",
+                "sensor": "generic",
+                "values": {"vwc": 31},
+            },
+            simulator,
+        )
         print(encode_bridge_frame(simulator.reporting_frame()).decode("ascii"), end="")
     return 0
 

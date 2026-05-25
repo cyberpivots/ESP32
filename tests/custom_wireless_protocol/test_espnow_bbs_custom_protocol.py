@@ -31,6 +31,7 @@ from espnow_bbs_custom_protocol import (  # noqa: E402
     fragment_body,
     make_custody_ack,
     missing_fragment_indexes,
+    process_bridge_request,
     reassemble_fragments,
 )
 
@@ -184,6 +185,93 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertEqual(intent["reason"], "control_intent_non_executing")
         report = decode_bridge_frame(encode_bridge_frame(simulator.reporting_frame()))
         self.assertEqual(report["control_intents"], 1)
+
+    def test_bridge_msg_post_and_download_queue_create_packetized_jobs(self) -> None:
+        simulator = ProtocolSimulator()
+        post = process_bridge_request(
+            {
+                "type": "msg_post",
+                "from": "sysop",
+                "to": "peer01",
+                "body": "hello from opcon",
+            },
+            simulator,
+        )
+        self.assertTrue(post["accepted"])
+        self.assertTrue(post["packetized"])
+        self.assertEqual(post["service"], "direct_message")
+        self.assertEqual(post["status"], "queued")
+        self.assertLessEqual(len(encode_bridge_frame(post)) - 1, BRIDGE_MAX_LINE_BYTES)
+        self.assertEqual(simulator.custody[post["id"]].status, "queued")
+
+        queued = process_bridge_request(
+            {
+                "type": "download_queue",
+                "id": 88,
+                "peer": "peer02",
+                "content": "x" * (RADIO_MAX_BODY_BYTES + 5),
+            },
+            simulator,
+        )
+        self.assertTrue(queued["accepted"])
+        self.assertTrue(queued["packetized"])
+        self.assertEqual(queued["service"], "file_chunk")
+        self.assertEqual(queued["fragments"], 2)
+        self.assertEqual(simulator.file_requests[88]["status"], "queued")
+
+    def test_bridge_telemetry_status_report_and_closed_controls(self) -> None:
+        simulator = ProtocolSimulator()
+        telemetry = process_bridge_request(
+            {
+                "type": "telemetry_report",
+                "node": "soil01",
+                "class": "soil_moisture",
+                "sensor": "teros12",
+                "values": {"vwc": 31, "temp_c": 22},
+            },
+            simulator,
+        )
+        status = process_bridge_request(
+            {
+                "type": "node_status",
+                "node": "peer01",
+                "link": "espnow-enc",
+                "rssi": -59,
+                "seen_ms": 900,
+            },
+            simulator,
+        )
+        report = process_bridge_request({"type": "protocol_report"}, simulator)
+        self.assertEqual(telemetry["service"], "telemetry_report")
+        self.assertEqual(status["service"], "node_status")
+        self.assertEqual(report["telemetry"], 1)
+
+        control = process_bridge_request(
+            {
+                "type": "control_intent",
+                "peer": "peer01",
+                "action": "relay_set",
+            },
+            simulator,
+        )
+        self.assertTrue(control["accepted"])
+        self.assertFalse(control["executed"])
+
+        blocked = process_bridge_request({"type": "relay_set", "peer": "peer01"}, simulator)
+        self.assertFalse(blocked["accepted"])
+        self.assertEqual(blocked["reason"], "state_changing_command_blocked")
+
+        non_ascii = process_bridge_request(
+            {
+                "type": "msg_post",
+                "from": "sysop",
+                "to": "peer01",
+                "body": "bad-\u2603",
+            },
+            simulator,
+        )
+        self.assertFalse(non_ascii["accepted"])
+        self.assertEqual(non_ascii["reason"], "non_ascii")
 
 
 if __name__ == "__main__":

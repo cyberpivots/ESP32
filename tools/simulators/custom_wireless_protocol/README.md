@@ -1,7 +1,7 @@
 # Custom Wireless Protocol Simulator
 
 This directory contains simulator-only helpers for the ESP-NOW BBS custom
-wireless protocol Gate B.
+wireless protocol Gate B and Gate C.
 
 ## Boundaries
 
@@ -23,6 +23,11 @@ The simulator covers:
 - Fragmentation, reassembly, missing-fragment detection, duplicate rejection,
   TTL expiry, custody ACKs, retry state, file resume status, telemetry reports,
   node status, reporting frames, and non-executing control intents.
+- Simulated bridge request handling for compact OPCON-style `msg_post`,
+  `download_queue`, `telemetry_report`, `node_status`, `protocol_report`, and
+  `control_intent` frames.
+- Explicit simulator rejection for state-changing bridge requests such as
+  `relay_set`, `flash`, `erase`, and `radio_set`.
 
 Run:
 

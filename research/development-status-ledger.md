@@ -21,6 +21,9 @@ bridge, operator, firmware, or live-proof truth.
   gate, cleanup proof, and pre/post read-only preflights.
 - Gate G is open only as a local-admin redacted JSON export from the DOS-C/Pi
   bridge spool under accepted `ADR-0005`.
+- Gate F now has an accepted ESP32 firmware ABI design contract under
+  `ADR-0006`, but it does not accept runtime firmware behavior or live proof
+  work.
 - The 2026-05-25 LAN DHCP/current-remap pass ended with a read-only preflight
   `ok:true` for the current Pi/coordinator/peer identities, but it did not run
   bridge, Win31/OPCON, BBS, flash, erase, monitor, or radio proof.
@@ -36,8 +39,8 @@ bridge, operator, firmware, or live-proof truth.
 
 ## Unknowns
 
-- No final firmware ABI is accepted for the custom wireless protocol service
-  jobs or export behavior.
+- No firmware runtime implementation or live proof is accepted for the custom
+  wireless protocol service jobs or export behavior.
 - No Win31/OPCON analytics export control and no live bridge export request type
   are accepted.
 - No current same-session physical USB-only/no-load/no-relay/no-XBee/no-TFT/
@@ -58,11 +61,11 @@ bridge, operator, firmware, or live-proof truth.
 | Custom wireless protocol Gate C bridge adapter | implemented-simulator-only | simulator tests | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-BRIDGE-SIM-2026-05-25` | Simulated compact bridge requests translate `msg_post`, `download_queue`, telemetry, node status, protocol report, `state_get`, and `control_intent`; blocked requests reject `relay_set`, `flash`, `erase`, and `radio_set`. | Not a final bridge/operator ABI and not live bridge behavior. | Owner review before final ABI or runtime mutation. |
 | Custom wireless protocol Gate D DOS-C pairing | implemented-simulator-only | paired simulator fixture replay | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-D-DOSC-PAIRING-2026-05-25` | DOS-C test fixtures replay through the ESP32 Gate C adapter within 512-byte bounds while live `download_queue` remains payload-free. | No live file transfer or final ABI freeze. | Keep DOS-C live operator request shapes payload-free unless a later gate changes them. |
 | Gate E bridge ABI candidate | design-only | draft doc plus simulator validation | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-E-BRIDGE-ABI-2026-05-25` | Draft `v:1` ASCII JSON request set and stable error reasons exist for owner review. | Final firmware ABI, runtime migration, bridge mutation, and live proof are not accepted. | Owner ADR/review for final ABI. |
-| Gate F firmware ABI draft | design-only | DOS-C companion draft only | unresolved gap | DOS-C has a draft firmware-facing packet/job note, but ESP32 has no accepted firmware ABI source-index entry. | Firmware packet/job enums, queues, persistence, scheduler, and migration are not accepted. | Create an ESP32 owner-reviewed source ledger and ADR before firmware runtime work. |
+| Gate F firmware ABI design contract | accepted-design-contract | ADR/source ledger plus host tests | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26`, `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26` | Accepted `ADR-0006` mirrors simulator packet budgets, service codes, custody codes, packet header layout, and non-executing `control_intent` semantics as a design contract only. | Firmware runtime queues, memory budgets, timeouts, retries, persistence, scheduler, migration, recovery, and live proof are not accepted. | Keep the next step host-only unless a separate owner gate opens firmware runtime work. |
 | Gate G simulator analytics | superseded | simulator tests | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-G-ANALYTICS-2026-05-25`, `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25` | Simulator analytics remain useful for test coverage, but policy fields are superseded by accepted ADR-0005 and live export implementation. | Simulator reports are not live export authority. | Treat as fixture coverage only. |
 | Gate G local-admin redacted JSON export | accepted-live | policy plus local-admin live proof | `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-POLICY-2026-05-25`, `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25` | Accepted `ADR-0005`, file-backed spool export, redacted `analytics-report.v1.json`, approved ignored roots, existing-destination refusal, raw identifier/body omission, and stale cleanup proof. | No Win31 export UI, firmware export ABI, or live bridge export request type. | Keep export CLI local-admin only until separate owner gates open additional surfaces. |
 | Win31 dashboard CV/OCR gate | implemented-validated | corroboration tooling and fixture tests | `SRC-LOCAL-WIN31-DASHBOARD-ML-LIVE-GATE-2026-05-23`, `SRC-LOCAL-WIN31-DASHBOARD-LEGIBILITY-RESEARCH-2026-05-24` | DOS-C vision gate can corroborate required views and passed the structured Gate H packet. | Screenshots remain secondary to transcript and cleanup evidence. | Use OCR/CV only after transcript proof is present. |
-| DOS-C bridge/operator default path | accepted-live | paired live proof and source implementation | `SRC-LOCAL-DOSC-ESPNOW-BBS-BRIDGE-2026-05-20`, `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23`, `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25` | COM1/nullmodem/Pi bridge path is accepted for BBS status, message, download, and non-executing OTAP intent proof. | Runtime export controls and firmware ABI remain closed. | Continue DOS-C work through companion KB records and host tests before ESP32 claims depend on it. |
+| DOS-C bridge/operator default path | accepted-live | paired live proof and source implementation | `SRC-LOCAL-DOSC-ESPNOW-BBS-BRIDGE-2026-05-20`, `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23`, `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25` | COM1/nullmodem/Pi bridge path is accepted for BBS status, message, download, and non-executing OTAP intent proof. | Runtime export controls and firmware ABI runtime behavior remain closed. | Continue DOS-C work through companion KB records and host tests before ESP32 claims depend on it. |
 | DOSBox-X PCAP/packet-driver path | blocked | historical diagnostic only | `SRC-DOSBOX-SERIAL-CONFIG`, `SRC-LOCAL-DOSC-ESPNOW-BBS-BRIDGE-2026-05-20` | No accepted PCAP proof. Serial-nullmodem is the accepted path. | Pi identity, wired `eth0`, capability setup/restore, redacted packet capture, and rollback proof. | Reopen only by explicit PCAP live-gate request. |
 | ESP-WIFI-MESH self-healing branch | design-only | source-backed design | `SRC-LOCAL-ESPNOW-NETWORK-LIVE-GATE-2026-05-23`, `SRC-ESP-IDF-WIFI-MESH`, `SRC-ESP-IDF-RF-COEXIST` | Optional metadata and Network view are simulator/source-level only. | No mesh route-table, parent, root, healing, coexistence, flash, or cleanup proof. | Accepted ADR plus fresh identity, backups, build hashes, mesh config, route/healing proof, rollback. |
 | BLE/Android client-node branch | design-only | source-backed design | `SRC-LOCAL-ESPNOW-NETWORK-LIVE-GATE-2026-05-23`, `SRC-ESP-IDF-BLE-API`, `SRC-ESP-IDF-BLE-SMP`, `SRC-ANDROID-BLE-OVERVIEW`, `SRC-ANDROID-BLE-GATT-CONNECT`, `SRC-ANDROID-BLUETOOTH-PERMISSIONS` | BLE GATT/Android model is documented only. | No UUIDs, Android package, permissions proof, bonding/SMP proof, coexistence proof, or live GATT proof. | Separate BLE live gate. |
@@ -77,8 +80,7 @@ bridge, operator, firmware, or live-proof truth.
 
 ## Closed Gates
 
-Keep firmware ABI, Win31 export controls, bridge export request types, BLE,
-mesh, PCAP, relay/XBee, TFT, MicroSD, load, mains, erase, monitor, and
-serial-write expansion closed unless a later source-backed gate explicitly
-opens the exact surface.
-
+Keep firmware ABI runtime implementation, Win31 export controls, bridge export
+request types, BLE, mesh, PCAP, relay/XBee, TFT, MicroSD, load, mains, erase,
+monitor, and serial-write expansion closed unless a later source-backed gate
+explicitly opens the exact surface.

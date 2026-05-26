@@ -24,8 +24,9 @@ Verified boundaries:
   and control intents are modeled as packetized services, not transparent
   streams.
 - Simulated bridge requests translate compact OPCON-style `msg_post`,
-  `download_queue`, `telemetry_report`, `node_status`, `protocol_report`, and
-  `control_intent` frames into packetized simulator work or reporting frames.
+  `download_queue`, `telemetry_report`, `node_status`, `protocol_report`,
+  `state_get`, and `control_intent` frames into packetized simulator work or
+  reporting frames.
 - State-changing bridge request names such as `relay_set`, `flash`, `erase`,
   and `radio_set` are rejected by the simulator adapter.
 - The Gate E draft stable error-reason set is `version_required`,

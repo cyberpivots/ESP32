@@ -251,12 +251,15 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 ## 12. Next-Step Implementation Plan With Explicit Gates
 
 - [repo-verified] Gate B simulator protocol proof, Gate C bridge-adapter proof,
-  Gate D DOS-C fixture pairing, Gate E draft bridge ABI, Gate G simulator
-  analytics, Gate G local-admin redacted export, Gate H structured transcript,
-  and Gate H structured live acceptance are all recorded in source-index IDs.
-- [design-only] Gate F firmware ABI remains unresolved until ESP32 owners add a
-  source-backed ADR or source ledger for packet/job enums, queues, persistence,
-  scheduler, migration, and runtime proof.
+  Gate D DOS-C fixture pairing, Gate E draft bridge ABI, Gate F accepted
+  firmware ABI design contract, Gate G simulator analytics, Gate G
+  local-admin redacted export, Gate H structured transcript, and Gate H
+  structured live acceptance are all recorded in source-index IDs.
+- [accepted-design-contract] Gate F firmware ABI now has accepted `ADR-0006`,
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26`,
+  and `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`,
+  but remains unresolved for runtime packet/job queues, persistence, scheduler,
+  migration, recovery, and live proof.
 - [blocked-until-evidence] Ag telemetry payloads, GPS pivot positioning, GPS
   asset tracking, analytics surfaces beyond ADR-0005 local-admin export,
   selected sensors, power/voltage/isolation notes, and retention policies

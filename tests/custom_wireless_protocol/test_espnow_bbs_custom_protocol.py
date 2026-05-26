@@ -18,11 +18,15 @@ from espnow_bbs_custom_protocol import (  # noqa: E402
     ANALYTICS_SCHEMA_VERSION,
     BRIDGE_MAX_LINE_BYTES,
     BRIDGE_PROTOCOL_VERSION,
+    BRIDGE_REQUEST_TYPES,
     BRIDGE_STABLE_ERROR_REASONS,
+    CUSTODY_CODES,
     RADIO_HEADER_BYTES,
     RADIO_MAX_BODY_BYTES,
     RADIO_MAX_FRAGMENT_COUNT,
     RADIO_MAX_PAYLOAD_BYTES,
+    RADIO_PROTOCOL_VERSION,
+    SERVICE_CODES,
     DuplicateWindow,
     ProtocolError,
     ProtocolSimulator,
@@ -99,6 +103,80 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         )
         self.assertEqual(response["v"], BRIDGE_PROTOCOL_VERSION)
         self.assertEqual(response["type"], "protocol_report")
+
+    def test_gate_f_abi_freeze_constants_and_header_layout(self) -> None:
+        self.assertEqual(BRIDGE_PROTOCOL_VERSION, 1)
+        self.assertEqual(BRIDGE_MAX_LINE_BYTES, 512)
+        self.assertEqual(
+            BRIDGE_REQUEST_TYPES,
+            {
+                "msg_post",
+                "download_queue",
+                "telemetry_report",
+                "node_status",
+                "protocol_report",
+                "state_get",
+                "control_intent",
+            },
+        )
+        self.assertEqual(RADIO_PROTOCOL_VERSION, 1)
+        self.assertEqual(RADIO_MAX_PAYLOAD_BYTES, 250)
+        self.assertEqual(RADIO_HEADER_BYTES, 32)
+        self.assertEqual(RADIO_MAX_BODY_BYTES, 190)
+        self.assertEqual(RADIO_MAX_FRAGMENT_COUNT, 16)
+        self.assertEqual(
+            SERVICE_CODES,
+            {
+                "direct_message": 1,
+                "file_chunk": 2,
+                "telemetry_report": 3,
+                "node_status": 4,
+                "custody_ack": 5,
+                "control_intent": 6,
+            },
+        )
+        self.assertEqual(
+            CUSTODY_CODES,
+            {
+                "none": 0,
+                "queued": 1,
+                "sent": 2,
+                "delivered": 3,
+                "acked": 4,
+                "failed": 5,
+                "expired": 6,
+            },
+        )
+
+        packet = WirelessPacket(
+            service="custody_ack",
+            seq=0x01020304,
+            source="src01",
+            destination="dst02",
+            message_id=0x05060708,
+            body=b"ack",
+            fragment_index=2,
+            fragment_count=9,
+            ttl=7,
+            custody="acked",
+            flags=0xA5,
+        )
+        encoded = encode_packet(packet)
+        self.assertEqual(len(encoded), RADIO_HEADER_BYTES + len(packet.body))
+        self.assertEqual(encoded[0], RADIO_PROTOCOL_VERSION)
+        self.assertEqual(encoded[1], SERVICE_CODES["custody_ack"])
+        self.assertEqual(encoded[2], 0xA5)
+        self.assertEqual(encoded[3], 7)
+        self.assertEqual(encoded[4:8], (0x01020304).to_bytes(4, "big"))
+        self.assertEqual(encoded[8:12], (0x05060708).to_bytes(4, "big"))
+        self.assertEqual(encoded[12], 2)
+        self.assertEqual(encoded[13], 9)
+        self.assertEqual(encoded[14:22], b"src01\0\0\0")
+        self.assertEqual(encoded[22:30], b"dst02\0\0\0")
+        self.assertEqual(encoded[30], len(packet.body))
+        self.assertEqual(encoded[31], CUSTODY_CODES["acked"])
+        self.assertEqual(encoded[32:], packet.body)
+        self.assertEqual(decode_packet(encoded), packet)
 
     def test_radio_packet_encode_decode_and_bounds(self) -> None:
         packet = WirelessPacket(

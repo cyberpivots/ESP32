@@ -73,6 +73,12 @@ remain outside the ESP32 firmware image.
   DOS-C/Pi bridge spool. Win31 export controls, firmware export ABI, and live
   bridge export request types remain closed. Source ID:
   `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25`.
+- `ADR-0006` is accepted for Gate F firmware ABI design contract only. It
+  mirrors the simulator packet budget, service codes, custody codes, frame
+  budgets, and non-executing `control_intent` semantics, but does not authorize
+  firmware runtime behavior or live proof work. Source IDs:
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26`,
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`.
 - A 2026-05-25 America/Denver LAN DHCP/current-remap pass, with UTC evidence
   filenames on 2026-05-26, validated a read-only current mapping:
   `peer01=COM6`, `peer02=COM10`, `peer03=COM12`, and coordinator `/dev/ttyUSB0`
@@ -124,6 +130,7 @@ remain outside the ESP32 firmware image.
    same-session gate for any rerun or new hardware mix.
 7. Keep ESP-WIFI-MESH/BLE GATT work design-only until ADR-0004 is accepted and
    fresh mesh, BLE, coexistence, backup, recovery, and cleanup evidence exists.
-8. Keep firmware ABI, Win31 export controls, bridge export request types,
-   chunked live delivery, provisioning UX, mobile/BLE client-node work, PCAP,
-   and physical wiring beyond USB-only as separate future evidence records.
+8. Keep firmware ABI runtime work, Win31 export controls, bridge export request
+   types, chunked live delivery, provisioning UX, mobile/BLE client-node work,
+   PCAP, and physical wiring beyond USB-only as separate future evidence
+   records.

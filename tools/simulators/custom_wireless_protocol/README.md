@@ -25,8 +25,8 @@ The simulator covers:
   TTL expiry, custody ACKs, retry state, file resume status, telemetry reports,
   node status, reporting frames, and non-executing control intents.
 - Simulated bridge request handling for compact OPCON-style `msg_post`,
-  `download_queue`, `telemetry_report`, `node_status`, `protocol_report`, and
-  `control_intent` frames.
+  `download_queue`, `telemetry_report`, `node_status`, `protocol_report`,
+  `state_get`, and `control_intent` frames.
 - Explicit simulator rejection for state-changing bridge requests such as
   `relay_set`, `flash`, `erase`, and `radio_set`.
 - Draft stable bridge error reasons for Gate E owner review:

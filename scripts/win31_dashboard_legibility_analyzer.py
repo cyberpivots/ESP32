@@ -50,6 +50,11 @@ VIEW_RULES: list[tuple[str, tuple[str, ...], tuple[str, ...]]] = [
 SOURCE_IDS = [
     "SRC-LOCAL-WIN31-DASHBOARD-ML-LIVE-GATE-2026-05-23",
     "SRC-LOCAL-WIN31-DASHBOARD-LEGIBILITY-RESEARCH-2026-05-24",
+    "SRC-LOCAL-WIN31-DASHBOARD-ADAPTIVE-VISUAL-QUALITY-2026-05-26",
+    "SRC-SUNFOUNDER-7INCH-HDMI-1024X600-2026-05-26",
+    "SRC-RASPBERRY-PI-CONFIGURATION",
+    "SRC-DOSBOX-X-REFERENCE-CONFIG-2026-05-26",
+    "SRC-MICROSOFT-WIN32-GEOMETRY-2026-05-26",
     "SRC-OPENCV-TEMPLATE-MATCHING-2026-05-23",
     "SRC-TESSERACT-IMAGE-QUALITY-2026-05-23",
     "SRC-WCAG-CONTRAST-MINIMUM-2026-05-24",
@@ -69,6 +74,8 @@ HIGH_RISK_TERMS = {
 SAFE_BOTTOM_MARGIN_PX = 16
 SAFE_RIGHT_MARGIN_PX = 4
 MIN_REGION_GAP_PX = 4
+PROOF_TARGET_WIDTH_PX = 1024
+PROOF_TARGET_HEIGHT_PX = 600
 DESKTOP_GRAY_RGB = (192, 192, 192)
 DESKTOP_GRAY_TOLERANCE = 32
 DESKTOP_ROW_SHARE = 0.70
@@ -124,6 +131,52 @@ def load_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise SystemExit(f"expected JSON object: {path}")
     return value
+
+
+def load_optional_json(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    resolved = path.resolve()
+    if not resolved.exists():
+        raise SystemExit(f"JSON file missing: {resolved}")
+    return load_json(resolved)
+
+
+def parse_display_config(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    resolved = path.resolve()
+    if not resolved.exists():
+        raise SystemExit(f"DOSBox-X config missing: {resolved}")
+    values: dict[str, dict[str, str]] = {}
+    current_section = ""
+    for raw_line in resolved.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or line.startswith(";"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            current_section = line[1:-1].strip().lower()
+            values.setdefault(current_section, {})
+            continue
+        if "=" not in line or current_section not in {"sdl", "render"}:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip().lower()
+        if key in {
+            "fullscreen",
+            "fullresolution",
+            "windowresolution",
+            "output",
+            "showmenu",
+            "scaler",
+        }:
+            values.setdefault(current_section, {})[key] = value.strip()
+    return {
+        "path": str(resolved),
+        "sdl": values.get("sdl", {}),
+        "render": values.get("render", {}),
+        "assumption": "Parsed display-related DOSBox-X keys only; runtime behavior still requires copied screenshot evidence.",
+    }
 
 
 def normalize_text(text: str) -> str:
@@ -244,6 +297,23 @@ def rect_margins(rect: dict[str, int] | None, width: int, height: int) -> dict[s
         "left": int(rect["left"]),
         "right": int(width - 1 - rect["right"]),
         "bottom": int(height - 1 - rect["bottom"]),
+    }
+
+
+def normalized_margin_values(margins: dict[str, int] | None, width: int, height: int) -> dict[str, int] | None:
+    if margins is None:
+        return None
+    scale_x = width / PROOF_TARGET_WIDTH_PX if width > 0 else 1.0
+    scale_y = height / PROOF_TARGET_HEIGHT_PX if height > 0 else 1.0
+    if scale_x <= 0:
+        scale_x = 1.0
+    if scale_y <= 0:
+        scale_y = 1.0
+    return {
+        "top": int(round(margins["top"] / scale_y)),
+        "left": int(round(margins["left"] / scale_x)),
+        "right": int(round(margins["right"] / scale_x)),
+        "bottom": int(round(margins["bottom"] / scale_y)),
     }
 
 
@@ -440,6 +510,7 @@ def layout_metrics(path: Path, ocr_text: str) -> dict[str, Any]:
     client_foreground = meaningful_client_mask(foreground, analysis_area, chrome_cutoff)
     client_bounds = rect_from_mask(client_foreground)
     safe_margins = rect_margins(client_bounds, width, height)
+    normalized_safe_margins = normalized_margin_values(safe_margins, width, height)
     app_bottom = desktop_start_y - 1 if desktop_start_y is not None else height - 1
     app_height = max(1, app_bottom + 1)
     app_bounds = {
@@ -490,19 +561,20 @@ def layout_metrics(path: Path, ocr_text: str) -> dict[str, Any]:
     missing_nav_labels = [label for label, present in nav_labels.items() if not present]
 
     fit_risks: list[dict[str, str]] = []
-    if safe_margins is None:
+    fit_margins = normalized_safe_margins or safe_margins
+    if fit_margins is None:
         add_risk(fit_risks, "console_fit_risk", "high", "Client content bounds could not be detected")
     else:
-        bottom_margin = safe_margins["bottom"]
-        right_margin = safe_margins["right"]
+        bottom_margin = fit_margins["bottom"]
+        right_margin = fit_margins["right"]
         if bottom_margin < SAFE_BOTTOM_MARGIN_PX or right_margin < SAFE_RIGHT_MARGIN_PX:
             add_risk(
                 fit_risks,
                 "console_fit_risk",
                 "high",
                 (
-                    f"Client content leaves bottom margin {bottom_margin}px and "
-                    f"right margin {right_margin}px"
+                    f"Client content leaves normalized bottom margin {bottom_margin}px and "
+                    f"normalized right margin {right_margin}px"
                 ),
             )
 
@@ -541,12 +613,24 @@ def layout_metrics(path: Path, ocr_text: str) -> dict[str, Any]:
 
     return {
         "available": True,
+        "captureSize": {"width": int(width), "height": int(height)},
         "desktopStartY": desktop_start_y,
         "appBounds": app_bounds,
         "frameBounds": frame_bounds,
         "clientBounds": client_bounds,
+        "windowFrameBounds": frame_bounds,
+        "clientEstimateBounds": client_bounds,
+        "contentBounds": client_bounds or frame_bounds,
         "safeMarginsPx": safe_margins,
+        "normalizedSafeMarginsPx": normalized_safe_margins,
+        "proofTargetSize": {"width": PROOF_TARGET_WIDTH_PX, "height": PROOF_TARGET_HEIGHT_PX},
+        "captureScaleToProof": {
+            "x": round(width / PROOF_TARGET_WIDTH_PX, 4),
+            "y": round(height / PROOF_TARGET_HEIGHT_PX, 4),
+        },
+        "fitMetricSpace": "normalized-proof" if (width, height) != (PROOF_TARGET_WIDTH_PX, PROOF_TARGET_HEIGHT_PX) else "native-capture",
         "regions": regions,
+        "regionBounds": regions,
         "regionOverlaps": overlaps,
         "minVerticalRegionGapPx": min_vertical_gap,
         "navigationLabels": nav_labels,
@@ -625,8 +709,27 @@ def screen_risks(
     bounds = visual.get("bounds") if isinstance(visual.get("bounds"), dict) else {}
     bottom_margin = parse_int(bounds.get("bottomMarginPx")) if bounds else 0
     right_margin = parse_int(bounds.get("rightMarginPx")) if bounds else 0
+    capture_width = parse_int(visual.get("width"))
+    capture_height = parse_int(visual.get("height"))
+    if capture_width and capture_height and (
+        capture_width != PROOF_TARGET_WIDTH_PX or capture_height != PROOF_TARGET_HEIGHT_PX
+    ):
+        add_risk(
+            risks,
+            "proof_capture_size_mismatch",
+            "medium",
+            (
+                f"Screenshot is {capture_width}x{capture_height}; "
+                f"target proof size is {PROOF_TARGET_WIDTH_PX}x{PROOF_TARGET_HEIGHT_PX}"
+            ),
+        )
     if layout and layout.get("available"):
-        margins = layout.get("safeMarginsPx") if isinstance(layout.get("safeMarginsPx"), dict) else {}
+        margins = (
+            layout.get("normalizedSafeMarginsPx")
+            if isinstance(layout.get("normalizedSafeMarginsPx"), dict)
+            else layout.get("safeMarginsPx")
+        )
+        margins = margins if isinstance(margins, dict) else {}
         if margins:
             bottom_margin = parse_int(margins.get("bottom"))
             right_margin = parse_int(margins.get("right"))
@@ -836,10 +939,26 @@ def layout_margin_values(screens: list[dict[str, Any]], side: str) -> list[int]:
     values = []
     for screen in screens:
         layout = screen.get("layout") if isinstance(screen.get("layout"), dict) else {}
-        margins = layout.get("safeMarginsPx") if isinstance(layout.get("safeMarginsPx"), dict) else {}
+        margins = (
+            layout.get("normalizedSafeMarginsPx")
+            if isinstance(layout.get("normalizedSafeMarginsPx"), dict)
+            else layout.get("safeMarginsPx")
+        )
+        margins = margins if isinstance(margins, dict) else {}
         if margins:
             values.append(parse_int(margins.get(side)))
     return values
+
+
+def advisory_visual_fit_status(aggregate: dict[str, Any]) -> str:
+    risks = aggregate.get("riskCounts") if isinstance(aggregate.get("riskCounts"), dict) else {}
+    if aggregate.get("visionGateStatus") != "pass":
+        return "needs_manual_review"
+    if risks.get("console_fit_risk") or risks.get("log_region_overflow"):
+        return "fail"
+    if risks.get("proof_capture_size_mismatch") or risks.get("navigation_label_gap"):
+        return "needs_manual_review"
+    return "pass"
 
 
 def build_backlog(screens: list[dict[str, Any]], view_summary: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1105,6 +1224,8 @@ def build_analysis(
     screenshot_paths: list[Path],
     vision_gate: dict[str, Any],
     analysis_date: str,
+    display_probe: dict[str, Any] | None = None,
+    dosbox_display_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     records_by_name = vision_records_by_name(vision_gate)
     screens = [
@@ -1137,10 +1258,26 @@ def build_analysis(
     ]
     bottom_margins = layout_margin_values(screens, "bottom")
     right_margins = layout_margin_values(screens, "right")
+    capture_sizes = sorted(
+        {
+            (
+                parse_int(screen.get("visual", {}).get("width")),
+                parse_int(screen.get("visual", {}).get("height")),
+            )
+            for screen in screens
+            if isinstance(screen.get("visual"), dict)
+            and screen.get("visual", {}).get("available")
+        }
+    )
     aggregate = {
         "screenCount": len(screens),
         "targetViewCount": len(TARGET_VIEWS),
         "mappedTargetViewCount": sum(1 for view in TARGET_VIEWS if view_summary[view]["screenCount"]),
+        "captureSizes": [
+            {"width": width, "height": height}
+            for width, height in capture_sizes
+            if width > 0 and height > 0
+        ],
         "totalOcrWords": sum(screen["ocr"]["wordCount"] for screen in screens),
         "lowestOcrConfidence": round(min(ocr_confidences), 2) if ocr_confidences else None,
         "medianOcrConfidence": round(sorted(ocr_confidences)[len(ocr_confidences) // 2], 2)
@@ -1152,6 +1289,29 @@ def build_analysis(
         "visionGateStatus": vision_gate.get("status"),
         "visionGateOk": bool(vision_gate.get("ok")),
         "visionGateFailures": vision_gate.get("failures", []),
+    }
+    aggregate["advisoryVisualFitStatus"] = advisory_visual_fit_status(aggregate)
+    coordinate_stack = {
+        "displayProbe": display_probe,
+        "dosboxDisplayConfig": dosbox_display_config,
+        "captureSizes": aggregate["captureSizes"],
+        "win31WindowMetrics": {
+            "screenFields": [
+                "layout.windowFrameBounds",
+                "layout.clientEstimateBounds",
+                "layout.contentBounds",
+                "layout.safeMarginsPx",
+            ],
+            "source": "copied screenshot foreground analysis",
+        },
+        "acceptanceMarginsPx": {
+            "bottom": SAFE_BOTTOM_MARGIN_PX,
+            "right": SAFE_RIGHT_MARGIN_PX,
+        },
+        "assumption": (
+            "Display and DOSBox-X config records explain the coordinate stack; "
+            "screenshots remain the proof for actual rendered fit."
+        ),
     }
     ranked_backlog = build_backlog(screens, view_summary)
     for screen in screens:
@@ -1183,6 +1343,7 @@ def build_analysis(
             "Estimated Win31 client regions are derived from local foreground pixels and must be compared against live screenshots.",
         ],
         "unknowns": unknowns,
+        "coordinateStack": coordinate_stack,
         "aggregate": aggregate,
         "screens": screens,
         "viewSummary": view_summary,
@@ -1196,6 +1357,8 @@ def analyze_evidence(
     vision_gate_path: Path | None,
     screenshot_dir: Path | None,
     analysis_date: str,
+    display_probe_path: Path | None = None,
+    dosbox_config_path: Path | None = None,
 ) -> dict[str, Any]:
     root = evidence_root.resolve()
     if not root.exists():
@@ -1204,7 +1367,14 @@ def analyze_evidence(
     if not vision_path.exists():
         raise SystemExit(f"vision gate JSON missing: {vision_path}")
     screenshots = collect_screenshots(root, screenshot_dir.resolve() if screenshot_dir else None)
-    return build_analysis(root, screenshots, load_json(vision_path), analysis_date)
+    return build_analysis(
+        root,
+        screenshots,
+        load_json(vision_path),
+        analysis_date,
+        load_optional_json(display_probe_path),
+        parse_display_config(dosbox_config_path),
+    )
 
 
 def format_percent(value: Any) -> str:
@@ -1230,7 +1400,12 @@ def risk_codes(screen: dict[str, Any]) -> str:
 
 def layout_margin_text(screen: dict[str, Any]) -> str:
     layout = screen.get("layout") if isinstance(screen.get("layout"), dict) else {}
-    margins = layout.get("safeMarginsPx") if isinstance(layout.get("safeMarginsPx"), dict) else {}
+    margins = (
+        layout.get("normalizedSafeMarginsPx")
+        if isinstance(layout.get("normalizedSafeMarginsPx"), dict)
+        else layout.get("safeMarginsPx")
+    )
+    margins = margins if isinstance(margins, dict) else {}
     if margins:
         return f"{margins.get('bottom', 'n/a')}/{margins.get('right', 'n/a')}"
     visual = screen["visual"]
@@ -1283,9 +1458,18 @@ def render_report(analysis: dict[str, Any]) -> str:
         [
             f"- Evidence root: `{analysis['evidenceRoot']}`.",
             f"- Accepted DOS-C vision gate status: `{aggregate['visionGateStatus']}`; failures: `{aggregate['visionGateFailures']}`.",
+            f"- Advisory visual-fit status: `{aggregate['advisoryVisualFitStatus']}`.",
             f"- Screenshots analyzed: {aggregate['screenCount']}; target views mapped: {aggregate['mappedTargetViewCount']}/{aggregate['targetViewCount']}.",
+            f"- Capture sizes: `{aggregate['captureSizes']}`.",
             f"- Total OCR words: {aggregate['totalOcrWords']}; lowest OCR confidence: {format_number(aggregate['lowestOcrConfidence'])}; median OCR confidence: {format_number(aggregate['medianOcrConfidence'])}.",
             f"- Lowest estimated layout safe margin: bottom {format_number(aggregate['lowestLayoutBottomMarginPx'])} px; right {format_number(aggregate['lowestLayoutRightMarginPx'])} px.",
+            "",
+            "## Coordinate Stack",
+            "",
+            f"- Proof target size: `{PROOF_TARGET_WIDTH_PX}x{PROOF_TARGET_HEIGHT_PX}`.",
+            f"- Display probe supplied: `{analysis['coordinateStack']['displayProbe'] is not None}`.",
+            f"- DOSBox-X display config supplied: `{analysis['coordinateStack']['dosboxDisplayConfig'] is not None}`.",
+            "- Per-screen layout fields include `captureSize`, `windowFrameBounds`, `clientEstimateBounds`, `contentBounds`, `normalizedSafeMarginsPx`, and `captureScaleToProof`.",
             "",
             "## Assumptions",
             "",
@@ -1396,6 +1580,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--evidence-root", type=Path, required=True)
     parser.add_argument("--vision-gate", type=Path)
     parser.add_argument("--screenshot-dir", type=Path)
+    parser.add_argument("--display-probe", type=Path)
+    parser.add_argument("--dosbox-config", type=Path)
     parser.add_argument("--analysis-date", default="2026-05-24")
     parser.add_argument("--out-json", type=Path)
     parser.add_argument("--out-report", type=Path)
@@ -1409,6 +1595,8 @@ def main() -> int:
         args.vision_gate,
         args.screenshot_dir,
         args.analysis_date,
+        args.display_probe,
+        args.dosbox_config,
     )
     if args.out_json:
         json_write(args.out_json.resolve(), analysis)

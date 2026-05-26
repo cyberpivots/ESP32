@@ -82,6 +82,29 @@ def write_win31_layout_screen(path: Path, *, clipped: bool) -> None:
     image.save(path)
 
 
+def write_large_inset_capture_screen(path: Path) -> None:
+    image = Image.new("RGB", (1920, 1080), (0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    line_font = font(18)
+    x0 = 140
+    y0 = 110
+    draw.rectangle((x0, y0, x0 + 980, y0 + 500), outline=(0, 170, 170))
+    draw.text((x0 + 20, y0 + 20), "HOME CARD 1/3", fill=(0, 255, 255), font=line_font)
+    draw.text(
+        (x0 + 20, y0 + 56),
+        "HOME BBS FILES NET PEERS DEV OTAP SETUP WIZ DIAG SAFE",
+        fill=(0, 255, 255),
+        font=line_font,
+    )
+    draw.rectangle((x0 + 20, y0 + 100, x0 + 390, y0 + 330), outline=(0, 170, 170))
+    draw.rectangle((x0 + 420, y0 + 100, x0 + 930, y0 + 330), outline=(0, 170, 170))
+    draw.text((x0 + 440, y0 + 120), "Coordinator Telemetry", fill=(0, 255, 255), font=line_font)
+    draw.text((x0 + 20, y0 + 360), "Relay disabled Flash gated Serial blocked PCAP gate", fill=(220, 220, 220), font=line_font)
+    draw.rectangle((x0 + 20, y0 + 410, x0 + 930, y0 + 475), outline=(0, 170, 170))
+    draw.text((x0 + 30, y0 + 424), "rx hello", fill=(0, 255, 255), font=line_font)
+    image.save(path)
+
+
 def vision_record(path: Path, text: str, confidence: float, words: int) -> dict[str, object]:
     return {
         "path": str(path),
@@ -188,6 +211,25 @@ class Win31DashboardLegibilityAnalyzerTests(unittest.TestCase):
         self.assertGreaterEqual(margins["bottom"], analyzer.SAFE_BOTTOM_MARGIN_PX)  # type: ignore[index]
         self.assertNotIn("console_fit_risk", risk_codes(screen))
         self.assertNotIn("log_region_overflow", risk_codes(screen))
+
+    def test_large_capture_reports_coordinate_stack_and_size_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "03-home-dashboard.png"
+            write_large_inset_capture_screen(path)
+            text = (
+                "HOME BBS FILES NET PEERS DEV OTAP SETUP WIZ DIAG SAFE "
+                "HOME CARD Coordinator Telemetry Relay disabled PCAP gate"
+            )
+            result = analyze(root, [vision_record(path, text, 82.0, 96)])
+        screen = only_screen(result)
+        layout = screen["layout"]  # type: ignore[index]
+        aggregate = result["aggregate"]  # type: ignore[index]
+        self.assertEqual(aggregate["captureSizes"], [{"width": 1920, "height": 1080}])  # type: ignore[index]
+        self.assertEqual(aggregate["advisoryVisualFitStatus"], "needs_manual_review")  # type: ignore[index]
+        self.assertEqual(layout["proofTargetSize"], {"width": 1024, "height": 600})  # type: ignore[index]
+        self.assertIn("normalizedSafeMarginsPx", layout)  # type: ignore[operator]
+        self.assertIn("proof_capture_size_mismatch", risk_codes(screen))
 
     def test_strong_and_weak_ocr_cases_are_separated(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

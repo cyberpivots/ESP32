@@ -112,6 +112,38 @@ Unknowns:
 - The revised layout has not yet proven mean OCR confidence >= 60, eliminated
   navigation-label gaps, or mapped all 10 target views in copied evidence.
 
+## 2026-05-26 Adaptive Visual Quality Refactor
+
+Verified facts:
+
+- DOS-C source now computes the Win31 OPCON startup client size from screen and
+  window metrics, then reflows controls from one computed layout on resize.
+- ESP32 analyzer output now separates functional gate status from advisory
+  visual-fit status and records capture sizes, coordinate-stack metadata,
+  normalized safe margins, and proof-target mismatch risks.
+- The current copied Gate H packet still passes the DOS-C vision gate and
+  paired ESP32 completion gate.
+- The current copied Gate H screenshots are `1920x1080`, not the intended
+  `1024x600` proof target.
+- A rerun against that current packet reports advisory visual-fit status
+  `fail`, capture size `1920x1080`, mapped target views `10/10`, median OCR
+  confidence `51.25`, `proof_capture_size_mismatch` on 18 screens,
+  `console_fit_risk` on 18 screens, and `log_region_overflow` on 18 screens.
+
+Assumptions:
+
+- The adaptive source change is the correct code-side response, but a fresh
+  copied packet must verify whether Pi display mode, DOSBox-X fullscreen
+  behavior, and capture tooling now align with the intended 1024x600 proof.
+
+Unknowns:
+
+- Whether the 1920x1080 capture mismatch comes from current Pi display mode,
+  DOSBox-X scaling/fullscreen behavior, capture tool geometry, or stale proof
+  context.
+- No fresh adaptive-layout proof packet exists yet, so this section does not
+  claim visual-fit closure.
+
 ## Assumptions
 
 - Tesseract OCR confidence and word count are useful legibility proxies, not human usability proof.

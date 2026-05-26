@@ -113,6 +113,15 @@
   pivot positioning, or GPS asset tracking as implementation targets. Required
   records must include source links, power, voltage, boot-pin, isolation,
   connector, protocol, and calibration/units notes.
+- Select and verify all `remote-lcd-xbee-solar-client` hardware before any
+  wiring, charging, firmware, or radio work: exact ESP32 board, 20x4 LCD,
+  rotary encoder, 18650 cell, BMS/protection board, solar panel, charger/power
+  path, XBee carrier, antenna, fuse/protection, and enclosure. Current
+  PCF8574/74A, PEC11R, BQ25185, BQ2970, BQ27441-G1, and UL lithium-ion safety
+  entries are candidate/reference-only or broad safety context.
+- The `remote-lcd-xbee-solar-client` private hardware submodules now exist and
+  are docs-only evidence lanes. They do not close exact hardware identity,
+  wiring, charging, radio-write, firmware, or live bench gaps.
 - Define the cross-project client UI live-gate target before implementation:
   selected board, current identity, Wi-Fi mode, browser support matrix, phone
   and laptop proof packet, safety-supervisor state model, authentication,
@@ -172,6 +181,7 @@
 | Custom wireless protocol implementation | Gate B simulator proof exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-SIM-2026-05-25`, Gate C bridge-adapter proof exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-BRIDGE-SIM-2026-05-25`, Gate D DOS-C fixture replay exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-D-DOSC-PAIRING-2026-05-25`, Gate E draft bridge ABI candidate exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-E-BRIDGE-ABI-2026-05-25`, Gate F owner-review design-contract acceptance exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26` and `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`, Gate F host-only packet golden vectors exist in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-GOLDEN-VECTORS-2026-05-26`, Gate F requirements-only runtime planning exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-RUNTIME-REQUIREMENTS-2026-05-26`, Gate G simulator-only analytics exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-G-ANALYTICS-2026-05-25`, Gate G live export policy is accepted in `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-POLICY-2026-05-25`, Gate G local-admin redacted export implementation exists in `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25`, Gate H live acceptance exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-H-LIVE-ACCEPTANCE-2026-05-25`, the structured transcript shape exists in `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-TRANSCRIPT-2026-05-25`, and structured Gate H live acceptance exists in `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25`; future evidence is still required for firmware runtime implementation, firmware persistence, Win31 export controls, and any live bridge export request type. |
 | Development status review | Current canonical ledger `research/development-status-ledger.md` plus `SRC-LOCAL-ESPNOW-DEVELOPMENT-STATUS-REVIEW-2026-05-26`; use it to classify planned lanes and superseded blocked evidence without rewriting historical task records. |
 | Agricultural telemetry hardware profiles | Source-backed records for selected center-pivot controller, soil probes, SDI-12/Modbus adapter, GPS pivot positioning device, GPS asset tracker, power/voltage/isolation limits, connector pinout, protocol, calibration, units, and live-proof plan. |
+| Remote LCD XBee solar client private submodules | Seven private docs-only submodule repos exist under `submodules/hardware/`, but closure still requires exact vendor sources and physical inspection records for ESP32 board, 20x4 LCD/backpack, rotary encoder, 18650 cell, BMS/protection board, solar panel, charger/power path, XBee carrier, antenna, fuse/protection, and enclosure; include power, voltage, boot-pin, isolation, charge/current limit, pullup, and recovery notes before any bench action. |
 | Cross-project client UI live gate | Stage 1 static or simulated phone/laptop UI proof; Stage 2 selected-board Wi-Fi read-only proof with identity, power, voltage, boot-pin, isolation, recovery, browser screenshot, and cleanup evidence; Stage 3 exact dummy-output GPIO/fixture proof with no relay/load/mains path, sequence logs, all-off, safety-lock rejection, and observed dummy output. |
 | DOS-C Windows 3.1 TCP bridge | SLIRP acceptance record showing guest ICMP/TCP path to the Pi simulator and operator-console state proof, with generated screenshots and captures kept out of Git. |
 | DOSBox-X PCAP bridge | Pi identity record, wired `eth0` evidence, capability setup and restore evidence, redacted packet-flow proof, and rollback result. |

@@ -1,0 +1,21 @@
+[submodule "submodules/hardware/rlxsc-esp32-client-node"]
+	path = submodules/hardware/rlxsc-esp32-client-node
+	url = https://github.com/cyberpivots/rlxsc-esp32-client-node.git
+[submodule "submodules/hardware/rlxsc-rotary-encoder"]
+	path = submodules/hardware/rlxsc-rotary-encoder
+	url = https://github.com/cyberpivots/rlxsc-rotary-encoder.git
+[submodule "submodules/hardware/rlxsc-xbee-pro-s3b"]
+	path = submodules/hardware/rlxsc-xbee-pro-s3b
+	url = https://github.com/cyberpivots/rlxsc-xbee-pro-s3b.git
+[submodule "submodules/hardware/rlxsc-lcd-20x4-i2c"]
+	path = submodules/hardware/rlxsc-lcd-20x4-i2c
+	url = https://github.com/cyberpivots/rlxsc-lcd-20x4-i2c.git
+[submodule "submodules/hardware/rlxsc-18650-cell"]
+	path = submodules/hardware/rlxsc-18650-cell
+	url = https://github.com/cyberpivots/rlxsc-18650-cell.git
+[submodule "submodules/hardware/rlxsc-bms-protection"]
+	path = submodules/hardware/rlxsc-bms-protection
+	url = https://github.com/cyberpivots/rlxsc-bms-protection.git
+[submodule "submodules/hardware/rlxsc-solar-charger-power-path"]
+	path = submodules/hardware/rlxsc-solar-charger-power-path
+	url = https://github.com/cyberpivots/rlxsc-solar-charger-power-path.git

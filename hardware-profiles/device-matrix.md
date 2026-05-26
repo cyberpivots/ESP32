@@ -5,6 +5,9 @@
 | ESP32 boards | Photographed ESP-WROOM-32 development board plus ESP32 I/O expansion shield for `four-relay-xbee-wifi`; DevKitC retained as prior reference | Photo-backed module/shield identity plus source-backed ESP32-WROOM-32 docs and hardware-design guidelines; third-party shield page is candidate evidence only | Project pin map remains provisional until board/shield routing, power, and boot-pin risks are verified |
 | Storage | Generic SPI MicroSD reader for `four-relay-xbee-wifi` static assets and logs | ESP-IDF FatFS/VFS, SDSPI, SD/MMC, HTTP server, and example docs support the planned storage/web-serving architecture; no exact reader is identified | Wiring is blocked until reader identity, 3.3 V power, pull-ups, shield continuity, and boot-pin risks are verified |
 | Display | User-requested Open-Smart R61509V TFT planning target | External R61509V references provide parallel-TFT pin-pressure context only | Exact module, pinout, power/backlight, touch interface, and driver path are unresolved |
+| Remote LCD client display | 20x4 I2C LCD requested for `remote-lcd-xbee-solar-client` | PCF8574/74A source is candidate/reference-only for an I2C expander class; no exact LCD/backpack is verified | Exact LCD module, controller, backpack IC, I2C address, pullups, logic voltage, backlight current, and enclosure fit are unresolved |
+| Remote LCD client input | Rotary encoder requested for `remote-lcd-xbee-solar-client` | Bourns PEC11R source is candidate/reference-only for an encoder family; no exact encoder is verified | Exact encoder part, PPR, detents, switch option, pullups, debounce, voltage, and boot-pin impact are unresolved |
+| Remote LCD client power | 18650 cell, BMS/protection, solar charger/power path requested for `remote-lcd-xbee-solar-client` | TI BQ25185, BQ2970, BQ27441-G1, and UL lithium-ion safety guidance are candidate/reference-only or broad safety context; no exact power hardware is verified | Exact cell, BMS board, panel, charger module, current limits, charge voltage, protection, enclosure, and power budget are unresolved |
 | Interface expansion | CD74HC4067 input mux plus MCP23017/TCA9555 relay expander candidates | TI and Espressif sources cover component classes; exact breakout/board selection is unresolved | Mux is input-only; relay expander proof starts with LEDs or logic analyzer, not relay inputs |
 | XBee | Digi `XBP9B-DPUT-001 RevF` with Waveshare XBee USB Adapter as first PC dock | Photo-backed exact radio label; source-backed part ID, adapter docs, and API-mode docs | PC dock read-only discovery only; needs adapter voltage, DIN/DOUT, carrier, address, and configuration validation before writes or ESP32 wiring |
 | Relay boards | Four-channel module populated with Songle `SRD-05VDC-SL-C` relays for first project; 1/8/16 channel future profiles | Photo-backed relay can identity plus Songle relay component source | Four-channel profile is verification-only; module trigger/isolation behavior and direct-GPIO 3.3 V/current gate unresolved |
@@ -23,6 +26,20 @@
   `SRC-ESP-IDF-SDSPI-EXAMPLE`
 - Display: `SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`,
   `SRC-LCDWIKI-R61509V-MRB2802`
+- Remote LCD client display: `SRC-NXP-PCF8574-74A`,
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-SCAFFOLD-2026-05-26`,
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-PRIVATE-SUBMODULES-2026-05-26`
+- Remote LCD client input: `SRC-BOURNS-PEC11R`,
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-SCAFFOLD-2026-05-26`,
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-PRIVATE-SUBMODULES-2026-05-26`
+- Remote LCD client power: `SRC-TI-BQ25185`, `SRC-TI-BQ2970`,
+  `SRC-TI-BQ27441-G1`, `SRC-UL-LIION-SAFETY`,
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-SCAFFOLD-2026-05-26`,
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-PRIVATE-SUBMODULES-2026-05-26`
+- Remote LCD client ESP32 node: `SRC-ESP-IDF-GPIO`, `SRC-ESP-IDF-UART`,
+  `SRC-ESP32-HARDWARE-DESIGN-GUIDELINES`,
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-SCAFFOLD-2026-05-26`,
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-PRIVATE-SUBMODULES-2026-05-26`
 - Interface expansion: `SRC-TI-CD74HC4067`, `SRC-TI-TCA9555`,
   `SRC-ESPRESSIF-MCP23017-COMPONENT`, `SRC-TI-TPIC6B595`
 - XBee: `SRC-DIGI-XBP9B-DPUT-001`, `SRC-DIGI-XBEE-PRO-900HP`,

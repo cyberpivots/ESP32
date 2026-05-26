@@ -53,11 +53,11 @@ class CoordinatorEsptoolSelectionTests(unittest.TestCase):
     def test_remote_invocation_does_not_force_no_stub_for_preferred_runtime(self) -> None:
         script = espnow_bbs_live_gate.remote_esptool_invocation(
             "/dev/ttyUSB0",
-            "read_flash",
+            "read-flash",
             ["0", "ALL", "/tmp/full.bin"],
         )
         self.assertIn("run_esptool $ESPTOOL_STUB_ARGS --port /dev/ttyUSB0", script)
-        self.assertIn("read_flash 0 ALL /tmp/full.bin", script)
+        self.assertIn("read-flash 0 ALL /tmp/full.bin", script)
         self.assertNotIn("run_esptool --no-stub --port", script)
 
     def test_recovery_command_names_proven_pi_esptool_runtime(self) -> None:

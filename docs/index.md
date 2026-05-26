@@ -4,6 +4,8 @@
 
 - [Agent coordination](agent-coordination.md)
 - [Handoff and review](handoff-and-review.md)
+- [Development status review task log](../.agents/TASK_LOG/0053-development-status-review.md)
+- [Development status review owner handoff](../.agents/handoffs/0042-development-status-review-to-owners.md)
 - [Risk and safety](risk-and-safety.md)
 - [Known limitations](known-limitations.md)
 - [GitHub Pages public site](github-pages-public-site.md)
@@ -82,11 +84,13 @@
 - [ESP-NOW BBS custom wireless protocol Gate G analytics source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-g-analytics.md)
 - [ESP-NOW BBS Gate G live export policy source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-g-live-export-policy.md)
 - [ESP-NOW BBS Gate G live export implementation source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-g-live-export-implementation.md)
+- [ESP-NOW BBS LAN DHCP current remap source ledger](../knowledge-base/source-ledger/2026-05-25-espnow-bbs-lan-dhcp-current-remap.md)
 - [ESP-NOW BBS custom wireless protocol Gate H live attempt source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-live-attempt.md)
 - [ESP-NOW BBS custom wireless protocol Gate H troubleshooting source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-troubleshooting.md)
 - [ESP-NOW BBS custom wireless protocol Gate H live acceptance source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-live-acceptance.md)
 - [ESP-NOW BBS structured Gate H transcript source ledger](../knowledge-base/source-ledger/2026-05-25-structured-gate-h-transcript.md)
 - [ESP-NOW BBS custom wireless protocol Gate H structured live acceptance source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-structured-live-acceptance.md)
+- [ESP-NOW BBS development status review source ledger](../knowledge-base/source-ledger/2026-05-26-development-status-review.md)
 - [Win31 dashboard ML live gate source ledger](../knowledge-base/source-ledger/2026-05-23-win31-dashboard-ml-live-gate.md)
 - [Win31 dashboard legibility research source ledger](../knowledge-base/source-ledger/2026-05-24-win31-dashboard-legibility-research.md)
 - [Client UI live gate source ledger](../knowledge-base/source-ledger/2026-05-24-client-ui-live-gate.md)
@@ -97,6 +101,7 @@
 
 ## Research
 
+- [Development status ledger](../research/development-status-ledger.md)
 - [Known gaps](../research/known-gaps.md)
 - [Triage status](../research/triage-status.md)
 - [Bench record template](../research/bench-records/TEMPLATE.md)
@@ -107,4 +112,5 @@
 - [ESP-NOW BBS custom wireless protocol Gate H live acceptance bench record](../research/bench-records/live-bench/2026-05-25-custom-wireless-protocol-gate-h-live-acceptance.md)
 - [ESP-NOW BBS custom wireless protocol Gate H structured live acceptance bench record](../research/bench-records/live-bench/2026-05-25-custom-wireless-protocol-gate-h-structured-live-acceptance.md)
 - [ESP-NOW BBS custom wireless protocol Gate G live export bench record](../research/bench-records/live-bench/2026-05-25-custom-wireless-protocol-gate-g-live-export.md)
+- [ESP-NOW BBS LAN DHCP current remap preflight bench record](../research/bench-records/live-bench/2026-05-25-espnow-bbs-lan-dhcp-current-remap-preflight.md)
 - [Available skills](../research/skills/available-skills.md)

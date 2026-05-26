@@ -13,13 +13,12 @@ Current physical proof command surface:
 - `hello`
 - `state`
 - `diag`
-- `peer_list` (source-level implementation added for the next three-peer
-  proof; live acceptance still pending)
+- `peer_list`
 
-The bridge and Win3.1 dashboard may expose higher-level simulator/database
+The bridge and Win3.1 dashboard expose higher-level simulator/database
 requests such as `diag_get`, `peer_list`, `msg_send`, `msg_ack`, and
 `fw_inventory`, but the physical coordinator serial request surface remains
-read-only for the encrypted peer proof.
+read-only for accepted live proof.
 
 Current compact physical response fields include:
 
@@ -67,15 +66,18 @@ The first peer payload is a bounded `PING` frame from peer `peer01` to
 coordinator `coord01`. The coordinator validates the peer, destination, and
 allowed MAC before counting RX and returning an application-level ACK.
 
-The next source-level coordinator shape supports exactly three encrypted peer
-slots for `peer01`, `peer02`, and `peer03` through ignored per-peer LMK/MAC
-overrides. Live acceptance requires fresh COM4/COM5/COM6 identity and backup
-evidence before any flash.
+The accepted 2026-05-23 proof supports exactly three encrypted peer slots for
+`peer01`, `peer02`, and `peer03` through ignored per-peer LMK/MAC overrides.
+That proof accepted the then-current `COM4=peer01`, `COM5=peer02`, and
+`COM6=peer03` map after fresh identity, backups, manifest review, and
+flash/verify evidence.
 
-The live gate maps peers by verified Windows port order only after a passing
-preflight: `COM4=peer01`, `COM5=peer02`, and `COM6=peer03`. The coordinator
-must be freshly identified on Pi `/dev/ttyUSB0`, and its MAC must differ from
-all peer MACs before prepare or flash work can proceed.
+The current 2026-05-25 America/Denver LAN/current-remap preflight, with UTC
+evidence filenames on 2026-05-26, validates the current read-only identity map
+as `COM6=peer01`, `COM10=peer02`, and `COM12=peer03`, with the coordinator on
+Pi `/dev/ttyUSB0`. This remap evidence does not prove a fresh BBS runtime or
+radio run. Before any future prepare or flash, the coordinator must be freshly
+identified and must differ from all peer MACs.
 
 ## Reliability
 
@@ -101,6 +103,13 @@ application ACKs, and the accepted Pi bridge/Win3.1 OPCON path showed peer
 `peer01`, link `espnow-enc`, peer count `1`, zero serial errors, and changing
 RX/TX/ACK counters.
 
-The 2026-05-23 source update extends the parser and config shape for three
-peers, and the follow-up ESP32 tooling adds preflight/manifest gates, but this
-does not prove live three-peer radio behavior.
+The 2026-05-23 corrected proof accepts USB-only three-peer live radio behavior
+for that proof packet. Later Gate H structured live acceptance proves the
+accepted serial-nullmodem path with `bridge-transcript.jsonl`, BBS
+post/pull/search/ack, download queue, non-executing OTAP intent, zero serial
+errors, three `espnow-enc` peers, moving counters, DOS-C vision `pass`, ESP32
+completion `pass`, and cleanup proof.
+
+Gate G is accepted only as a local-admin redacted JSON export from the DOS-C/Pi
+bridge spool under `ADR-0005`. Firmware export ABI, Win31 export controls, and
+live bridge export request types remain closed.

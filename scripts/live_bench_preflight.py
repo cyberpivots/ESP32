@@ -26,10 +26,14 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT_ROOT = ROOT / "research" / "bench-records" / "live-bench"
 
 DEFAULT_WINDOWS_PORTS = ["COM4", "COM5", "COM6"]
+CURRENT_ACCEPTED_WINDOWS_PORTS = ["COM6", "COM10", "COM12"]
 DEFAULT_PI_USER = "dospi"
 DEFAULT_PI_HOST = "172.16.0.2"
 ACCEPTED_PI_ACCESS_HOSTS = {DEFAULT_PI_HOST, "192.168.137.93", "192.168.137.105"}
 DEFAULT_COORDINATOR_PORT = "/dev/ttyUSB0"
+REMOTE_ESPNOW_ESPTOOL = (
+    "/home/dospi/dos-c/artifacts/runtime/esptool-venv-espnow-encrypted/bin/esptool"
+)
 ACCEPTED_PEER_ROLE_MACS = {
     "peer01": "94:b9:7e:da:17:d0",
     "peer02": "78:e3:6d:0a:90:14",
@@ -61,7 +65,14 @@ EXPECTED_PI = {
     },
 }
 
-ALLOWED_ESPTOOL_COMMANDS = ("chip_id", "read_mac", "flash_id")
+CURRENT_ESPTOOL_COMMANDS = ("chip-id", "read-mac", "flash-id")
+LEGACY_ESPTOOL_COMMANDS = ("chip_id", "read_mac", "flash_id")
+ESPTOOL_COMMAND_ALIASES = {
+    "chip-id": ("chip-id", "chip_id"),
+    "read-mac": ("read-mac", "read_mac"),
+    "flash-id": ("flash-id", "flash_id"),
+}
+ALLOWED_ESPTOOL_COMMANDS = CURRENT_ESPTOOL_COMMANDS
 FORBIDDEN_ESPTOOL_TERMS = (
     "write_flash",
     "write-flash",
@@ -135,6 +146,16 @@ def normalize_flash_size(value: str | None) -> str | None:
     compact = re.sub(r"\s+", "", value.upper())
     compact = compact.replace("MIB", "MB").replace("KIB", "KB")
     return compact
+
+
+def current_peer_role_ports(ports: list[str]) -> dict[str, str] | None:
+    normalized = [normalize_windows_port(port) for port in ports]
+    if normalized != CURRENT_ACCEPTED_WINDOWS_PORTS:
+        return None
+    return {
+        f"peer{index:02d}": port
+        for index, port in enumerate(CURRENT_ACCEPTED_WINDOWS_PORTS, start=1)
+    }
 
 
 def uses_expected_pi_profile(host: str) -> bool:
@@ -540,6 +561,7 @@ def collect_peer_esp32_identities(ports: list[str]) -> dict[str, Any]:
     identities: dict[str, Any] = {
         "expectedProfile": EXPECTED_ESP32,
         "allowedCommands": list(ALLOWED_ESPTOOL_COMMANDS),
+        "legacyParsedCommandNames": list(LEGACY_ESPTOOL_COMMANDS),
         "forbiddenTerms": list(FORBIDDEN_ESPTOOL_TERMS),
         "toolSelection": selected,
         "ports": {},
@@ -593,11 +615,43 @@ def collect_esp32_identity_for_port(
     return record
 
 
+def identity_command_result(
+    commands: dict[str, Any],
+    canonical_command: str,
+) -> tuple[str, dict[str, Any]]:
+    for command in ESPTOOL_COMMAND_ALIASES[canonical_command]:
+        if command in commands:
+            return command, commands[command]
+    return canonical_command, {}
+
+
+def collect_esptool_warnings(commands: dict[str, Any]) -> list[dict[str, str]]:
+    warnings: list[dict[str, str]] = []
+    for command, result in sorted(commands.items()):
+        if not isinstance(result, dict):
+            continue
+        for stream_name in ("stdout", "stderr"):
+            for line in result.get(stream_name, []):
+                text = str(line)
+                lowered = text.lower()
+                if "warning" in lowered or "deprecated" in lowered:
+                    warnings.append(
+                        {
+                            "command": command,
+                            "stream": stream_name,
+                            "text": text,
+                        }
+                    )
+    return warnings
+
+
 def parse_esptool_identity(commands: dict[str, Any]) -> dict[str, Any]:
     lines: list[str] = []
     command_results: dict[str, bool] = {}
-    for command in ALLOWED_ESPTOOL_COMMANDS:
-        result = commands.get(command, {})
+    command_sources: dict[str, str | None] = {}
+    for command in CURRENT_ESPTOOL_COMMANDS:
+        source_command, result = identity_command_result(commands, command)
+        command_sources[command] = source_command if result else None
         command_results[command] = result.get("returncode") == 0
         lines.extend(str(line) for line in result.get("stdout", []))
         lines.extend(str(line) for line in result.get("stderr", []))
@@ -627,6 +681,13 @@ def parse_esptool_identity(commands: dict[str, Any]) -> dict[str, Any]:
         "manufacturer": manufacturer_match.group(1) if manufacturer_match else None,
         "device": device_match.group(1) if device_match else None,
         "commandResults": command_results,
+        "commandSources": command_sources,
+        "usesLegacyCommandNames": any(
+            source in LEGACY_ESPTOOL_COMMANDS
+            for source in command_sources.values()
+            if source
+        ),
+        "esptoolWarnings": collect_esptool_warnings(commands),
     }
     parsed["profileChecks"] = validate_esp32_profile(parsed)
     parsed["ok"] = (
@@ -709,11 +770,20 @@ def collect_pi_identity(
     stamp: str,
     coordinator_port: str,
     skip_coordinator: bool,
+    allow_discovered_host: bool,
 ) -> dict[str, Any]:
+    use_expected_profile = uses_expected_pi_profile(host) or allow_discovered_host
     record: dict[str, Any] = {
         "target": f"{user}@{host}",
-        "expected": EXPECTED_PI if uses_expected_pi_profile(host) else None,
+        "expected": EXPECTED_PI if use_expected_profile else None,
         "coordinatorPort": coordinator_port,
+        "hostPolicy": (
+            "accepted_known_host"
+            if uses_expected_pi_profile(host)
+            else "discovered_host_expected_identity"
+            if allow_discovered_host
+            else "unaccepted_host"
+        ),
     }
     keyscan = run_command(["ssh-keyscan", "-T", "5", host], timeout=8.0)
     record["sshKeyscan"] = keyscan
@@ -722,7 +792,7 @@ def collect_pi_identity(
     record["sshFingerprints"] = keygen
     observed = parse_fingerprint_lines(keygen.get("stdout", []))
     record["observedFingerprints"] = observed
-    expected = EXPECTED_PI["sshFingerprints"] if uses_expected_pi_profile(host) else {}
+    expected = EXPECTED_PI["sshFingerprints"] if use_expected_profile else {}
     record["fingerprintCheck"] = {
         "ok": bool(expected) and observed == expected,
         "expected": expected,
@@ -777,7 +847,12 @@ def collect_pi_identity(
                 pass
 
     record["sshIdentity"] = ssh
-    record["identityChecks"] = check_pi_identity(ssh.get("stdout", []), host, coordinator_port)
+    record["identityChecks"] = check_pi_identity(
+        ssh.get("stdout", []),
+        host,
+        coordinator_port,
+        allow_discovered_host=allow_discovered_host,
+    )
     record["coordinatorEsp32Identity"] = parse_remote_coordinator_identity(
         ssh.get("stdout", []),
         coordinator_port,
@@ -824,14 +899,19 @@ if command -v lsusb >/dev/null 2>&1; then lsusb; else echo "lsusb missing"; fi
 ls -l /dev/ttyUSB* 2>/dev/null || true
 if [ "$SKIP_COORDINATOR" = "0" ]; then
   if [ -e "$COORDINATOR_PORT" ]; then
-    if command -v esptool >/dev/null 2>&1; then ESPTOOL="esptool";
-    elif command -v esptool.py >/dev/null 2>&1; then ESPTOOL="esptool.py";
-    elif python3 -c 'import esptool' >/dev/null 2>&1; then ESPTOOL="python3 -m esptool";
+    REMOTE_ESPNOW_ESPTOOL={shlex.quote(REMOTE_ESPNOW_ESPTOOL)}
+    ESPTOOL_STUB_ARGS=""
+    if [ -x "$REMOTE_ESPNOW_ESPTOOL" ]; then ESPTOOL="$REMOTE_ESPNOW_ESPTOOL";
+    elif command -v esptool >/dev/null 2>&1; then ESPTOOL="esptool"; ESPTOOL_STUB_ARGS="--no-stub";
+    elif command -v esptool.py >/dev/null 2>&1; then ESPTOOL="esptool.py"; ESPTOOL_STUB_ARGS="--no-stub";
+    elif python3 -c 'import esptool' >/dev/null 2>&1; then ESPTOOL="python3 -m esptool"; ESPTOOL_STUB_ARGS="--no-stub";
     else ESPTOOL=""; fi
-    for CMD in chip_id read_mac flash_id; do
+    echo "__coordinator_esptool__"
+    printf '%s stub_args=%s\\n' "${{ESPTOOL:-missing}}" "${{ESPTOOL_STUB_ARGS:-none}}"
+    for CMD in chip-id read-mac flash-id; do
       echo "__coordinator_${{CMD}}__"
       if [ -n "$ESPTOOL" ]; then
-        $ESPTOOL --no-stub --port "$COORDINATOR_PORT" "$CMD" 2>&1
+        $ESPTOOL $ESPTOOL_STUB_ARGS --port "$COORDINATOR_PORT" "$CMD" 2>&1
         RC=$?
       else
         echo "esptool not found"
@@ -865,8 +945,16 @@ def section_value(lines: list[str], section: str) -> list[str]:
     return lines[start:end]
 
 
-def check_pi_identity(lines: list[str], host: str, coordinator_port: str) -> dict[str, Any]:
-    expected = EXPECTED_PI if uses_expected_pi_profile(host) else {}
+def check_pi_identity(
+    lines: list[str],
+    host: str,
+    coordinator_port: str,
+    *,
+    allow_discovered_host: bool = False,
+) -> dict[str, Any]:
+    expected = (
+        EXPECTED_PI if uses_expected_pi_profile(host) or allow_discovered_host else {}
+    )
     hostnamectl = "\n".join(section_value(lines, "hostnamectl"))
     model = " ".join(section_value(lines, "model")).strip()
     serial = " ".join(section_value(lines, "serial")).strip()
@@ -1099,6 +1187,16 @@ def validate_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
             verified_facts.append(
                 "Read-only esptool identity matched the accepted peer role MACs on current Windows COM ports."
             )
+            current_role_ports = peer_port_policy.get("currentAcceptedRolePorts", {})
+            if current_role_ports:
+                verified_facts.append(
+                    "Current accepted peer role port map is "
+                    + ", ".join(
+                        f"{role}={port}"
+                        for role, port in sorted(current_role_ports.items())
+                    )
+                    + "."
+                )
     elif len(peer_macs) == len(expected_ports) and not malformed_peer:
         verified_facts.append(
             "Read-only esptool identity passed for "
@@ -1234,10 +1332,14 @@ def summarize_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
     """Return a compact, non-secret gate summary for operator review."""
 
     peer_summary = {}
+    peer_warnings: dict[str, list[dict[str, str]]] = {}
     for port, identity in sorted(
         record.get("peerEsp32Identities", {}).get("ports", {}).items()
     ):
         parsed = identity.get("parsedIdentity", {})
+        warnings = parsed.get("esptoolWarnings", [])
+        if warnings:
+            peer_warnings[port] = warnings
         peer_summary[port] = {
             "ok": bool(identity.get("ok")),
             "mac": parsed.get("mac"),
@@ -1245,6 +1347,7 @@ def summarize_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
             "flashSize": parsed.get("flashSize"),
             "wslPort": identity.get("wslPort"),
             "tool": " ".join(identity.get("tool", {}).get("argv", [])) or None,
+            "esptoolWarnings": warnings,
         }
 
     coordinator_identity = (
@@ -1252,6 +1355,7 @@ def summarize_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
         .get("coordinatorEsp32Identity", {})
     )
     coordinator_parsed = coordinator_identity.get("parsedIdentity", {})
+    coordinator_warnings = coordinator_parsed.get("esptoolWarnings", [])
     coordinator_error = coordinator_identity.get("error")
     if remote_coordinator_tool_missing(coordinator_identity):
         coordinator_error = "Pi esptool command is not available"
@@ -1306,6 +1410,11 @@ def summarize_preflight_record(record: dict[str, Any]) -> dict[str, Any]:
             "chip": coordinator_parsed.get("chip"),
             "flashSize": coordinator_parsed.get("flashSize"),
             "error": coordinator_error,
+            "esptoolWarnings": coordinator_warnings,
+        },
+        "esptoolWarnings": {
+            "peers": peer_warnings,
+            "coordinator": coordinator_warnings,
         },
         "verifiedFacts": record.get("verifiedFacts", []),
         "failures": record.get("failures", []),
@@ -1345,6 +1454,7 @@ def build_record(args: argparse.Namespace) -> dict[str, Any]:
     out_path = validate_output_path(args.out)
     output_dir = out_path.parent if out_path else None
     ports = [normalize_windows_port(port) for port in args.windows_ports]
+    current_role_ports = current_peer_role_ports(ports)
     record: dict[str, Any] = {
         "ok": False,
         "generatedAt": utc_now(),
@@ -1360,6 +1470,7 @@ def build_record(args: argparse.Namespace) -> dict[str, Any]:
             "acceptedPeerRoleMacs": (
                 ACCEPTED_PEER_ROLE_MACS if args.allow_peer_port_remap else {}
             ),
+            "currentAcceptedRolePorts": current_role_ports or {},
         },
         "coordinatorPort": args.coordinator_port,
         "readOnlyBoundary": {
@@ -1376,6 +1487,7 @@ def build_record(args: argparse.Namespace) -> dict[str, Any]:
             "Default peer IDs are assigned by Windows port order only after the full gate passes: COM4=peer01, COM5=peer02, COM6=peer03.",
             "When --allow-peer-port-remap is used, peer IDs are assigned only by the accepted role MAC set after fresh read-only identity passes.",
             "The Pi target is accepted only when fresh host-key and identity checks match.",
+            "When --allow-discovered-pi-host is used, the IP address is not trusted by itself; host-key fingerprints and Pi identity must still match.",
         ],
         "unknowns": [
             "Physical USB-only/no-load/no-relay/TFT/MicroSD/XBee wiring state is not proven by this script.",
@@ -1408,6 +1520,7 @@ def build_record(args: argparse.Namespace) -> dict[str, Any]:
             stamp,
             args.coordinator_port,
             args.skip_coordinator,
+            args.allow_discovered_pi_host,
         )
     )
     if args.skip_peers:
@@ -1442,13 +1555,22 @@ def parse_args() -> argparse.Namespace:
             "matches the accepted peer role MACs."
         ),
     )
+    parser.add_argument(
+        "--current-peer-remap",
+        action="store_true",
+        help=(
+            "Use the current accepted peer remap COM6 COM10 COM12 and require "
+            "accepted peer role MAC matching."
+        ),
+    )
     parser.add_argument("--pi-user", default=DEFAULT_PI_USER)
     parser.add_argument(
         "--pi-host",
         default=DEFAULT_PI_HOST,
         help=(
             "Pi SSH access host. Accepted live-gate hosts are direct "
-            "172.16.0.2 and forwarded 192.168.137.93."
+            "172.16.0.2 plus forwarded 192.168.137.93/192.168.137.105; "
+            "use --allow-discovered-pi-host for a fresh LAN DHCP address."
         ),
     )
     parser.add_argument("--coordinator-port", default=DEFAULT_COORDINATOR_PORT)
@@ -1468,6 +1590,14 @@ def parse_args() -> argparse.Namespace:
         help="Diagnostic only: skip Pi /dev/ttyUSB0 esptool identity checks.",
     )
     parser.add_argument(
+        "--allow-discovered-pi-host",
+        action="store_true",
+        help=(
+            "Allow --pi-host to be a freshly discovered LAN address only if "
+            "SSH fingerprints and Pi identity match the expected gate."
+        ),
+    )
+    parser.add_argument(
         "--out",
         type=Path,
         help="Optional JSON output path under research/bench-records/live-bench/.",
@@ -1483,11 +1613,14 @@ def parse_args() -> argparse.Namespace:
         help="Print a concise gate summary instead of the full evidence JSON.",
     )
     args = parser.parse_args()
+    if args.current_peer_remap:
+        args.windows_ports = CURRENT_ACCEPTED_WINDOWS_PORTS
+        args.allow_peer_port_remap = True
     args.windows_ports = [normalize_windows_port(port) for port in args.windows_ports]
     if args.windows_ports != DEFAULT_WINDOWS_PORTS and not args.allow_peer_port_remap:
         raise SystemExit(
             "this gate currently requires exactly COM4 COM5 COM6 unless "
-            "--allow-peer-port-remap is set"
+            "--allow-peer-port-remap or --current-peer-remap is set"
         )
     if args.allow_peer_port_remap and len(args.windows_ports) != len(
         ACCEPTED_PEER_ROLE_MACS

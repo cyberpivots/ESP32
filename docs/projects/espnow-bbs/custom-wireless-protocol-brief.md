@@ -21,12 +21,15 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
   flash/verify evidence, three `espnow-enc` peers over `serial-nullmodem`,
   moving RX/TX/ACK counters, Win31 runtime evidence, and cleanup. Source ID:
   `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23`.
-- [repo-verified] The latest local 2026-05-24 forwarded preflight artifact
-  reports `ok: true`, while the direct 2026-05-24 preflight artifact reports
-  failures; this brief does not reprove current same-session live state. Source
-  paths:
-  `research/bench-records/live-bench/espnow-bbs-live-preflight-forwarded-20260524T042420Z.json`,
-  `research/bench-records/live-bench/espnow-bbs-live-preflight-20260524T042330Z.json`.
+- [repo-verified] The current LAN/current-remap source record reports a
+  post-cleanup read-only preflight `ok:true` for Pi `192.168.200.153`,
+  coordinator `/dev/ttyUSB0`, and peers `COM6`/`COM10`/`COM12`; it does not
+  prove a fresh BBS runtime run. Source ID:
+  `SRC-LOCAL-ESPNOW-LAN-DHCP-CURRENT-REMAP-2026-05-25`.
+- [live-verified] The 2026-05-25 structured Gate H rerun captured
+  `bridge-transcript.jsonl`, passed the DOS-C vision gate, passed the ESP32
+  completion gate, and cleaned up stale runtime state. Source ID:
+  `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25`.
 - [official-source-verified] ESP-NOW is a connectionless Wi-Fi protocol that
   carries application data in vendor-specific action frames. Source ID:
   `SRC-ESP-IDF-ESPNOW`.
@@ -67,9 +70,11 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
   Win31/OPCON UI state was captured for this brief. Required evidence:
   `scripts/live_bench_preflight.py` output plus bridge transcript and Win31
   proof in the same session as any live acceptance claim.
-- [unknown] No security provisioning, key rotation, custody-retention, or
-  analytics-export policy is accepted. Required evidence: source-backed ADR and
-  test plan.
+- [unknown] No security provisioning, key rotation, or custody-retention policy
+  is accepted beyond the current BBS spool and Gate G export policy. Gate G
+  local-admin redacted JSON export is accepted by `ADR-0005`, but Win31 export
+  controls, firmware export ABI, and live bridge export request types remain
+  unresolved. Required evidence: source-backed ADR and test plan.
 
 ## 3. Streaming vs Packetized Decision Matrix
 
@@ -80,7 +85,7 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 | File transfer | [inference] Model files as cataloged chunks with checksums, resume state, and custody ACKs. | [repo-verified] The existing envelope and bridge spool sources already separate bounded radio payloads from stream UI. |
 | Interval telemetry | [inference] Model telemetry as compact reports with class, cadence, priority, and link-status metadata. | [official-source-verified] Ag sensor and asset-tracking classes are source-backed, but local schemas are not accepted. |
 | Node/client status | [inference] Keep node health/status as packetized radio telemetry summarized through the bridge UI. | [repo-verified] Existing status fields and peer counters already support operations visibility. |
-| Analytics/reporting | [inference] Generate reports from Pi bridge/spool records before firmware-resident analytics. | [assumption] The Pi bridge remains the durability and admin boundary for v1. |
+| Analytics/reporting | [inference] Generate reports from Pi bridge/spool records before firmware-resident analytics. | [repo-verified] `ADR-0005` accepts only local-admin redacted JSON export from the DOS-C/Pi bridge spool for v1. |
 | Mesh/BLE/PCAP/router/admin/relay | [assumption] Keep out of scope for this protocol brief. | [repo-verified] Live-gate docs keep those lanes closed unless a later explicit gate opens them. |
 
 ## 4. Proposed Protocol Model
@@ -177,17 +182,17 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
   through compact bridge responses that fit the Win31 line budget.
 - [assumption] Client/user reporting and analytics are generated from bridge
   records first, not from ESP32 firmware state.
-- [repo-verified] Gate G adds simulator-only analytics report generation for
+- [repo-verified] Gate G simulator analytics remain fixture coverage for
   counters, custody rollups, file rollups, telemetry rollups, and fixture-only
   client/user summary fields.
 - [repo-verified] `ADR-0005` is accepted as the Gate G live analytics export
   policy. It allows only local-admin redacted JSON export using
   `gate-g.analytics.v1` and `adr-0005-redacted-local-operator-v1`, with 7-day
   stale-export cleanup.
-- [repo-verified] Gate G live export remains closed to Win31/OPCON controls,
-  firmware ABI/runtime export behavior, and bridge request types. The first
-  live surface is the DOS-C/Pi local-admin export from a file-backed bridge
-  spool into ignored proof/runtime roots.
+- [repo-verified] Gate G live export is open only as the DOS-C/Pi local-admin
+  export from a file-backed bridge spool into ignored proof/runtime roots. It
+  remains closed to Win31/OPCON controls, firmware ABI/runtime export behavior,
+  and bridge request types.
 
 ## 9. Test and Acceptance Plan
 
@@ -205,9 +210,10 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 - [repo-verified] Gate H live acceptance is recorded separately in
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-H-LIVE-ACCEPTANCE-2026-05-25`
   for the accepted serial-nullmodem path after fresh preflight and cleanup
-  proof. Future deterministic screenshot/completion gate reruns should use the
-  structured `bridge-transcript.jsonl` evidence shape from
-  `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-TRANSCRIPT-2026-05-25`.
+  proof. The later structured Gate H live acceptance is recorded in
+  `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25` and should be
+  treated as the stronger current proof because it uses
+  `bridge-transcript.jsonl`.
 
 ## 10. Risks / Non-Goals
 
@@ -244,22 +250,14 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 
 ## 12. Next-Step Implementation Plan With Explicit Gates
 
-- [assumption] Gate A is complete when this documentation brief, source ledger,
-  source-index rows, known-gap entries, task log, handoff, and docs-index links
-  are committed or otherwise accepted.
-- [assumption] Gate B is simulator-only protocol proof: add fixtures and tests
-  for message, file, telemetry, node status, custody ACK, and reporting classes
-  without touching live hardware.
-- [assumption] Gate C is bridge/operator integration against simulated or
-  non-executing backends; keep physical coordinator state-changing serial
-  commands closed.
-- [assumption] Gate D is firmware implementation only after accepted protocol
-  ADR or equivalent owner review; keep v1 payload budgeting and build-only
-  validation separate from live acceptance.
-- [assumption] Gate E is live proof only after explicit authorization, fresh
-  same-session identity, backups, manifest review, write/verify evidence when
-  applicable, bridge transcript, Win31/OPCON evidence, and cleanup proof.
+- [repo-verified] Gate B simulator protocol proof, Gate C bridge-adapter proof,
+  Gate D DOS-C fixture pairing, Gate E draft bridge ABI, Gate G simulator
+  analytics, Gate G local-admin redacted export, Gate H structured transcript,
+  and Gate H structured live acceptance are all recorded in source-index IDs.
+- [design-only] Gate F firmware ABI remains unresolved until ESP32 owners add a
+  source-backed ADR or source ledger for packet/job enums, queues, persistence,
+  scheduler, migration, and runtime proof.
 - [blocked-until-evidence] Ag telemetry payloads, GPS pivot positioning, GPS
-  asset tracking, analytics export, selected sensors, power/voltage/isolation
-  notes, and retention policy remain unresolved until source-backed profiles and
-  ADRs exist.
+  asset tracking, analytics surfaces beyond ADR-0005 local-admin export,
+  selected sensors, power/voltage/isolation notes, and retention policies
+  remain unresolved until source-backed profiles and ADRs exist.

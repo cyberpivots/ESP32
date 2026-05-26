@@ -6,7 +6,7 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 
 This project lane supports the DOS-C off-grid BBS architecture:
 
-`Windows 3.1 dashboard -> DOSBox-X/NETTSR -> Raspberry Pi bridge -> USB serial -> ESP32 coordinator -> ESP-NOW clients`
+`Windows 3.1 dashboard -> DOSBox-X nullmodem -> Raspberry Pi bridge -> USB serial -> ESP32 coordinator -> ESP-NOW clients`
 
 The ESP32 firmware responsibility is limited to the coordinator and client
 radio/device behavior. Durable BBS storage, sysop UI, and firmware management
@@ -29,17 +29,17 @@ remain outside the ESP32 firmware image.
   coordinator backup, the coordinator was flashed and Win3.1 OPCON showed
   peer `peer01`, link `espnow-enc`, peer count `1`, and moving RX/TX/ACK
   counters over the accepted Pi bridge path.
-- DOS-C source now contains the next multi-peer dashboard slice: original
-  Win31 retro splash, Message Board search/pull/post/ack controls, bounded
-  peer/message row parsing, coordinator serial `peer_list`, three encrypted
-  coordinator peer slots, and ignored timestamped live config generation for
-  `peer01` through `peer03`. This is source-level implementation only until
-  fresh COM4/COM5/COM6 identity, backups, builds, flashes, and live radio proof
-  pass.
-- ESP32 tooling now provides the three-peer live gate: read-only preflight for
-  `COM4`, `COM5`, `COM6`, Pi `172.16.0.2`, and coordinator `/dev/ttyUSB0`,
-  plus prepare/flash manifest tooling that records backups, build hashes, and
-  recovery commands before any explicit write-confirmed flash.
+- DOS-C source contains the multi-peer dashboard slice: original Win31 retro
+  splash, Message Board search/pull/post/ack controls, bounded peer/message row
+  parsing, coordinator serial `peer_list`, three encrypted coordinator peer
+  slots, ignored live config generation for `peer01` through `peer03`,
+  `bridge-transcript.jsonl` proof output, and local-admin Gate G redacted JSON
+  export under accepted `ADR-0005`.
+- ESP32 tooling provides the three-peer live gate and completion gate:
+  read-only preflight, prepare/flash manifest tooling, `complete` transcript
+  and vision-gate auditing, structured JSONL transcript support, peer remap
+  support, and current LAN-DHCP preflight support. Prepare/flash remain gated
+  by fresh identity, backups, manifest review, write confirmation, and cleanup.
 - A fresh read-only preflight on 2026-05-23 found exactly three Windows CP210x
   ESP32 peers on `COM4`, `COM5`, and `COM6`, all ESP32-D0WDQ6 with 4 MB flash
   and distinct MACs. Direct Pi access at `172.16.0.2` failed from the current
@@ -62,6 +62,23 @@ remain outside the ESP32 firmware image.
   from `126/126/126` to `129/129/129`, Win31 runtime captures, Program Manager
   helper proof, and final cleanup.
   Source ID: `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23`.
+- A later 2026-05-25 Gate H structured live rerun captured
+  `bridge-transcript.jsonl` on the accepted serial-nullmodem path. The JSONL
+  transcript included startup telemetry, a pre-action telemetry refresh,
+  `msg_post`, `msg_pull`, `msg_search`, `msg_ack`, `download_queue`,
+  `otap_intent`, and a final telemetry refresh; DOS-C vision gate and ESP32
+  completion gate both reported `status: pass`. Source ID:
+  `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25`.
+- `ADR-0005` opens Gate G only as a local-admin redacted JSON export from the
+  DOS-C/Pi bridge spool. Win31 export controls, firmware export ABI, and live
+  bridge export request types remain closed. Source ID:
+  `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25`.
+- A 2026-05-25 America/Denver LAN DHCP/current-remap pass, with UTC evidence
+  filenames on 2026-05-26, validated a read-only current mapping:
+  `peer01=COM6`, `peer02=COM10`, `peer03=COM12`, and coordinator `/dev/ttyUSB0`
+  MAC `78:e3:6d:10:4d:6c`. It did not run bridge, Win31/OPCON, BBS, prepare,
+  flash, erase, monitor, or radio proof. Source ID:
+  `SRC-LOCAL-ESPNOW-LAN-DHCP-CURRENT-REMAP-2026-05-25`.
 - ADR-0004 proposes ESP-WIFI-MESH as a future self-healing branch and BLE GATT
   as the Android client-node interface model, but no firmware migration is
   accepted. The paired DOS-C bridge/operator source now has simulator-only
@@ -99,11 +116,14 @@ remain outside the ESP32 firmware image.
    failed SLIRP packet-driver callback lane for OPCON.
 2. Keep ESP-IDF v6.0.1 toolchain evidence current.
 3. Preserve the accepted coordinator USB serial `hello`/`state`/`diag` proof.
-4. Add chunked message delivery and custody telemetry.
-5. Add provisioning and firmware inventory flows.
+4. Add chunked message delivery and custody telemetry only through simulator
+   and owner-reviewed ABI gates first.
+5. Add provisioning and firmware inventory flows only after source-backed
+   security and operator policy review.
 6. Preserve the accepted three-peer live gate evidence and require a fresh
    same-session gate for any rerun or new hardware mix.
 7. Keep ESP-WIFI-MESH/BLE GATT work design-only until ADR-0004 is accepted and
    fresh mesh, BLE, coexistence, backup, recovery, and cleanup evidence exists.
-8. Keep chunked delivery, provisioning UX, mobile/BLE client-node work, and
-   physical wiring beyond USB-only as separate future evidence records.
+8. Keep firmware ABI, Win31 export controls, bridge export request types,
+   chunked live delivery, provisioning UX, mobile/BLE client-node work, PCAP,
+   and physical wiring beyond USB-only as separate future evidence records.

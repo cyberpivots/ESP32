@@ -22,7 +22,7 @@ DEFAULT_DOSC_ROOT = Path("/mnt/h/dos-c")
 DEFAULT_LIVE_ROOT = DEFAULT_DOSC_ROOT / "secrets" / "espnow-bbs"
 DEFAULT_COORDINATOR_PORT = "/dev/ttyUSB0"
 REMOTE_ESPNOW_ESPTOOL = (
-    "/home/dospi/dos-c/artifacts/runtime/esptool-venv-espnow-encrypted/bin/esptool.py"
+    "/home/dospi/dos-c/artifacts/runtime/esptool-venv-espnow-encrypted/bin/esptool"
 )
 FLASH_ORDER = ["coordinator", "peer01", "peer02", "peer03"]
 FORBIDDEN_FLASH_ARGS = {
@@ -354,7 +354,7 @@ def backup_remote_coordinator(
     remote_path = f"/tmp/espnow-bbs-{stamp}-coordinator-full-flash.bin"
     remote_script = (
         "set -eu; "
-        + remote_esptool_invocation(device["port"], "read_flash", ["0", "ALL", remote_path])
+        + remote_esptool_invocation(device["port"], "read-flash", ["0", "ALL", remote_path])
         + "; "
         f"sha256sum {shlex.quote(remote_path)}"
     )

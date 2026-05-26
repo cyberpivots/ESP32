@@ -258,6 +258,8 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 - [accepted-design-contract] Gate F firmware ABI now has accepted `ADR-0006`,
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26`,
   and `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`,
+  with host-only full packet golden vectors in
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-GOLDEN-VECTORS-2026-05-26`,
   but remains unresolved for runtime packet/job queues, persistence, scheduler,
   migration, recovery, and live proof.
 - [blocked-until-evidence] Ag telemetry payloads, GPS pivot positioning, GPS

@@ -75,10 +75,12 @@ remain outside the ESP32 firmware image.
   `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25`.
 - `ADR-0006` is accepted for Gate F firmware ABI design contract only. It
   mirrors the simulator packet budget, service codes, custody codes, frame
-  budgets, and non-executing `control_intent` semantics, but does not authorize
-  firmware runtime behavior or live proof work. Source IDs:
+  budgets, host-only packet golden vectors, and non-executing `control_intent`
+  semantics, but does not authorize firmware runtime behavior or live proof
+  work. Source IDs:
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26`,
-  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`.
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`,
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-GOLDEN-VECTORS-2026-05-26`.
 - A 2026-05-25 America/Denver LAN DHCP/current-remap pass, with UTC evidence
   filenames on 2026-05-26, validated a read-only current mapping:
   `peer01=COM6`, `peer02=COM10`, `peer03=COM12`, and coordinator `/dev/ttyUSB0`

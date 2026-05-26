@@ -178,6 +178,95 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertEqual(encoded[32:], packet.body)
         self.assertEqual(decode_packet(encoded), packet)
 
+    def test_gate_f_golden_packet_vectors(self) -> None:
+        vectors = {
+            "direct_message": (
+                WirelessPacket(
+                    service="direct_message",
+                    seq=0x01020304,
+                    source="coord01",
+                    destination="peer01",
+                    message_id=0x11121314,
+                    body=b"dm",
+                    custody="queued",
+                ),
+                "0101000401020304111213140001636f6f726430310070656572303100000201646d",
+            ),
+            "file_chunk": (
+                WirelessPacket(
+                    service="file_chunk",
+                    seq=0x02030405,
+                    source="coord01",
+                    destination="peer02",
+                    message_id=0x21222324,
+                    body=b"file",
+                    fragment_index=3,
+                    fragment_count=5,
+                    ttl=5,
+                    custody="queued",
+                    flags=2,
+                ),
+                "0102020502030405212223240305636f6f72643031007065657230320000040166696c65",
+            ),
+            "telemetry_report": (
+                WirelessPacket(
+                    service="telemetry_report",
+                    seq=0x03040506,
+                    source="soil01",
+                    destination="coord01",
+                    message_id=0x31323334,
+                    body=b'{"v":1}',
+                    custody="delivered",
+                ),
+                "0103000403040506313233340001736f696c30310000636f6f726430310007037b2276223a317d",
+            ),
+            "node_status": (
+                WirelessPacket(
+                    service="node_status",
+                    seq=0x04050607,
+                    source="peer01",
+                    destination="coord01",
+                    message_id=0x41424344,
+                    body=b"stat",
+                    ttl=3,
+                    custody="delivered",
+                    flags=1,
+                ),
+                "01040103040506074142434400017065657230310000636f6f7264303100040373746174",
+            ),
+            "custody_ack": (
+                WirelessPacket(
+                    service="custody_ack",
+                    seq=0x05060708,
+                    source="peer01",
+                    destination="coord01",
+                    message_id=0x51525354,
+                    body=b"ack",
+                    ttl=2,
+                    custody="acked",
+                    flags=0x80,
+                ),
+                "01058002050607085152535400017065657230310000636f6f7264303100030461636b",
+            ),
+            "control_intent": (
+                WirelessPacket(
+                    service="control_intent",
+                    seq=0x06070809,
+                    source="coord01",
+                    destination="peer03",
+                    message_id=0x61626364,
+                    body=b"intent",
+                ),
+                "0106000406070809616263640001636f6f726430310070656572303300000600696e74656e74",
+            ),
+        }
+
+        for name, (packet, expected_hex) in vectors.items():
+            with self.subTest(name=name):
+                encoded = encode_packet(packet)
+                self.assertEqual(encoded.hex(), expected_hex)
+                self.assertEqual(decode_packet(bytes.fromhex(expected_hex)), packet)
+
     def test_radio_packet_encode_decode_and_bounds(self) -> None:
         packet = WirelessPacket(
             service="direct_message",

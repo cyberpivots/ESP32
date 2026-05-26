@@ -44,6 +44,11 @@ from espnow_bbs_custom_protocol import (  # noqa: E402
     process_bridge_request,
     reassemble_fragments,
 )
+from espnow_bbs_runtime import (  # noqa: E402
+    PacketJob,
+    RuntimeConfig,
+    RuntimeScheduler,
+)
 
 
 class CustomWirelessProtocolTests(unittest.TestCase):
@@ -669,6 +674,262 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertEqual(report["export_boundary"]["privacy_policy"], ANALYTICS_POLICY)
         self.assertEqual(report["export_boundary"]["win31_control"], "absent")
         self.assertEqual(report["export_boundary"]["firmware_request"], "absent")
+
+    def test_phase_6_runtime_defaults_are_host_only_design_values(self) -> None:
+        config = RuntimeConfig()
+
+        self.assertEqual(config.outbound_radio_jobs, 32)
+        self.assertEqual(config.inbound_packets, 32)
+        self.assertEqual(config.custody_ack_events, 16)
+        self.assertEqual(config.telemetry_reports, 8)
+        self.assertEqual(config.node_status_reports, 8)
+        self.assertEqual(config.control_intent_records, 8)
+        self.assertEqual(config.duplicate_window, 64)
+        self.assertEqual(config.max_attempts, 3)
+        self.assertEqual(config.tick_ms, 250)
+        self.assertEqual(config.retry_delay_ticks, 2)
+        self.assertEqual(config.job_expiry_ticks, 20)
+
+    def test_phase_6_runtime_rejects_33rd_outbound_packet_job(self) -> None:
+        runtime = RuntimeScheduler()
+
+        for index in range(32):
+            response = runtime.submit_bridge_frame(
+                {
+                    "v": BRIDGE_PROTOCOL_VERSION,
+                    "type": "msg_post",
+                    "from": "sysop",
+                    "to": "peer01",
+                    "body": f"slot-{index}",
+                }
+            )
+            self.assertTrue(response["accepted"])
+
+        rejected = runtime.submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "msg_post",
+                "from": "sysop",
+                "to": "peer01",
+                "body": "overflow",
+            }
+        )
+        self.assertFalse(rejected["accepted"])
+        self.assertEqual(rejected["reason"], "backpressure_queue_full")
+        self.assertEqual(rejected["queue"], "outbound_radio_jobs")
+        self.assertEqual(rejected["needed"], 1)
+        self.assertEqual(rejected["available"], 0)
+        self.assertEqual(runtime.snapshot()["counters"]["backpressure"], 1)
+
+    def test_phase_6_runtime_file_fragment_limits_and_atomic_admission(self) -> None:
+        runtime = RuntimeScheduler()
+        sixteen_fragment_body = "x" * (RADIO_MAX_BODY_BYTES * RADIO_MAX_FRAGMENT_COUNT)
+        accepted = runtime.submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "download_queue",
+                "id": 201,
+                "peer": "peer01",
+                "content": sixteen_fragment_body,
+            }
+        )
+        self.assertTrue(accepted["accepted"])
+        self.assertEqual(accepted["fragments"], RADIO_MAX_FRAGMENT_COUNT)
+
+        too_large = RuntimeScheduler().submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "download_queue",
+                "id": 202,
+                "peer": "peer01",
+                "content": "x" * (RADIO_MAX_BODY_BYTES * (RADIO_MAX_FRAGMENT_COUNT + 1)),
+            }
+        )
+        self.assertFalse(too_large["accepted"])
+        self.assertEqual(too_large["reason"], "fragment_count_invalid")
+
+        small_runtime = RuntimeScheduler(config=RuntimeConfig(outbound_radio_jobs=15))
+        atomic_reject = small_runtime.submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "download_queue",
+                "id": 203,
+                "peer": "peer01",
+                "content": sixteen_fragment_body,
+            }
+        )
+        self.assertFalse(atomic_reject["accepted"])
+        self.assertEqual(atomic_reject["reason"], "backpressure_queue_full")
+        self.assertNotIn(203, small_runtime.simulator.custody)
+        self.assertNotIn(203, small_runtime.simulator.file_requests)
+        self.assertEqual(small_runtime.snapshot()["queues"]["outbound_radio_jobs"], 0)
+
+    def test_phase_6_runtime_dispatches_custody_ack_before_file_chunks(self) -> None:
+        runtime = RuntimeScheduler()
+        queued = runtime.submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "download_queue",
+                "id": 301,
+                "peer": "peer01",
+                "content": "x" * (RADIO_MAX_BODY_BYTES * 2),
+            }
+        )
+        self.assertTrue(queued["accepted"])
+        ack = make_custody_ack(999, "acked", "peer01", "coord01", 71)
+        runtime.enqueue_packet_job(PacketJob(packet=ack))
+
+        dispatched = runtime.dispatch_one()
+        self.assertIsNotNone(dispatched)
+        self.assertEqual(dispatched.service, "custody_ack")
+
+    def test_phase_6_runtime_retry_limit_becomes_terminal_failure(self) -> None:
+        runtime = RuntimeScheduler()
+        queued = runtime.submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "msg_post",
+                "from": "sysop",
+                "to": "peer01",
+                "body": "retry me",
+            }
+        )
+        message_id = queued["id"]
+
+        first = runtime.dispatch_one()
+        self.assertEqual(first.message_id, message_id)
+        self.assertEqual(runtime.simulator.custody[message_id].attempts, 1)
+        self.assertEqual(runtime.simulator.custody[message_id].status, "sent")
+
+        runtime.tick(runtime.config.retry_delay_ticks)
+        runtime.dispatch_one()
+        self.assertEqual(runtime.simulator.custody[message_id].attempts, 2)
+
+        runtime.tick(runtime.config.retry_delay_ticks)
+        runtime.dispatch_one()
+        self.assertEqual(runtime.simulator.custody[message_id].attempts, 3)
+
+        runtime.tick(runtime.config.retry_delay_ticks)
+        self.assertIsNotNone(runtime.dispatch_one())
+        record = runtime.simulator.custody[message_id]
+        self.assertEqual(record.status, "failed")
+        self.assertFalse(record.should_retry(max_attempts=runtime.config.max_attempts))
+        self.assertEqual(runtime.snapshot()["counters"]["failed"], 1)
+        self.assertEqual(runtime.snapshot()["queues"]["outbound_radio_jobs"], 0)
+
+    def test_phase_6_runtime_expiry_beats_retry_and_is_terminal(self) -> None:
+        runtime = RuntimeScheduler(config=RuntimeConfig(retry_delay_ticks=30))
+        queued = runtime.submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "msg_post",
+                "from": "sysop",
+                "to": "peer01",
+                "body": "expire me",
+            }
+        )
+        message_id = queued["id"]
+        runtime.dispatch_one()
+
+        runtime.tick(runtime.config.job_expiry_ticks)
+        record = runtime.simulator.custody[message_id]
+        self.assertEqual(record.status, "expired")
+        self.assertFalse(record.should_retry(max_attempts=runtime.config.max_attempts))
+        self.assertEqual(runtime.snapshot()["counters"]["expired"], 1)
+
+    def test_phase_6_runtime_duplicate_inbound_packet_is_counted_and_dropped(self) -> None:
+        runtime = RuntimeScheduler()
+        packet = WirelessPacket(
+            service="direct_message",
+            seq=1,
+            source="peer01",
+            destination="coord01",
+            message_id=701,
+            body=b"hello",
+            custody="delivered",
+        )
+
+        accepted = runtime.apply_inbound_packet(packet)
+        duplicate = runtime.apply_inbound_packet(packet)
+        snapshot = runtime.snapshot()
+
+        self.assertTrue(accepted["accepted"])
+        self.assertFalse(duplicate["accepted"])
+        self.assertEqual(duplicate["reason"], "duplicate_packet")
+        self.assertEqual(snapshot["queues"]["inbound_packets"], 1)
+        self.assertEqual(snapshot["counters"]["duplicates"], 1)
+        self.assertEqual(snapshot["counters"]["dropped"], 1)
+
+    def test_phase_6_runtime_control_intent_is_record_only(self) -> None:
+        runtime = RuntimeScheduler()
+        control = runtime.submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "control_intent",
+                "peer": "peer01",
+                "action": "relay_set",
+            }
+        )
+        blocked = runtime.submit_bridge_frame(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "relay_set", "peer": "peer01"}
+        )
+        snapshot = runtime.snapshot()
+
+        self.assertTrue(control["accepted"])
+        self.assertFalse(control["executed"])
+        self.assertEqual(control["reason"], "control_intent_non_executing")
+        self.assertFalse(blocked["accepted"])
+        self.assertEqual(blocked["reason"], "state_changing_command_blocked")
+        self.assertEqual(snapshot["queues"]["control_intent_records"], 1)
+        self.assertEqual(snapshot["queues"]["outbound_radio_jobs"], 0)
+        self.assertEqual(snapshot["counters"]["control_intents"], 1)
+
+    def test_phase_6_runtime_bridge_line_rejections_remain_bounded(self) -> None:
+        runtime = RuntimeScheduler()
+        non_ascii = runtime.submit_bridge_line(
+            b'{"v":1,"type":"msg_post","from":"sysop","to":"peer01","body":"bad-\xff"}\n'
+        )
+        bad_json = runtime.submit_bridge_line(b'{"v":1,"type":')
+        too_long = runtime.submit_bridge_line(b"{" + (b'"x":' + b'"a"' * 260) + b"}")
+
+        self.assertFalse(non_ascii["accepted"])
+        self.assertEqual(non_ascii["reason"], "non_ascii")
+        self.assertFalse(bad_json["accepted"])
+        self.assertEqual(bad_json["reason"], "json_invalid")
+        self.assertFalse(too_long["accepted"])
+        self.assertEqual(too_long["reason"], "line_too_long")
+
+    def test_phase_6_runtime_snapshot_and_report_expose_required_counters(self) -> None:
+        runtime = RuntimeScheduler()
+        runtime.submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "msg_post",
+                "from": "sysop",
+                "to": "peer01",
+                "body": "counter proof",
+            }
+        )
+        runtime.dispatch_one()
+        snapshot = runtime.snapshot()
+        report = runtime.protocol_report()
+
+        for counter in (
+            "queued",
+            "sent",
+            "delivered",
+            "acked",
+            "failed",
+            "expired",
+            "dropped",
+            "backpressure",
+            "retries",
+            "duplicates",
+        ):
+            self.assertIn(counter, snapshot["counters"])
+            self.assertIn(counter, report["runtime"]["counters"])
+        self.assertIn("outbound_radio_jobs", snapshot["queues"])
+        self.assertIn("runtime", report)
 
 
 if __name__ == "__main__":

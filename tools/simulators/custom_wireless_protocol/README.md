@@ -1,7 +1,8 @@
 # Custom Wireless Protocol Simulator
 
 This directory contains simulator-only helpers for the ESP-NOW BBS custom
-wireless protocol Gate B, Gate C, and the Gate E draft bridge ABI candidate.
+wireless protocol Gate B, Gate C, the Gate E draft bridge ABI candidate, and
+the Phase 5/6 host-only runtime design prototype.
 
 ## Boundaries
 
@@ -36,6 +37,10 @@ The simulator covers:
 - Simulator-only Gate G analytics report generation for retained counters,
   custody rollups, file rollups, telemetry rollups, and fixture-only
   client/user summaries.
+- Host-only Phase 6 runtime scheduling through `espnow_bbs_runtime.py`:
+  balanced queue defaults, atomic backpressure, custody ACK priority, retry
+  limit, expiry, duplicate handling, volatile reset, and bridge-visible runtime
+  counters.
 
 The draft ABI is recorded in
 `docs/projects/espnow-bbs/bridge-abi-draft.md`. It is not final firmware ABI

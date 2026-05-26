@@ -81,6 +81,13 @@ remain outside the ESP32 firmware image.
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26`,
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`,
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-GOLDEN-VECTORS-2026-05-26`.
+- `ADR-0008` accepts Phase 5/6 runtime design review as host-only simulator
+  work: balanced queue defaults, atomic backpressure, deterministic scheduler
+  order, retry/expiry handling, duplicate handling, visible counters, and
+  non-executing `control_intent`. It does not authorize coordinator/peer
+  firmware runtime migration, persistence, flash, serial writes, or live proof.
+  Source ID:
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-PHASE-5-6-RUNTIME-DESIGN-REVIEW-2026-05-26`.
 - A 2026-05-25 America/Denver LAN DHCP/current-remap pass, with UTC evidence
   filenames on 2026-05-26, validated a read-only current mapping:
   `peer01=COM6`, `peer02=COM10`, `peer03=COM12`, and coordinator `/dev/ttyUSB0`

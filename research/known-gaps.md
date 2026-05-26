@@ -99,7 +99,12 @@
   Gate F runtime requirements are accepted only as requirements planning in
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-RUNTIME-REQUIREMENTS-2026-05-26`;
   this sets volatile-only queue/custody/scheduler requirements for a future
-  implementation but does not approve runtime code or firmware persistence.
+  implementation but does not approve firmware runtime code or firmware
+  persistence. Phase 5/6 runtime design is accepted only as host simulator work
+  in
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-PHASE-5-6-RUNTIME-DESIGN-REVIEW-2026-05-26`;
+  its balanced queue/retry/expiry defaults are not measured firmware memory
+  budgets.
   Do not treat Gate E bridge ABI fixtures, Gate G export policy, Gate H live
   acceptance, the Gate F design contract, or the Gate F runtime requirements as
   firmware runtime implementation approval.

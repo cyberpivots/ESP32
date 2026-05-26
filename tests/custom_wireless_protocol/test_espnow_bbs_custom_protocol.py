@@ -27,6 +27,7 @@ from espnow_bbs_custom_protocol import (  # noqa: E402
     RADIO_MAX_PAYLOAD_BYTES,
     RADIO_PROTOCOL_VERSION,
     SERVICE_CODES,
+    CustodyRecord,
     DuplicateWindow,
     ProtocolError,
     ProtocolSimulator,
@@ -349,6 +350,79 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         simulator.apply_ack(ack)
         self.assertEqual(simulator.custody[packet.message_id].status, "acked")
         self.assertFalse(simulator.custody[packet.message_id].should_retry())
+
+    def test_gate_f_runtime_requirements_pin_custody_retry_and_terminal_states(self) -> None:
+        simulator = ProtocolSimulator()
+        packet = simulator.queue_direct_message("peer01", "sysop", "runtime custody")[0]
+        record = simulator.custody[packet.message_id]
+
+        self.assertEqual(record.status, "queued")
+        self.assertTrue(record.should_retry(max_attempts=3))
+
+        simulator.mark_sent(packet)
+        self.assertEqual(record.status, "sent")
+        self.assertEqual(record.attempts, 1)
+        self.assertTrue(record.should_retry(max_attempts=3))
+
+        record.mark_ack("delivered")
+        self.assertFalse(record.should_retry(max_attempts=3))
+
+        for terminal_status in ("acked", "expired"):
+            terminal = CustodyRecord(
+                message_id=packet.message_id + len(terminal_status),
+                service="direct_message",
+                destination="peer01",
+            )
+            terminal.mark_ack(terminal_status)
+            self.assertEqual(terminal.status, terminal_status)
+            self.assertFalse(terminal.should_retry(max_attempts=3))
+
+        retry_limited = CustodyRecord(
+            message_id=packet.message_id + 99,
+            service="direct_message",
+            destination="peer01",
+        )
+        for attempt in range(1, 4):
+            retry_limited.mark_sent()
+            retry_limited.mark_ack("failed", "timeout")
+            self.assertEqual(retry_limited.attempts, attempt)
+            self.assertEqual(retry_limited.status, "failed")
+            self.assertEqual(
+                retry_limited.should_retry(max_attempts=3),
+                attempt < 3,
+            )
+
+    def test_gate_f_runtime_requirements_pin_fragment_failure_and_control_boundary(self) -> None:
+        body = b"runtime-fragments" * 24
+        packets = fragment_body(
+            service="file_chunk",
+            source="coord01",
+            destination="peer01",
+            message_id=123,
+            seq=44,
+            body=body,
+            custody="queued",
+        )
+        partial = [packets[0], packets[-1]]
+
+        self.assertGreater(len(packets), 2)
+        self.assertEqual(missing_fragment_indexes(partial), list(range(1, len(packets) - 1)))
+        with self.assertRaisesRegex(ProtocolError, "fragment_missing"):
+            reassemble_fragments(partial)
+
+        simulator = ProtocolSimulator()
+        control = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "control_intent",
+                "peer": "peer01",
+                "action": "relay_set",
+            },
+            simulator,
+        )
+        self.assertTrue(control["accepted"])
+        self.assertFalse(control["executed"])
+        self.assertEqual(control["reason"], "control_intent_non_executing")
 
     def test_direct_message_is_packetized_not_streamed(self) -> None:
         simulator = ProtocolSimulator()

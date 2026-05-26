@@ -260,8 +260,10 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
   and `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`,
   with host-only full packet golden vectors in
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-GOLDEN-VECTORS-2026-05-26`,
-  but remains unresolved for runtime packet/job queues, persistence, scheduler,
-  migration, recovery, and live proof.
+  and requirements-only runtime planning in
+  `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-RUNTIME-REQUIREMENTS-2026-05-26`,
+  but remains unresolved for implemented runtime packet/job queues, firmware
+  persistence, scheduler code, migration, recovery, and live proof.
 - [blocked-until-evidence] Ag telemetry payloads, GPS pivot positioning, GPS
   asset tracking, analytics surfaces beyond ADR-0005 local-admin export,
   selected sensors, power/voltage/isolation notes, and retention policies

@@ -15,6 +15,6 @@
 | TFT/MicroSD/expander/storage | Design-only | Create exact module/card/bus/pin records before wiring, driver selection, or firmware dependencies. |
 | BLE, Web Bluetooth, Web Serial, PCAP, mesh | Closed | Keep behind separate live gates with current identity, rollback, source-backed config, proof packet, and cleanup evidence. |
 | Agricultural telemetry profiles | Design-only | Select source-backed hardware profiles before schemas, wiring, or live telemetry proof. |
-| Remote LCD XBee solar client | Private-submodule-scaffolded-design-only | Seven private docs-only hardware submodules exist; collect exact hardware identity and source records before wiring, battery/solar charging, XBee writes, pin assignments, framework selection, firmware implementation, or live bench action. |
+| Remote LCD XBee solar client | Private-submodule-scaffolded-design-only | Treat as a separate hardware-device stream; start source-backed identity intake in the private `rlxsc-*` submodules, prioritizing power/safety evidence before board/interface bench action. |
 | Heltec WiFi LoRa 32(V2) | Partial | Confirm physical revision and pin map. |
 | Prompt/model routing | Seeded | Convert governance docs into tooling when needed. |

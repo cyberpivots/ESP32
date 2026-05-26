@@ -12,6 +12,7 @@ instructions, or ESP32 pin assignments.
 
 ## Package map
 
+- [Separate hardware development stream](development-stream.md)
 - [Submodule map](submodule-map.md)
 - [Architecture](architecture.md)
 - [Hardware intake](hardware-intake.md)
@@ -34,6 +35,7 @@ instructions, or ESP32 pin assignments.
 - [Solar charger/power-path profile](../../../hardware-profiles/power/solar-charger-power-path/README.md)
 - [Existing XBee profile](../../../hardware-profiles/xbee/xbp9b-dput-001/README.md)
 - [Source ledger](../../../knowledge-base/source-ledger/2026-05-26-remote-lcd-xbee-solar-client.md)
+- [Separate hardware stream source ledger](../../../knowledge-base/source-ledger/2026-05-26-remote-lcd-xbee-solar-client-separate-hardware-stream.md)
 
 ## Verified facts
 
@@ -44,6 +46,10 @@ instructions, or ESP32 pin assignments.
 - Seven private hardware Git submodules now exist under `submodules/hardware/`,
   each seeded with docs-only content on `main`. Source ID:
   `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-PRIVATE-SUBMODULES-2026-05-26`.
+- This lane is now recorded as a separate hardware-device development stream
+  from ESP-NOW BBS, Win31/DOS-C, Gate F runtime, Gate G export, Gate H proof,
+  mesh, BLE, network, relay, TFT, MicroSD, load, and mains work. Source ID:
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-SEPARATE-HARDWARE-STREAM-2026-05-26`.
 - Digi identifies `XBP9B-DPUT-001` as an XBee-PRO 900HP S3B
   Point2Multipoint, 900 MHz, 250 mW, U.FL, 10 kbps model. Source ID:
   `SRC-DIGI-XBP9B-DPUT-001`.

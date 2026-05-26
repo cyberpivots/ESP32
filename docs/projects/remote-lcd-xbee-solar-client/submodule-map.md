@@ -30,6 +30,19 @@
 | `submodules/hardware/rlxsc-bms-protection` | `cyberpivots/rlxsc-bms-protection` | Hardware plus QA | Exact board schematic/source, thresholds, FET path, current rating, and connector labels |
 | `submodules/hardware/rlxsc-solar-charger-power-path` | `cyberpivots/rlxsc-solar-charger-power-path` | Hardware plus QA | Exact panel, charger, thermistor policy, current limit, load sharing, fuse/protection, and enclosure review |
 
+## Development order
+
+1. Complete source-backed hardware identity intake in each private submodule.
+2. Prioritize power and safety review in `rlxsc-18650-cell`,
+   `rlxsc-bms-protection`, and
+   `rlxsc-solar-charger-power-path`.
+3. Then review board and interface risks in `rlxsc-esp32-client-node`,
+   `rlxsc-lcd-20x4-i2c`, `rlxsc-rotary-encoder`, and
+   `rlxsc-xbee-pro-s3b`.
+4. Write parent hardware ADRs only after submodule evidence exists.
+5. Keep any early behavior prototype host-only and outside hardware evidence
+   submodules.
+
 ## Unknowns
 
 - Whether the LCD and fuel-gauge paths share an I2C bus, use separate buses, or

@@ -25,6 +25,7 @@ document ranks UI hypotheses and before/after acceptance evidence only.
 - `SRC-MICROSOFT-WIN32-UI-PRINCIPLES-2026-05-24`
 - `SRC-MICROSOFT-MENU-GUIDELINES-2026-05-24`
 - `SRC-NNG-HEURISTICS-SUMMARY-2026-05-24`
+- `SRC-LOCAL-WIN31-DASHBOARD-1024X600-2026-05-26`
 
 ## Verified Facts
 
@@ -36,6 +37,80 @@ document ranks UI hypotheses and before/after acceptance evidence only.
 - Screenshots analyzed: 17; target views mapped: 10/10.
 - Total OCR words: 2964; lowest OCR confidence: 48.21; median OCR confidence: 50.63.
 - Lowest estimated layout safe margin: bottom 0 px; right 9 px.
+
+## 2026-05-26 Visual Design Continuation
+
+Verified facts:
+
+- DOS-C source was updated at
+  `/mnt/h/dos-c/software/win31-operator/src/operator.c`.
+- The operator client target is now 640x360, with a two-row navigation strip
+  using `HOME`, `BBS BOARD`, `DOWNLOADS`, `NETWORK`, `PEERS`, `DEVICES`,
+  `OTAP`, `SETTINGS`, `WIZARD`, `DIAGNOSTICS`, and `SAFETY`.
+- Action captions are now `PULL MSG`, `POST`, `SEARCH`, `ACK`, `CATALOG`,
+  `QUEUE`, and `OTAP INTENT`, backed by the existing request handlers.
+- Relay, Flash, Serial, and PCAP footer controls remain disabled; Safety and
+  Diagnostics now name the external live gates that own those actions.
+- The latest copied structured Gate H packet at
+  `/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-25-gate-h-structured-live/gate-h-structured-live-20260525T155900Z/`
+  still passes the DOS-C vision gate: `status: pass`, `failures: []`.
+- Advisory analysis of that same copied packet reports 14 screenshots, mapped
+  target views `7/10`, lowest OCR confidence `51.42`, median OCR confidence
+  `54.99`, no `console_fit_risk`, no `log_region_overflow`, lowest layout
+  bottom margin `120 px`, and lowest layout right margin `384 px`.
+
+Assumptions:
+
+- The fixed Win3.1 viewfinder remains the accepted operator surface for this
+  lane until a later accepted gate changes the client direction.
+- OCR/CV remains advisory and secondary to bridge transcript behavior.
+
+Unknowns:
+
+- No fresh revised-UI screenshot packet exists yet, so the 2026-05-26 source
+  change has not proven OCR confidence >= 60 or removed navigation-label gaps.
+- The latest structured Gate H copied packet lacks Settings, Wizard, and
+  Devices screenshots, so it cannot satisfy the advisory `10/10` mapped-view
+  target by itself.
+
+## 2026-05-26 1024x600 Layout Refactor
+
+Verified facts:
+
+- The proof screen being targeted is 1024x600.
+- DOS-C source was updated again at
+  `/mnt/h/dos-c/software/win31-operator/src/operator.c`.
+- The operator client target is now 1000x500. It is intentionally smaller than
+  a full 1024x600 client because `AdjustWindowRect` adds Win3.1 frame and menu
+  chrome around the requested client.
+- The two-row navigation labels remain `HOME`, `BBS BOARD`, `DOWNLOADS`,
+  `NETWORK`, `PEERS`, `DEVICES`, `OTAP`, `SETTINGS`, `WIZARD`, `DIAGNOSTICS`,
+  and `SAFETY`.
+- The status strip, navigation strip, carousel controls, list/detail panes,
+  action row, disabled footer, and console log were widened and reflowed for the
+  1024 px proof-screen width.
+- Relay, Flash, Serial, and PCAP controls remain disabled; Safety and
+  Diagnostics still assign hardware mutation to external live gates.
+- Source-level validation passed after the refactor. The latest copied
+  structured Gate H packet still passes the DOS-C vision gate.
+- Advisory analysis of that copied packet still reports mapped target views
+  `7/10`, lowest OCR confidence `51.42`, median OCR confidence `54.99`, no
+  `console_fit_risk`, no `log_region_overflow`, lowest layout bottom margin
+  `120 px`, and lowest layout right margin `384 px`.
+
+Assumptions:
+
+- A 1000x500 client is the safer screen-oriented target for a top-left Win3.1
+  window on a 1024x600 capture because it leaves room for window chrome and
+  bottom quiet space.
+- OCR/CV remains advisory and secondary to bridge transcript behavior.
+
+Unknowns:
+
+- No fresh copied screenshot packet exists yet for the 1000x500 layout; the
+  copied-evidence metrics above are from the previous 640 px source capture.
+- The revised layout has not yet proven mean OCR confidence >= 60, eliminated
+  navigation-label gaps, or mapped all 10 target views in copied evidence.
 
 ## Assumptions
 

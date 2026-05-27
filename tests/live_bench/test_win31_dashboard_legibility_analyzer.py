@@ -82,6 +82,25 @@ def write_win31_layout_screen(path: Path, *, clipped: bool) -> None:
     image.save(path)
 
 
+def write_win31_gray_gap_screen(path: Path) -> None:
+    image = Image.new("RGB", (640, 360), (200, 200, 200))
+    draw = ImageDraw.Draw(image)
+    line_font = font(14)
+    draw.rectangle((0, 0, 639, 14), fill=(0, 0, 170))
+    draw.text((220, 0), "RETRO-CBBS-NOW Dashboard", fill=(255, 255, 255), font=line_font)
+    draw.rectangle((0, 15, 639, 29), fill=(255, 255, 255))
+    draw.text((8, 15), "Session Views BBS Transfers Devices Style Help", fill=(0, 0, 0), font=line_font)
+    draw.rectangle((8, 40, 631, 58), outline=(128, 128, 128))
+    draw.text((18, 42), "HOME BBS FILES NET PEERS DEV", fill=(0, 0, 0), font=line_font)
+    draw.rectangle((8, 80, 252, 190), fill=(255, 255, 255), outline=(0, 0, 0))
+    draw.rectangle((260, 80, 610, 190), fill=(255, 255, 255), outline=(0, 0, 0))
+    draw.text((20, 92), "HOME 1/3", fill=(0, 0, 0), font=line_font)
+    draw.text((272, 92), "Coordinator Telemetry", fill=(0, 0, 0), font=line_font)
+    draw.rectangle((8, 245, 631, 318), fill=(255, 255, 255), outline=(0, 0, 0))
+    draw.text((14, 250), "rx msg_page client-01", fill=(0, 0, 0), font=line_font)
+    image.save(path)
+
+
 def write_large_inset_capture_screen(path: Path) -> None:
     image = Image.new("RGB", (1920, 1080), (0, 0, 0))
     draw = ImageDraw.Draw(image)
@@ -211,6 +230,26 @@ class Win31DashboardLegibilityAnalyzerTests(unittest.TestCase):
         self.assertGreaterEqual(margins["bottom"], analyzer.SAFE_BOTTOM_MARGIN_PX)  # type: ignore[index]
         self.assertNotIn("console_fit_risk", risk_codes(screen))
         self.assertNotIn("log_region_overflow", risk_codes(screen))
+
+    def test_win31_gray_footer_gap_is_not_desktop_bleed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "03-home-dashboard.png"
+            write_win31_gray_gap_screen(path)
+            result = analyze(
+                root,
+                [
+                    vision_record(
+                        path,
+                        "HOME BBS FILES NET PEERS DEV HOME Coordinator Telemetry",
+                        82.0,
+                        96,
+                    )
+                ],
+            )
+        layout = only_screen(result)["layout"]  # type: ignore[index]
+        desktop_start_y = layout["desktopStartY"]  # type: ignore[index]
+        self.assertTrue(desktop_start_y is None or desktop_start_y > 300)
 
     def test_large_capture_reports_coordinate_stack_and_size_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

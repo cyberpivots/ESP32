@@ -374,7 +374,7 @@ def estimate_desktop_start_y(arr: Any) -> int | None:
             start = index
         if (not present or index == height - 1) and start is not None:
             end = index - 1 if not present else index
-            if end - start + 1 >= min_run:
+            if end - start + 1 >= min_run and end == height - 1:
                 return int(start)
             start = None
     return None

@@ -3,7 +3,7 @@
 - ID: 0069-win31-opcon-dual-style
 - Date: 2026-05-27
 - Contract: `AGENTS.md`
-- Status: implemented; live visual packet deferred
+- Status: implemented; live visual packet captured
 
 ## Goal
 
@@ -26,9 +26,20 @@ path:
   `ac5d898cf4275548b80e61caddfa3681358f99c90506cdbd600930a14c557620`.
 - Rebuilt ignored DOS-C `OPCONPC.EXE` SHA-256:
   `f6c8ae9f227914db53a2c3f91bd861cdbfae5cd9506aebac437e324bffcf5d85`.
-- No ESP32 firmware, live-gate script, analyzer source, bridge protocol,
-  transport client, PCAP, relay/XBee, BLE, mesh, serial-write, or router/admin
-  code was changed in this pass.
+- Live visual packet copied from the Pi:
+  `/mnt/h/dos-c/artifacts/pi4-poe/integration/2026-05-27-win31-opcon-dual-style/live-dual-style-20260527T040008Z/`.
+- The packet contains 14 screenshots at `1024x600`: 11 Windows 3.1 default
+  views plus ANSI Terminal Settings, Home, and Safety.
+- The bridge ran on the accepted physical serial read-only path with
+  `/dev/ttyUSB0`, `--allow-physical-serial`, and `--read-only`.
+- Cleanup proof reports no DOSBox-X process, no quit-warning modal, no bridge
+  process, and no listeners on `31331`, `31332`, or `8080`.
+- `scripts/win31_dashboard_legibility_analyzer.py` now avoids treating an
+  interior Windows 3.1 gray footer gap as desktop bleed-through; tests cover
+  that fixture.
+- No ESP32 firmware, live-gate script, bridge protocol, transport client, PCAP,
+  relay/XBee, BLE, mesh, serial-write, or router/admin code was changed in
+  this pass.
 
 ## Sources
 
@@ -45,8 +56,6 @@ path:
 
 ## Unknowns
 
-- Fresh 1024x600 screenshots for the Windows 3.1 default style have not yet
-  been captured.
 - Human physical-panel confirmation remains pending.
 
 ## Validation
@@ -55,6 +64,10 @@ path:
 - PASS: `/mnt/h/dos-c` `bash software/win31-operator/build-watcom.sh`
 - PASS: `/mnt/h/dos-c` `python3 tests/test_win31_dashboard_vision_gate.py`
 - PASS: `python3 tests/live_bench/test_win31_dashboard_legibility_analyzer.py`
+- PASS: ESP32 visual-only analyzer on the copied live packet reported
+  `visual_only_pass`, mapped target views `10/10`, lowest layout margins
+  bottom `29 px` and right `15 px`, no `console_fit_risk`, no
+  `log_region_overflow`, and no `proof_capture_size_mismatch`.
 
 ## Handoff
 

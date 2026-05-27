@@ -73,6 +73,15 @@ monitor, serial-write expansion, or Gate G export action is opened.
 - The exact installed LCD identity is not independently proven by EDID in this
   record; SunFounder is a user-stated display class plus candidate product
   source.
-- The adaptive source change has not yet been captured in a fresh Win31/DOSBox-X
-  proof packet.
+- A fresh 2026-05-26 Win31/DOSBox-X proof packet first captured the active Pi
+  display path at `1024x600` with a 640x480 visible surface, then the follow-up
+  fixed it with X11 fullscreen config and compact 640-logical-pixel OPCON
+  layout positions.
 - Human usability remains unmeasured.
+
+## Fullscreen Recovery Follow-Up
+
+The current fullscreen recovery status is `fixed-live-open`. Final proof
+`final-live-20260527T014831Z` captured `1024x600`, bbox `(0,1)-(1023,599)`,
+zero right/bottom margin, and the fixed dashboard was left open for human
+panel confirmation.

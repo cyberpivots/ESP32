@@ -28,6 +28,10 @@ bridge, operator, firmware, or live-proof truth.
 - The 2026-05-25 LAN DHCP/current-remap pass ended with a read-only preflight
   `ok:true` for the current Pi/coordinator/peer identities, but it did not run
   bridge, Win31/OPCON, BBS, flash, erase, monitor, or radio proof.
+- The 2026-05-26 Win31 fullscreen recovery fixed the active Pi display path:
+  DOSBox-X now uses X11 fullscreen at `1024x600`, OPCON was rebuilt with a
+  compact 640-logical-pixel layout, and final live proof shows zero
+  right/bottom margin.
 
 ## Assumptions
 
@@ -49,6 +53,8 @@ bridge, operator, firmware, or live-proof truth.
   no-MicroSD state was captured by this documentation review.
 - No current live proof opens BLE, ESP-WIFI-MESH, PCAP, relay, XBee, TFT,
   MicroSD, load, mains, erase, monitor, or serial-write expansion.
+- The fullscreen fix did not require Windows 3.1 display-driver/runtime
+  mutation.
 
 ## Status Ledger
 
@@ -67,6 +73,7 @@ bridge, operator, firmware, or live-proof truth.
 | Gate G simulator analytics | superseded | simulator tests | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-G-ANALYTICS-2026-05-25`, `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25` | Simulator analytics remain useful for test coverage, but policy fields are superseded by accepted ADR-0005 and live export implementation. | Simulator reports are not live export authority. | Treat as fixture coverage only. |
 | Gate G local-admin redacted JSON export | accepted-live | policy plus local-admin live proof | `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-POLICY-2026-05-25`, `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25` | Accepted `ADR-0005`, file-backed spool export, redacted `analytics-report.v1.json`, approved ignored roots, existing-destination refusal, raw identifier/body omission, and stale cleanup proof. | No Win31 export UI, firmware export ABI, or live bridge export request type. | Keep export CLI local-admin only until separate owner gates open additional surfaces. |
 | Win31 dashboard CV/OCR gate | implemented-validated | corroboration tooling and fixture tests | `SRC-LOCAL-WIN31-DASHBOARD-ML-LIVE-GATE-2026-05-23`, `SRC-LOCAL-WIN31-DASHBOARD-LEGIBILITY-RESEARCH-2026-05-24` | DOS-C vision gate can corroborate required views and passed the structured Gate H packet. | Screenshots remain secondary to transcript and cleanup evidence. | Use OCR/CV only after transcript proof is present. |
+| Win31 dashboard fullscreen recovery | fixed-live-open | live display proof plus tracked DOS-C fix | `SRC-LOCAL-WIN31-DASHBOARD-FULLSCREEN-RECOVERY-2026-05-26`, `SRC-WIN31-WIN-COM-SWITCHES-2026-05-26`, `SRC-SUNFOUNDER-7INCH-HDMI-1024X600-2026-05-26`, `SRC-DOSBOX-X-REFERENCE-CONFIG-2026-05-26` | Pi identity, SSH fingerprints, `wlr-randr`, DRM, and `grim` proved the display/capture path at `1024x600`; initial copied config-only tests failed; the accepted fix uses DOSBox-X X11 fullscreen at `1024x600` plus a compact OPCON layout for the 640x480 Win31 logical surface; final live capture bbox was `(0,1)-(1023,599)` with zero right/bottom margin and the screen was left open. | Human physical-panel acceptance remains pending. | Keep current bridge/DOSBox-X PIDs open until the user confirms or asks for cleanup. |
 | DOS-C bridge/operator default path | accepted-live | paired live proof and source implementation | `SRC-LOCAL-DOSC-ESPNOW-BBS-BRIDGE-2026-05-20`, `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23`, `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25` | COM1/nullmodem/Pi bridge path is accepted for BBS status, message, download, and non-executing OTAP intent proof. | Runtime export controls and firmware ABI runtime behavior remain closed. | Continue DOS-C work through companion KB records and host tests before ESP32 claims depend on it. |
 | DOSBox-X PCAP/packet-driver path | blocked | historical diagnostic only | `SRC-DOSBOX-SERIAL-CONFIG`, `SRC-LOCAL-DOSC-ESPNOW-BBS-BRIDGE-2026-05-20` | No accepted PCAP proof. Serial-nullmodem is the accepted path. | Pi identity, wired `eth0`, capability setup/restore, redacted packet capture, and rollback proof. | Reopen only by explicit PCAP live-gate request. |
 | ESP-WIFI-MESH self-healing branch | design-only | source-backed design | `SRC-LOCAL-ESPNOW-NETWORK-LIVE-GATE-2026-05-23`, `SRC-ESP-IDF-WIFI-MESH`, `SRC-ESP-IDF-RF-COEXIST` | Optional metadata and Network view are simulator/source-level only. | No mesh route-table, parent, root, healing, coexistence, flash, or cleanup proof. | Accepted ADR plus fresh identity, backups, build hashes, mesh config, route/healing proof, rollback. |

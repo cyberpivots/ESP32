@@ -118,6 +118,41 @@ class CoordinatorEsptoolSelectionTests(unittest.TestCase):
         self.assertIn(f"SDKCONFIG={ROOT / 'sdkconfigs' / 'peer02.sdkconfig'}", command)
         self.assertEqual(command[-1], "build")
 
+    def test_live_config_generator_argv_enables_companion_http(self) -> None:
+        argv = espnow_bbs_live_gate.live_config_generator_argv(
+            ROOT,
+            ROOT / "live",
+            {
+                "coordinator": {"mac": "aa:bb:cc:dd:ee:01"},
+                "peer01": {"mac": "aa:bb:cc:dd:ee:02"},
+                "peer02": {"mac": "aa:bb:cc:dd:ee:03"},
+                "peer03": {"mac": "aa:bb:cc:dd:ee:04"},
+            },
+            6,
+            True,
+        )
+        self.assertIn("--enable-companion-http", argv)
+
+    def test_companion_metadata_redacts_passphrase(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            credentials = root / espnow_bbs_live_gate.COMPANION_CREDENTIALS_NAME
+            write_json(
+                credentials,
+                {
+                    "ssid": "DOSC-BBS-TEST",
+                    "passphrase": "not-for-manifest",
+                    "channel": 6,
+                    "dummyOutputEnabled": False,
+                },
+            )
+            metadata = espnow_bbs_live_gate.load_companion_http_metadata(root, True)
+        self.assertTrue(metadata["enabled"])
+        self.assertEqual(metadata["ssid"], "DOSC-BBS-TEST")
+        self.assertEqual(metadata["passphrase"], espnow_bbs_live_gate.REDACTED_SECRET)
+        self.assertNotIn("not-for-manifest", json.dumps(metadata))
+        self.assertFalse(metadata["dummyOutputEnabled"])
+
 
 def sha256(path: Path) -> str:
     return espnow_bbs_live_gate.sha256_file(path)
@@ -168,6 +203,38 @@ def completion_audit_jsonl_transcript() -> list[dict[str, object]]:
     return records
 
 
+def companion_proof_payload() -> dict[str, object]:
+    return {
+        "schema": "esp32.bbs_companion_softap_windows_proof.v1",
+        "controlNetwork": {"ok": True, "wiredAdapterUp": True},
+        "physicalOutputClaim": False,
+        "requests": {
+            "state": {
+                "response": {
+                    "status": "ok",
+                    "runtime": {"volatile": True, "persistence": False},
+                    "safety_locked": True,
+                    "dummy_output": {"enabled": False, "active": False},
+                }
+            },
+            "allOff": {
+                "response": {
+                    "status": "ok",
+                    "dummy_output": {"enabled": False, "active": False},
+                }
+            },
+            "dummyOutput": {
+                "response": {
+                    "status": "error",
+                    "reason": "dummy_output_disabled",
+                    "dummy_output": {"enabled": False, "active": False},
+                }
+            },
+        },
+        "cleanup": {"temporaryProfileDeleted": True, "disconnected": True},
+    }
+
+
 class CompletionGateTests(unittest.TestCase):
     def write_completion_fixture(
         self,
@@ -175,6 +242,8 @@ class CompletionGateTests(unittest.TestCase):
         *,
         vision_ok: bool = True,
         transcript_payload: list[dict[str, object]] | None = None,
+        companion_enabled: bool = False,
+        include_companion_proof: bool = True,
     ) -> SimpleNamespace:
         backups: dict[str, object] = {}
         builds: dict[str, object] = {}
@@ -203,18 +272,25 @@ class CompletionGateTests(unittest.TestCase):
             devices[role] = {"role": role}
 
         manifest_path = root / "manifest.json"
-        write_json(
-            manifest_path,
-            {
-                "devices": devices,
-                "backups": backups,
-                "builds": builds,
-                "flashGate": {
-                    "requiresConfirmWriteFlash": True,
-                    "flashOrder": espnow_bbs_live_gate.FLASH_ORDER,
-                },
+        manifest_payload = {
+            "devices": devices,
+            "backups": backups,
+            "builds": builds,
+            "flashGate": {
+                "requiresConfirmWriteFlash": True,
+                "flashOrder": espnow_bbs_live_gate.FLASH_ORDER,
             },
-        )
+        }
+        if companion_enabled:
+            manifest_payload["companionHttp"] = {
+                "enabled": True,
+                "ssid": "DOSC-BBS-TEST",
+                "passphrase": espnow_bbs_live_gate.REDACTED_SECRET,
+                "dummyOutputEnabled": False,
+                "requiresProof": True,
+            }
+            manifest_payload["flashGate"]["requiresCompanionProof"] = True
+        write_json(manifest_path, manifest_payload)
         flash_path = root / "flash-evidence.json"
         write_json(
             flash_path,
@@ -269,12 +345,18 @@ class CompletionGateTests(unittest.TestCase):
                 "cleanup": {"ok": True},
             },
         )
+        companion_proof = None
+        if companion_enabled and include_companion_proof:
+            companion_proof = root / "companion-proof.json"
+            write_json(companion_proof, companion_proof_payload())
+
         return SimpleNamespace(
             manifest=manifest_path,
             flash_evidence=flash_path,
             bridge_transcript=transcript_path,
             cleanup_proof=cleanup_path,
             vision_gate=vision_path,
+            companion_proof=companion_proof,
             out=root / "completion.json",
         )
 
@@ -315,6 +397,41 @@ class CompletionGateTests(unittest.TestCase):
         self.assertEqual(status, 2)
         self.assertFalse(payload["ok"])
         self.assertIn("vision_gate_not_pass", payload["failures"])
+
+    def test_complete_gate_requires_companion_proof_when_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = self.write_completion_fixture(
+                Path(tmp),
+                companion_enabled=True,
+                include_companion_proof=False,
+            )
+            status = espnow_bbs_live_gate.command_complete(fixture)
+            payload = json.loads(fixture.out.read_text(encoding="utf-8"))
+        self.assertEqual(status, 2)
+        self.assertFalse(payload["ok"])
+        self.assertIn("companion_proof_required", payload["failures"])
+
+    def test_complete_gate_passes_with_companion_proof_when_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = self.write_completion_fixture(Path(tmp), companion_enabled=True)
+            status = espnow_bbs_live_gate.command_complete(fixture)
+            payload = json.loads(fixture.out.read_text(encoding="utf-8"))
+        self.assertEqual(status, 0)
+        self.assertTrue(payload["ok"], payload.get("failures"))
+        self.assertTrue(payload["companionProof"]["required"])
+        self.assertEqual(payload["companionManifest"]["failures"], [])
+
+    def test_windows_companion_proof_script_has_cleanup_and_no_physical_claim(self) -> None:
+        source = (ROOT / "scripts" / "companion_softap_windows_proof.ps1").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("finally", source)
+        self.assertIn("netsh @deleteArgs", source)
+        self.assertIn('passphrase = "<redacted>"', source)
+        self.assertIn("physicalOutputClaim = $false", source)
+        self.assertIn("/api/state", source)
+        self.assertIn("/api/all-off", source)
+        self.assertIn("/api/dummy-output/1", source)
 
 
 if __name__ == "__main__":

@@ -56,6 +56,8 @@ COMPLETE_CLEANUP_CATEGORIES = {
     "bridge": ("espnow_bbs_bridge.py", "bridge process"),
     "listeners": ("31331", "31332", "8080", "listener"),
 }
+COMPANION_CREDENTIALS_NAME = "companion-softap-credentials.json"
+REDACTED_SECRET = "<redacted>"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import live_bench_preflight as preflight  # noqa: E402
@@ -390,12 +392,13 @@ def backup_remote_coordinator(
     }
 
 
-def run_live_config_generator(
+def live_config_generator_argv(
     dosc_root: Path,
     live_dir: Path,
     devices: dict[str, Any],
     channel: int,
-) -> dict[str, Any]:
+    enable_companion_http: bool,
+) -> list[str]:
     generator = dosc_root / "scripts" / "generate_espnow_bbs_live_config.py"
     argv = [
         "python3",
@@ -413,6 +416,57 @@ def run_live_config_generator(
         "--out-dir",
         str(live_dir),
     ]
+    if enable_companion_http:
+        argv.append("--enable-companion-http")
+    return argv
+
+
+def load_companion_http_metadata(live_dir: Path, enabled: bool) -> dict[str, Any]:
+    metadata: dict[str, Any] = {
+        "enabled": enabled,
+        "dummyOutputEnabled": False,
+        "requiresProof": enabled,
+    }
+    if not enabled:
+        return metadata
+
+    credentials_path = live_dir / COMPANION_CREDENTIALS_NAME
+    if not credentials_path.exists():
+        raise SystemExit(f"missing companion SoftAP credentials: {credentials_path}")
+    credentials = json_load(credentials_path)
+    ssid = credentials.get("ssid")
+    passphrase = credentials.get("passphrase")
+    if not isinstance(ssid, str) or not ssid:
+        raise SystemExit("companion SoftAP credentials missing SSID")
+    if not isinstance(passphrase, str) or len(passphrase) < 8:
+        raise SystemExit("companion SoftAP credentials missing WPA2 passphrase")
+    if credentials.get("dummyOutputEnabled") is not False:
+        raise SystemExit("companion Gate 1 requires dummy output disabled")
+    metadata.update(
+        {
+            "ssid": ssid,
+            "passphrase": REDACTED_SECRET,
+            "credentialsPath": str(credentials_path),
+            "channel": credentials.get("channel"),
+        }
+    )
+    return metadata
+
+
+def run_live_config_generator(
+    dosc_root: Path,
+    live_dir: Path,
+    devices: dict[str, Any],
+    channel: int,
+    enable_companion_http: bool,
+) -> dict[str, Any]:
+    argv = live_config_generator_argv(
+        dosc_root,
+        live_dir,
+        devices,
+        channel,
+        enable_companion_http,
+    )
     result = run_command(argv, cwd=dosc_root, timeout=30.0)
     require_success(result, "live config generation")
     return result
@@ -707,7 +761,14 @@ def command_prepare(args: argparse.Namespace) -> int:
     if live_dir.exists() and any(live_dir.iterdir()):
         raise SystemExit(f"refusing to reuse non-empty live dir: {live_dir}")
 
-    config_result = run_live_config_generator(args.dosc_root, live_dir, devices, args.channel)
+    config_result = run_live_config_generator(
+        args.dosc_root,
+        live_dir,
+        devices,
+        args.channel,
+        args.enable_companion_http,
+    )
+    companion_http = load_companion_http_metadata(live_dir, args.enable_companion_http)
     live_dir.mkdir(parents=True, exist_ok=True)
     backup_dir = live_dir / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
@@ -732,6 +793,7 @@ def command_prepare(args: argparse.Namespace) -> int:
         "preflightSha256": sha256_file(preflight_path),
         "preflightGeneratedAt": preflight_record.get("generatedAt"),
         "devices": devices,
+        "companionHttp": companion_http,
         "knownHosts": str(known_hosts),
         "configGeneration": config_result,
         "backups": backups,
@@ -743,6 +805,7 @@ def command_prepare(args: argparse.Namespace) -> int:
             "requiresConfirmWriteFlash": True,
             "forbiddenArgs": sorted(FORBIDDEN_FLASH_ARGS),
             "flashOrder": FLASH_ORDER,
+            "requiresCompanionProof": args.enable_companion_http,
         },
     }
     manifest_path = live_dir / "manifest.json"
@@ -1101,23 +1164,133 @@ def audit_vision_gate(path: Path) -> dict[str, Any]:
     }
 
 
+def get_nested(value: Any, *keys: str) -> Any:
+    current = value
+    for key in keys:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+    return current
+
+
+def companion_http_enabled(manifest: dict[str, Any]) -> bool:
+    companion = manifest.get("companionHttp")
+    return isinstance(companion, dict) and companion.get("enabled") is True
+
+
+def audit_companion_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+    companion = manifest.get("companionHttp", {})
+    failures: list[str] = []
+    if not companion_http_enabled(manifest):
+        return {"required": False, "failures": failures}
+    if companion.get("passphrase") != REDACTED_SECRET:
+        failures.append("companion_manifest_passphrase_not_redacted")
+    if companion.get("dummyOutputEnabled") is not False:
+        failures.append("companion_manifest_dummy_output_not_disabled")
+    if companion.get("requiresProof") is not True:
+        failures.append("companion_manifest_missing_proof_gate")
+    ssid = companion.get("ssid")
+    if not isinstance(ssid, str) or not ssid:
+        failures.append("companion_manifest_missing_ssid")
+    flash_gate = manifest.get("flashGate", {})
+    if flash_gate.get("requiresCompanionProof") is not True:
+        failures.append("companion_flash_gate_missing_companion_proof")
+    return {"required": True, "failures": failures}
+
+
+def audit_companion_proof(path: Path | None, required: bool) -> dict[str, Any]:
+    if path is None:
+        return {
+            "ok": not required,
+            "required": required,
+            "path": None,
+            "failures": ["companion_proof_required"] if required else [],
+        }
+
+    payload = json_load(path)
+    failures: list[str] = []
+    control_network = payload.get("controlNetwork", {})
+    if not isinstance(control_network, dict) or control_network.get("ok") is not True:
+        failures.append("companion_control_network_not_ok")
+
+    state = get_nested(payload, "requests", "state", "response")
+    if get_nested(state, "status") != "ok":
+        failures.append("companion_state_status_not_ok")
+    if get_nested(state, "runtime", "volatile") is not True:
+        failures.append("companion_state_runtime_not_volatile")
+    if get_nested(state, "runtime", "persistence") is not False:
+        failures.append("companion_state_persistence_not_false")
+    if get_nested(state, "safety_locked") is not True:
+        failures.append("companion_state_not_safety_locked")
+    if get_nested(state, "dummy_output", "enabled") is not False:
+        failures.append("companion_state_dummy_output_enabled")
+
+    all_off = get_nested(payload, "requests", "allOff", "response")
+    if get_nested(all_off, "status") != "ok":
+        failures.append("companion_all_off_status_not_ok")
+    if get_nested(all_off, "dummy_output", "active") is not False:
+        failures.append("companion_all_off_dummy_active")
+
+    dummy = get_nested(payload, "requests", "dummyOutput", "response")
+    if get_nested(dummy, "status") != "error":
+        failures.append("companion_dummy_output_status_not_error")
+    if get_nested(dummy, "reason") != "dummy_output_disabled":
+        failures.append("companion_dummy_output_reason_mismatch")
+    if get_nested(dummy, "dummy_output", "enabled") is not False:
+        failures.append("companion_dummy_output_enabled")
+    if get_nested(dummy, "dummy_output", "active") is not False:
+        failures.append("companion_dummy_output_active")
+
+    cleanup = payload.get("cleanup", {})
+    if not isinstance(cleanup, dict) or cleanup.get("temporaryProfileDeleted") is not True:
+        failures.append("companion_wifi_profile_not_deleted")
+    if isinstance(cleanup, dict) and cleanup.get("disconnected") is not True:
+        failures.append("companion_wifi_not_disconnected")
+    if payload.get("physicalOutputClaim") is True:
+        failures.append("companion_physical_output_claimed")
+
+    return {
+        "ok": not failures,
+        "required": required,
+        "path": str(path),
+        "sha256": sha256_file(path),
+        "failures": failures,
+    }
+
+
 def command_complete(args: argparse.Namespace) -> int:
     manifest_path = args.manifest.resolve()
     flash_evidence_path = args.flash_evidence.resolve()
     bridge_transcript_path = args.bridge_transcript.resolve()
     cleanup_proof_path = args.cleanup_proof.resolve()
     vision_gate_path = args.vision_gate.resolve()
+    companion_proof_path = getattr(args, "companion_proof", None)
+    if companion_proof_path is not None:
+        companion_proof_path = companion_proof_path.resolve()
 
     manifest = json_load(manifest_path)
     flash_evidence = json_load(flash_evidence_path)
     manifest_audit = audit_completion_manifest(manifest, manifest_path)
+    companion_manifest_audit = audit_companion_manifest(manifest)
     flash_audit = audit_flash_evidence(flash_evidence, flash_evidence_path, manifest_path)
     transcript_audit = audit_bridge_transcript(bridge_transcript_path)
     cleanup_audit = audit_cleanup_proof(cleanup_proof_path)
     vision_audit = audit_vision_gate(vision_gate_path)
+    companion_audit = audit_companion_proof(
+        companion_proof_path,
+        companion_manifest_audit["required"],
+    )
 
     failures = []
-    for audit in [manifest_audit, flash_audit, transcript_audit, cleanup_audit, vision_audit]:
+    for audit in [
+        manifest_audit,
+        companion_manifest_audit,
+        flash_audit,
+        transcript_audit,
+        cleanup_audit,
+        vision_audit,
+        companion_audit,
+    ]:
         failures.extend(audit.get("failures", []))
     status = "pass" if not failures else "needs_manual_review"
     payload = {
@@ -1131,12 +1304,15 @@ def command_complete(args: argparse.Namespace) -> int:
             "bridgeTranscript": str(bridge_transcript_path),
             "cleanupProof": str(cleanup_proof_path),
             "visionGate": str(vision_gate_path),
+            "companionProof": str(companion_proof_path) if companion_proof_path else None,
         },
         "manifest": manifest_audit,
+        "companionManifest": companion_manifest_audit,
         "flashEvidence": flash_audit,
         "transcript": transcript_audit,
         "cleanup": cleanup_audit,
         "visionGate": vision_audit,
+        "companionProof": companion_audit,
         "failures": failures,
     }
     out = args.out.resolve() if args.out else manifest_path.parent / f"completion-evidence-{utc_stamp()}.json"
@@ -1155,6 +1331,15 @@ def parse_args() -> argparse.Namespace:
     prepare_parser.add_argument("--live-dir", type=Path)
     prepare_parser.add_argument("--channel", type=int, default=1)
     prepare_parser.add_argument("--confirm-read-flash-backups", action="store_true")
+    prepare_parser.add_argument(
+        "--enable-companion-http",
+        action="store_true",
+        help=(
+            "Generate a live companion SoftAP HTTP coordinator override. "
+            "Gate 1 keeps dummy output disabled and redacts the passphrase "
+            "from the manifest."
+        ),
+    )
     prepare_parser.set_defaults(func=command_prepare)
 
     flash_parser = sub.add_parser("flash", help="Flash using a prepared manifest.")
@@ -1168,6 +1353,11 @@ def parse_args() -> argparse.Namespace:
     complete_parser.add_argument("--bridge-transcript", type=Path, required=True)
     complete_parser.add_argument("--cleanup-proof", type=Path, required=True)
     complete_parser.add_argument("--vision-gate", type=Path, required=True)
+    complete_parser.add_argument(
+        "--companion-proof",
+        type=Path,
+        help="Windows SoftAP companion API proof JSON; required when manifest enabled companion HTTP.",
+    )
     complete_parser.add_argument("--out", type=Path)
     complete_parser.set_defaults(func=command_complete)
 

@@ -23,6 +23,9 @@ are not rewritten as current truth.
 - Companion SoftAP Gate 1 has tooling-only validation records, but no live
   SoftAP, Windows Wi-Fi, physical output, bridge, vision, completion, or cleanup
   proof.
+- Full-service mesh discovery Gate M2-A has paired DOS-C host-only
+  bridge/operator support recorded in
+  `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27`.
 
 ## Assumptions
 
@@ -47,7 +50,7 @@ are not rewritten as current truth.
 | Plan governance | current | Keep this plan aligned with the status ledger, source index, task logs, and handoffs after each non-trivial lane change. | Agent Operations + QA | Tier 2 | `SRC-LOCAL-DEVELOPMENT-PLAN-CONSOLIDATION-2026-05-27` | Live bench, firmware runtime, hardware mutation | This file and `research/development-status-ledger.md` |
 | ESP-NOW BBS live baseline | accepted-live | Use structured Gate H transcript proof as the current live baseline; any rerun starts with fresh Tier 3 preflight and authority. | Communications + QA | Tier 3 for live, Tier 2 for docs | `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25` | Flash/erase/monitor unless a new live gate opens them | `research/development-status-ledger.md` |
 | Custom wireless Gate F | accepted-host-prototype-only | Keep runtime firmware implementation closed; continue only host or owner-review slices until a later implementation gate is accepted. | Communications + Firmware + QA | Tier 2 | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-PHASE-5-6-RUNTIME-DESIGN-REVIEW-2026-05-26` | Firmware runtime, persistence, live proof | ADR-0006, ADR-0007, ADR-0008 |
-| Full-service mesh discovery | accepted-host-simulator-only | Gate M2: DOS-C companion bridge/operator fixture support and Win31 read-only Network/Services summary. | Communications + Architecture + QA | Tier 2 | `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27` | Live mesh, BLE pairing, Android app, router/admin, firmware mapping | ADR-0009 |
+| Full-service mesh discovery | gate-m2a-implemented-host-only | Gate M3: firmware mapping review/design-only for `mesh_discovery.v1`; live proof remains a separate future Tier 3 gate. | Communications + Architecture + QA | Tier 2 | `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`, `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27` | Live mesh, BLE pairing, Android app, router/admin, firmware mapping | ADR-0009 plus DOS-C commit `62c4db6` |
 | Companion SoftAP Gate 1 | implemented-host-tooling-only | Re-run ESP32 and paired DOS-C host tests before any continuation; live proof needs fresh Tier 3 identity, recovery, Windows Wi-Fi, companion proof, and cleanup evidence. | Communications + QA | Tier 2 tooling; Tier 3 live | `SRC-LOCAL-ESPNOW-BBS-COMPANION-SOFTAP-LIVE-GATE-TOOLING-2026-05-27` | Live SoftAP, Windows Wi-Fi mutation, dummy GPIO/output, flash, cleanup acceptance | Task 0076 and handoff 0065 |
 | Win31/OPCON and DOS-C companion | mixed | Treat Gate H and serial-nullmodem path as accepted; keep fullscreen human acceptance, CBBS input proof, and launcher/live proof as separate gated work. | QA + UI/Protocol | Tier 2 or Tier 3 by action | `SRC-LOCAL-WIN31-CBBS-INPUT-RENAME-ICON-UI-2026-05-27`, `SRC-LOCAL-WIN31-DASHBOARD-FULLSCREEN-RECOVERY-2026-05-26` | PCAP, packet-driver replacement, unsafe controls | Status ledger and Win31 task/handoff records |
 | Four-relay XBee Wi-Fi | blocked hardware-facing | Complete low-voltage identity, power, relay, XBee adapter, TFT, MicroSD, expander, and instrument records before hardware-facing enablement. | Hardware + Firmware + QA | Tier 2 docs; Tier 3 bench | `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`, `SRC-LOCAL-FOUR-RELAY-SAFE-CORE-CONTRACT-2026-05-19` | Relay/load/mains, XBee writes, flashing, live output enablement | Four-relay docs and known gaps |
@@ -66,8 +69,9 @@ are not rewritten as current truth.
 2. Continue ESP-NOW BBS work through host and companion gates first.
    The accepted live path remains
    `OPCON.EXE -> COM1 -> DOSBox-X nullmodem -> Pi bridge -> /dev/ttyUSB0 -> ESP32 coordinator`.
-   The next safe mesh-discovery step is Gate M2 DOS-C companion fixture support
-   and a read-only Win31 Network/Services summary. Companion SoftAP remains
+   Gate M2-A now provides DOS-C companion bridge/operator support and a
+   read-only Win31 Network/Services summary. The next safe mesh-discovery step
+   is Gate M3 firmware mapping review/design-only. Companion SoftAP remains
    tooling-only until a new Tier 3 live proof opens it.
 
 3. Keep Win31 and DOS-C status precise.

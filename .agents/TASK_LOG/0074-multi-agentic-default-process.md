@@ -3,7 +3,8 @@
 - ID: 0074-multi-agentic-default-process
 - Date: 2026-05-27
 - Contract: `AGENTS.md`
-- Status: implemented locally; validated; hook trust follow-up pending
+- Status: implemented locally; validated; superseded by continuation-decision
+  extension; hook trust follow-up pending
 
 ## Goal
 
@@ -51,6 +52,15 @@ records, and static scaffold verification.
   they run in future sessions.
 - Hook stdin and transcript details can evolve; hook scripts are advisory and
   must not be treated as complete enforcement.
+
+## Continuation Note
+
+Task `0077-multi-agentic-continuation-decision` extends this default process.
+It default-authorizes project-local read-only subagents for safe Tier 2 and
+Tier 3 reviewer quorum, keeps mutating workers behind explicit disjoint write
+scopes, strengthens hook behavior tests, and records local hook execution
+proof. It does not prove active Codex runtime hook trust or hard mutation
+enforcement.
 
 ## Validation
 

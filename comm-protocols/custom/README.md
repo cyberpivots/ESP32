@@ -36,6 +36,16 @@ Verified boundaries:
 - Gate G analytics reports are simulator-only and now reference accepted
   ADR-0005 policy fields: `privacy_policy:
   adr-0005-redacted-local-operator-v1` and `retention: 7_days`.
+- `mesh_discovery.v1` is accepted by `ADR-0009` as a host-only discovery
+  contract for topology snapshots, discovery/healing events, service catalog,
+  capability report, and BLE/Android presence metadata.
+  Source ID: `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`.
+- Discovery bridge summaries use `discovery_snapshot`, `discovery_events`,
+  `service_catalog`, and `capability_report`; they must remain ASCII,
+  schema-versioned, and bounded to the 512-byte bridge line limit.
+- Discovery payloads reject secret-bearing fields such as PMKs, LMKs, bonding
+  keys, pairing tokens, Android identifiers, raw message bodies, credential
+  fields, and precise location fields.
 
 Still unresolved:
 
@@ -43,6 +53,8 @@ Still unresolved:
   accepted by this simulator.
 - No live hardware, serial, radio, actual bridge runtime, or Win31/OPCON state
   is proven by these tests.
+- No live ESP-WIFI-MESH, BLE pairing, Android app behavior, router/admin
+  mutation, or firmware mapping to `mesh_discovery.v1` is accepted.
 - Gate G live export is accepted only as a local-admin redacted JSON export
   from the DOS-C/Pi bridge spool. No Win31/OPCON export UI, firmware export ABI,
   or bridge export request type is accepted.

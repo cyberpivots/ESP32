@@ -93,6 +93,28 @@ responses for simulator-first proof. They are status only and must fit the
 The Windows 3.1 dashboard may render these fields in a Network view using
 already received metadata. It must not add live network mutation commands.
 
+## Full-Service Discovery Host Contract
+
+`ADR-0009` accepts `mesh_discovery.v1` as the host-only source of truth for
+future topology, node, service, capability, BLE/Android presence, and
+healing-event summaries. Source ID:
+`SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`.
+
+The dashboard metadata fields above are derived summaries when discovery data
+exists. They are not live mesh evidence and are not an authority for
+state-changing network commands.
+
+Host-only simulator summary requests are:
+
+- `discovery_snapshot`
+- `discovery_events`
+- `service_catalog`
+- `capability_report`
+
+These summaries must remain schema-versioned, ASCII, and bounded to the
+512-byte bridge line limit. They do not add Gate F radio service codes and do
+not accept ESP-WIFI-MESH live action.
+
 ## Live-Gate Requirements
 
 Before ESP-WIFI-MESH work can move beyond simulator/design status:

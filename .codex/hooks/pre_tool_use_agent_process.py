@@ -31,6 +31,21 @@ MUTATING_MCP_RE = re.compile(
 TIER_RE = re.compile(r"\bTier\s*[0-3]\b", re.IGNORECASE)
 VALIDATION_RE = re.compile(r"\b(validation plan|validate|verification|tests?|audit|gate)\b", re.IGNORECASE)
 BOUNDARY_RE = re.compile(r"\b(mutation boundary|write scope|scope boundary|read-only|no mutation)\b", re.IGNORECASE)
+VERIFIED_RE = re.compile(r"\bverified facts?\b", re.IGNORECASE)
+ASSUMPTIONS_RE = re.compile(r"\bassumptions?\b", re.IGNORECASE)
+UNKNOWNS_RE = re.compile(r"\bunknowns?\b", re.IGNORECASE)
+OWNER_RE = re.compile(r"\b(owner role|owner)\b", re.IGNORECASE)
+EVIDENCE_RE = re.compile(r"\bevidence need\b|\bevidence\s*:\b", re.IGNORECASE)
+
+
+def _load_payload() -> tuple[dict[str, Any], bool]:
+    try:
+        raw = json.load(sys.stdin)
+    except json.JSONDecodeError:
+        return {}, True
+    if not isinstance(raw, dict):
+        return {}, True
+    return raw, False
 
 
 def _extract_command(tool_input: Any) -> str:
@@ -117,10 +132,30 @@ def _is_mutating(tool_name: str, tool_input: Any) -> bool:
     return False
 
 
+def _emit_warning(missing: list[str]) -> None:
+    shape_note = ""
+    if "valid hook input shape" in missing:
+        shape_note = "Hook input shape was unknown; "
+    message = (
+        f"{shape_note}ESP32 agent-process warning: this mutating tool call is starting before "
+        f"the hook can see {', '.join(missing)} in the prompt context. "
+        "Before continuing, state verified facts, assumptions, unknowns, selected "
+        "tier, owner role, evidence need, mutation boundary, and validation plan. "
+        "Project-local hooks and prompt packets are advisory aids; source-backed "
+        "records and explicit gate authority remain authoritative."
+    )
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "additionalContext": message,
+        }
+    }))
+
+
 def main() -> int:
-    try:
-        payload = json.load(sys.stdin)
-    except json.JSONDecodeError:
+    payload, shape_unknown = _load_payload()
+    if shape_unknown:
+        _emit_warning(["valid hook input shape"])
         return 0
 
     tool_name = str(payload.get("tool_name") or "")
@@ -132,8 +167,18 @@ def main() -> int:
         payload.get("transcript_path")
     )
     missing = []
+    if not VERIFIED_RE.search(prompt):
+        missing.append("verified facts")
+    if not ASSUMPTIONS_RE.search(prompt):
+        missing.append("assumptions")
+    if not UNKNOWNS_RE.search(prompt):
+        missing.append("unknowns")
     if not TIER_RE.search(prompt):
         missing.append("selected tier")
+    if not OWNER_RE.search(prompt):
+        missing.append("owner role")
+    if not EVIDENCE_RE.search(prompt):
+        missing.append("evidence need")
     if not VALIDATION_RE.search(prompt):
         missing.append("validation path")
     if not BOUNDARY_RE.search(prompt):
@@ -141,19 +186,7 @@ def main() -> int:
     if not missing:
         return 0
 
-    message = (
-        "ESP32 agent-process warning: this mutating tool call is starting before "
-        f"the hook can see {', '.join(missing)} in the prompt context. "
-        "Before continuing, state verified facts, assumptions, unknowns, selected "
-        "tier, owner role, mutation boundary, and validation plan. This hook is "
-        "advisory and is not a hard security boundary."
-    )
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "additionalContext": message,
-        }
-    }))
+    _emit_warning(missing)
     return 0
 
 

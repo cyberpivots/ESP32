@@ -16,11 +16,18 @@ from espnow_bbs_custom_protocol import (  # noqa: E402
     ANALYTICS_POLICY,
     ANALYTICS_RETENTION,
     ANALYTICS_SCHEMA_VERSION,
+    BLOCKED_LIVE_REQUEST_TYPES,
     BRIDGE_MAX_LINE_BYTES,
     BRIDGE_PROTOCOL_VERSION,
     BRIDGE_REQUEST_TYPES,
     BRIDGE_STABLE_ERROR_REASONS,
     CUSTODY_CODES,
+    DISCOVERY_ADMIN_GATE,
+    DISCOVERY_BRIDGE_REQUEST_TYPES,
+    DISCOVERY_EVENT_TYPES,
+    DISCOVERY_MODE,
+    DISCOVERY_SCHEMA_VERSION,
+    DISCOVERY_TRANSPORT,
     RADIO_HEADER_BYTES,
     RADIO_MAX_BODY_BYTES,
     RADIO_MAX_FRAGMENT_COUNT,
@@ -28,10 +35,12 @@ from espnow_bbs_custom_protocol import (  # noqa: E402
     RADIO_PROTOCOL_VERSION,
     SERVICE_CODES,
     CustodyRecord,
+    DiscoveryNode,
     DuplicateWindow,
     ProtocolError,
     ProtocolSimulator,
     WirelessPacket,
+    assert_no_discovery_secrets,
     decode_bridge_frame,
     decode_packet,
     decode_packet_body,
@@ -183,6 +192,39 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertEqual(encoded[31], CUSTODY_CODES["acked"])
         self.assertEqual(encoded[32:], packet.body)
         self.assertEqual(decode_packet(encoded), packet)
+
+    def test_mesh_discovery_v1_schema_is_separate_from_gate_f_radio_abi(self) -> None:
+        self.assertEqual(DISCOVERY_SCHEMA_VERSION, "mesh_discovery.v1")
+        self.assertEqual(DISCOVERY_TRANSPORT, "esp-wifi-mesh")
+        self.assertEqual(DISCOVERY_MODE, "sim")
+        self.assertEqual(DISCOVERY_ADMIN_GATE, "disabled")
+        self.assertEqual(
+            DISCOVERY_BRIDGE_REQUEST_TYPES,
+            {
+                "discovery_snapshot",
+                "discovery_events",
+                "service_catalog",
+                "capability_report",
+            },
+        )
+        self.assertTrue(
+            {
+                "node_seen",
+                "node_lost",
+                "parent_selected",
+                "root_elected",
+                "root_switched",
+                "route_added",
+                "route_removed",
+                "heal_started",
+                "heal_observed",
+                "service_seen",
+                "capability_seen",
+                "ble_client_seen",
+            }.issubset(DISCOVERY_EVENT_TYPES)
+        )
+        self.assertTrue(DISCOVERY_BRIDGE_REQUEST_TYPES.isdisjoint(BRIDGE_REQUEST_TYPES))
+        self.assertNotIn("mesh_discovery", SERVICE_CODES)
 
     def test_gate_f_golden_packet_vectors(self) -> None:
         vectors = {
@@ -467,6 +509,128 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertLessEqual(len(encoded) - 1, BRIDGE_MAX_LINE_BYTES)
         self.assertEqual(json.loads(encoded.decode("ascii"))["telemetry"], 2)
 
+    def test_mesh_discovery_snapshot_events_catalog_and_capabilities_fit_bridge(self) -> None:
+        simulator = ProtocolSimulator()
+        snapshot = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "discovery_snapshot",
+                "limit": 2,
+            },
+            simulator,
+        )
+        self.assertEqual(snapshot["schema"], DISCOVERY_SCHEMA_VERSION)
+        self.assertEqual(snapshot["transport"], DISCOVERY_TRANSPORT)
+        self.assertEqual(snapshot["mode"], DISCOVERY_MODE)
+        self.assertEqual(snapshot["admin_gate"], DISCOVERY_ADMIN_GATE)
+        self.assertTrue(snapshot["simulator_only"])
+        self.assertEqual(len(snapshot["nodes"]), 2)
+        self.assertLessEqual(len(encode_bridge_frame(snapshot)) - 1, BRIDGE_MAX_LINE_BYTES)
+
+        coord = snapshot["nodes"][0]
+        for key in ("id", "r", "l", "p", "rt", "rssi", "age", "h", "svc", "cap"):
+            self.assertIn(key, coord)
+
+        events = process_bridge_request(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "discovery_events", "limit": 4},
+            simulator,
+        )
+        self.assertEqual(events["schema"], DISCOVERY_SCHEMA_VERSION)
+        self.assertLessEqual(len(encode_bridge_frame(events)) - 1, BRIDGE_MAX_LINE_BYTES)
+
+        catalog = process_bridge_request(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "service_catalog"},
+            simulator,
+        )
+        self.assertEqual(
+            catalog["services"],
+            [
+                "bbs_msg",
+                "file_xfer",
+                "telemetry",
+                "node_status",
+                "custody_ack",
+                "control_intent",
+                "ble_presence",
+                "android_meta",
+            ],
+        )
+        self.assertLessEqual(len(encode_bridge_frame(catalog)) - 1, BRIDGE_MAX_LINE_BYTES)
+
+        capabilities = process_bridge_request(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "capability_report"},
+            simulator,
+        )
+        self.assertEqual(capabilities["ble_android"]["presence"], "metadata_only")
+        self.assertEqual(capabilities["ble_android"]["android"], "central_gatt_client")
+        self.assertEqual(capabilities["ble_android"]["esp32"], "peripheral_gatt_server")
+        self.assertLessEqual(len(encode_bridge_frame(capabilities)) - 1, BRIDGE_MAX_LINE_BYTES)
+
+    def test_mesh_discovery_node_coalescing_stale_loss_and_healing_events(self) -> None:
+        simulator = ProtocolSimulator()
+        simulator.observe_discovery_node(
+            DiscoveryNode(
+                node_id="peer01",
+                mac="94:b9:7e:da:17:d0",
+                link=DISCOVERY_TRANSPORT,
+                role="child",
+                layer=2,
+                parent="coord01",
+                root="coord01",
+                rssi=-49,
+                seen_ms=500,
+                health="ok",
+                services=("file_xfer",),
+                capabilities=("mesh_child",),
+            )
+        )
+        self.assertEqual(len(simulator.discovery_nodes), 2)
+        self.assertEqual(simulator.discovery_nodes["peer01"].rssi, -49)
+
+        simulator.observe_discovery_node(
+            DiscoveryNode(
+                node_id="peer02",
+                mac="94:b9:7e:da:9a:50",
+                link=DISCOVERY_TRANSPORT,
+                role="child",
+                layer=2,
+                parent="coord01",
+                root="coord01",
+                rssi=-71,
+                seen_ms=8000,
+                health="stale",
+                services=("telemetry",),
+                capabilities=("route_leaf",),
+            )
+        )
+        simulator.record_discovery_event("root_elected", "coord01")
+        simulator.record_discovery_event("parent_selected", "peer02", detail="coord01")
+        simulator.record_discovery_event("route_added", "peer02")
+        simulator.record_discovery_event("heal_started", "peer02")
+        simulator.expire_discovery_nodes(stale_after_ms=5000)
+        simulator.record_discovery_event("heal_observed", "peer02")
+
+        self.assertEqual(simulator.discovery_nodes["peer02"].health, "lost")
+        self.assertEqual(simulator.discovery_summary()["heal"], "observed")
+        events = [event["event"] for event in simulator.discovery_event_log]
+        self.assertIn("node_lost", events)
+        self.assertIn("heal_observed", events)
+
+    def test_mesh_discovery_rejects_secret_bearing_payload_fields(self) -> None:
+        with self.assertRaisesRegex(ProtocolError, "secret_field_blocked"):
+            assert_no_discovery_secrets({"node": {"pmk": "redacted"}})
+        with self.assertRaisesRegex(ProtocolError, "secret_field_blocked"):
+            assert_no_discovery_secrets({"android_id": "device-id"})
+        with self.assertRaisesRegex(ProtocolError, "secret_field_blocked"):
+            assert_no_discovery_secrets({"nested": [{"pairing_token": "abc"}]})
+
+        simulator = ProtocolSimulator()
+        snapshot = process_bridge_request(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "discovery_snapshot"},
+            simulator,
+        )
+        assert_no_discovery_secrets(snapshot)
+
     def test_file_ack_updates_resume_status_and_control_intent_does_not_execute(self) -> None:
         simulator = ProtocolSimulator()
         packets = simulator.queue_file(77, "peer03", b"file-bytes" * 35)
@@ -580,6 +744,47 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         )
         self.assertFalse(non_ascii["accepted"])
         self.assertEqual(non_ascii["reason"], "non_ascii")
+
+    def test_mesh_discovery_bridge_bounds_and_closed_live_controls(self) -> None:
+        simulator = ProtocolSimulator()
+        invalid_limit = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "discovery_snapshot",
+                "limit": 5,
+            },
+            simulator,
+        )
+        self.assertFalse(invalid_limit["accepted"])
+        self.assertEqual(invalid_limit["reason"], "field_type_invalid")
+
+        malformed_limit = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "discovery_events",
+                "limit": "four",
+            },
+            simulator,
+        )
+        self.assertFalse(malformed_limit["accepted"])
+        self.assertEqual(malformed_limit["reason"], "field_type_invalid")
+
+        for message_type in (
+            "ble_pair",
+            "live_mesh",
+            "mesh_start",
+            "router_admin",
+            "serial_write",
+            "xbee_write",
+        ):
+            with self.subTest(message_type=message_type):
+                self.assertIn(message_type, BLOCKED_LIVE_REQUEST_TYPES)
+                blocked = process_bridge_request(
+                    {"v": BRIDGE_PROTOCOL_VERSION, "type": message_type},
+                    simulator,
+                )
+                self.assertFalse(blocked["accepted"])
+                self.assertEqual(blocked["reason"], "state_changing_command_blocked")
 
     def test_gate_g_analytics_report_is_simulator_only(self) -> None:
         simulator = ProtocolSimulator()
@@ -930,6 +1135,32 @@ class CustomWirelessProtocolTests(unittest.TestCase):
             self.assertIn(counter, report["runtime"]["counters"])
         self.assertIn("outbound_radio_jobs", snapshot["queues"])
         self.assertIn("runtime", report)
+
+    def test_runtime_discovery_requests_are_host_only_and_do_not_queue_packets(self) -> None:
+        runtime = RuntimeScheduler()
+        response = runtime.submit_bridge_frame(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "discovery_snapshot",
+                "limit": 2,
+            }
+        )
+        snapshot = runtime.snapshot()
+        report = runtime.protocol_report()
+
+        self.assertEqual(response["schema"], DISCOVERY_SCHEMA_VERSION)
+        self.assertTrue(response["simulator_only"])
+        self.assertLessEqual(len(encode_bridge_frame(response)) - 1, BRIDGE_MAX_LINE_BYTES)
+        self.assertEqual(snapshot["queues"]["outbound_radio_jobs"], 0)
+        self.assertEqual(snapshot["queues"]["custody_ack_events"], 0)
+        self.assertEqual(snapshot["discovery"]["schema"], DISCOVERY_SCHEMA_VERSION)
+        self.assertEqual(report["discovery"]["schema"], DISCOVERY_SCHEMA_VERSION)
+
+        blocked = runtime.submit_bridge_frame(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "ble_pair"}
+        )
+        self.assertFalse(blocked["accepted"])
+        self.assertEqual(blocked["reason"], "state_changing_command_blocked")
 
 
 if __name__ == "__main__":

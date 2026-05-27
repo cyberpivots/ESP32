@@ -1,8 +1,9 @@
 # Custom Wireless Protocol Simulator
 
 This directory contains simulator-only helpers for the ESP-NOW BBS custom
-wireless protocol Gate B, Gate C, the Gate E draft bridge ABI candidate, and
-the Phase 5/6 host-only runtime design prototype.
+wireless protocol Gate B, Gate C, the Gate E draft bridge ABI candidate, the
+Phase 5/6 host-only runtime design prototype, and the host-only
+`mesh_discovery.v1` discovery contract accepted by ADR-0009.
 
 ## Boundaries
 
@@ -41,6 +42,15 @@ The simulator covers:
   balanced queue defaults, atomic backpressure, custody ACK priority, retry
   limit, expiry, duplicate handling, volatile reset, and bridge-visible runtime
   counters.
+- Host-only `mesh_discovery.v1` summaries for discovery snapshots, discovery
+  events, service catalog, capability reports, BLE/Android presence metadata,
+  stale/lost topology transitions, and healing-event evidence.
+- Recursive discovery payload rejection for secret-bearing fields such as PMK,
+  LMK, pairing token, bonding key, Android identifiers, raw message bodies,
+  credential fields, and precise location fields.
+- Explicit simulator rejection for additional live-action request names such as
+  `ble_pair`, `live_mesh`, `mesh_start`, `router_admin`, `serial_write`,
+  `xbee_write`, `pcap_start`, and `monitor`.
 
 The draft ABI is recorded in
 `docs/projects/espnow-bbs/bridge-abi-draft.md`. It is not final firmware ABI
@@ -50,6 +60,9 @@ accepted ADR-0005: `privacy_policy: adr-0005-redacted-local-operator-v1` and
 `retention: 7_days`. Simulator reports still record
 `simulator_only: true`, no live bridge request, no Win31 export control, and no
 firmware export request.
+Discovery summaries are also simulator-only: `schema:
+mesh_discovery.v1`, `mode: sim`, and `admin_gate: disabled`. They do not add
+Gate F radio service codes and do not authorize ESP-WIFI-MESH live action.
 
 Run:
 

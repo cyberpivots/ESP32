@@ -10,6 +10,8 @@ from typing import Any
 
 from espnow_bbs_custom_protocol import (
     BRIDGE_PROTOCOL_VERSION,
+    BLOCKED_LIVE_REQUEST_TYPES,
+    DISCOVERY_BRIDGE_REQUEST_TYPES,
     RADIO_MAX_BODY_BYTES,
     RADIO_MAX_FRAGMENT_COUNT,
     CUSTODY_CODES,
@@ -129,6 +131,8 @@ class RuntimeScheduler:
             message_type = self._require_str(frame, "type")
             if message_type in {"protocol_report", "state_get"}:
                 return self.protocol_report()
+            if message_type in DISCOVERY_BRIDGE_REQUEST_TYPES:
+                return self._submit_discovery_request(frame, message_type)
             if message_type == "msg_post":
                 return self._submit_direct_message(frame)
             if message_type == "download_queue":
@@ -139,7 +143,7 @@ class RuntimeScheduler:
                 return self._submit_node_status(frame)
             if message_type == "control_intent":
                 return self._submit_control_intent(frame)
-            if message_type in {"relay_set", "flash", "erase", "radio_set"}:
+            if message_type in BLOCKED_LIVE_REQUEST_TYPES:
                 raise ProtocolError("state_changing_command_blocked", message_type)
             raise ProtocolError("message_type_unknown", message_type)
         except ProtocolError as exc:
@@ -236,6 +240,7 @@ class RuntimeScheduler:
             },
             "custody": self._custody_counts(),
             "counters": dict(self.state.counters),
+            "discovery": self.simulator.discovery_summary(),
         }
 
     def protocol_report(self) -> dict[str, Any]:
@@ -276,6 +281,24 @@ class RuntimeScheduler:
             fragments=len(packets),
             packetized=True,
         )
+
+    def _submit_discovery_request(
+        self,
+        frame: Mapping[str, Any],
+        message_type: str,
+    ) -> dict[str, Any]:
+        if message_type == "discovery_snapshot":
+            limit = self._optional_limit(frame, default=2, maximum=4)
+            return self._versioned(self.simulator.discovery_snapshot(limit))
+        if message_type == "discovery_events":
+            limit = self._optional_limit(frame, default=4, maximum=8)
+            return self._versioned(self.simulator.discovery_events(limit))
+        if message_type == "service_catalog":
+            limit = self._optional_limit(frame, default=8, maximum=8)
+            return self._versioned(self.simulator.service_catalog(limit))
+        if message_type == "capability_report":
+            return self._versioned(self.simulator.capability_report())
+        raise ProtocolError("message_type_unknown", message_type)
 
     def _submit_file(self, frame: Mapping[str, Any]) -> dict[str, Any]:
         file_id = self._require_int(frame, "id")
@@ -585,6 +608,14 @@ class RuntimeScheduler:
             raise ProtocolError("field_type_invalid", key)
         compact_json_bytes(value)
         return value
+
+    def _optional_limit(self, frame: Mapping[str, Any], *, default: int, maximum: int) -> int:
+        if "limit" not in frame:
+            return default
+        limit = self._require_int(frame, "limit")
+        if limit < 1 or limit > maximum:
+            raise ProtocolError("field_type_invalid", "limit")
+        return limit
 
     def _bridge_content_bytes(self, frame: Mapping[str, Any]) -> bytes:
         if "content" in frame:

@@ -3,7 +3,9 @@
 ## Coordinator
 
 Classifies every prompt by tier, owner, evidence need, mutation boundary, and
-validation plan. Runs local role lenses when subagents are unavailable or unsafe.
+validation plan. Project-local read-only subagents are default-authorized for
+safe Tier 2 and Tier 3 reviewer quorum, and local role lenses are used when
+subagents are unavailable or unsafe.
 
 ## Agent Operations
 
@@ -32,7 +34,8 @@ Maintains wired, wireless, and custom protocol contracts and test scenarios.
 ## QA
 
 Maintains verification scripts, test plans, reviewer quorum records, acceptance
-gates, hook-trust follow-up, and reproducible evidence artifacts.
+gates, hook-trust follow-up, continuation-decision evidence, and reproducible
+evidence artifacts.
 
 ## Release
 

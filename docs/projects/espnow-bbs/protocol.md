@@ -36,6 +36,21 @@ Current compact physical response fields include:
 - `rssi`
 - `seen_ms`
 
+Host-only `mesh_discovery.v1` simulator summaries are accepted by `ADR-0009`
+for planning and fixture coverage only. Source ID:
+`SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`.
+
+Simulator bridge request names for this host discovery contract are:
+
+- `discovery_snapshot`
+- `discovery_events`
+- `service_catalog`
+- `capability_report`
+
+These request names are not physical coordinator serial commands and are not
+Gate F radio service codes. They must remain ASCII, schema-versioned, and
+bounded to the existing 512-byte bridge line limit.
+
 Serial writes and dashboard state-changing commands remain blocked until a
 separate accepted gate opens them.
 

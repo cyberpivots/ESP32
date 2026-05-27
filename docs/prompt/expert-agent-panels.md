@@ -22,10 +22,11 @@ review loop that can inspect workspace truth, inventory skills, close knowledge
 gaps, perform source-backed research, choose a bounded next action, validate
 the result, and update durable records.
 
-This workspace now uses the same role-lens discipline for every prompt. That
-does not mean every prompt spawns subagents. It means every prompt is classified
-by tier, owner, evidence need, mutation boundary, and validation plan before
-non-trivial mutation.
+This workspace now uses the same role-lens discipline for every prompt.
+Project-local read-only subagents are default-authorized for safe Tier 2 and
+Tier 3 reviewer quorum, while mutating workers still require explicit disjoint
+write scopes. Every non-trivial prompt is classified by tier, owner, evidence
+need, mutation boundary, and validation plan before mutation.
 
 ## Verified facts
 
@@ -36,8 +37,9 @@ non-trivial mutation.
   reasoning effort as workload-tuning levels and reserves higher effort for
   harder, higher-value, or longer-running work.
 - Official Codex subagent guidance says Codex uses built-in `default`,
-  `worker`, and `explorer` agents and only spawns subagents when explicitly
-  asked.
+  `worker`, and `explorer` agents; this workspace default-authorizes
+  project-local read-only reviewers for Tier 2 and Tier 3 quorum when tools are
+  available and safe.
 - Official Codex configuration guidance documents project/user config,
   `skills.config`, and agent settings; this workspace does not need a
   project-scoped `.codex/agents/*.toml` file for the v1 panel skill.
@@ -73,9 +75,11 @@ non-trivial mutation.
 
 - Tier 0: coordinator triage plus local role lens.
 - Tier 1: coordinator plus relevant owner and QA lens.
-- Tier 2: read-only reviewer quorum before mutation.
-- Tier 3: explicit gate authority, same-session evidence, and reviewer quorum
-  before mutation.
+- Tier 2: read-only reviewer quorum before mutation; no-P1/P2 quorum may
+  accept only the named gate and mutation boundary.
+- Tier 3: explicit gate authority, same-session evidence, recovery path, and
+  reviewer quorum before mutation; no-P1/P2 quorum cannot waive live-gate
+  prerequisites.
 
 ## Prompt pattern
 
@@ -83,8 +87,9 @@ non-trivial mutation.
 Use $expert-agent-panels to run an expert panel review and improvement loop for
 this task. Read the workspace contract first, inventory available skills,
 separate verified facts from assumptions and unknowns, use official or primary
-sources for missing facts, spawn subagents only when explicitly authorized, then
-implement the best bounded action and validate it.
+sources for missing facts, spawn project-local read-only subagents by default
+for safe Tier 2 and Tier 3 quorum, then implement the best bounded action and
+validate it.
 ```
 
 ## Default multi-agentic process prompt
@@ -92,9 +97,12 @@ implement the best bounded action and validate it.
 ```text
 Apply the ESP32 default-multi-agentic-process. Classify the prompt as Tier 0,
 Tier 1, Tier 2, or Tier 3; state verified facts, assumptions, unknowns, owner
-role, mutation boundary, and validation plan before non-trivial mutation; use
-project-local subagents only when explicitly authorized and safe; otherwise run
-the same role lenses locally and say no subagents were spawned.
+role, evidence need, mutation boundary, reviewer quorum, gate authority,
+validation plan, and trust boundary before non-trivial mutation; use
+project-local read-only subagents by default for safe Tier 2 and Tier 3 quorum;
+use mutating workers only with explicit disjoint write scopes; end with a
+decision footer naming the next gate, owner, evidence, validation, durable
+records, approved mutation boundary, and authority limits.
 ```
 
 ## Expected output

@@ -6,7 +6,7 @@
 2. Identify the owner role in `.agents/OWNERSHIP.md`.
 3. Select the tier from the workspace multi-agent process.
 4. State verified facts, assumptions, unknowns, owner role, mutation boundary,
-   and validation plan before non-trivial mutation.
+   evidence need, and validation plan before non-trivial mutation.
 5. Open or update a task record in `.agents/TASK_LOG/`.
 6. Check source coverage before editing factual docs.
 7. Leave validation evidence and handoff notes.
@@ -24,9 +24,20 @@
 ## Reviewer quorum
 
 Tier 2 and Tier 3 work needs at least coordinator, relevant owner, and QA
-perspectives before mutation. Use project-local read-only subagents only when
-explicitly authorized and safe for the runtime. Otherwise, run the same role
-lenses locally and record that no subagents were spawned.
+perspectives before mutation. Project-local read-only subagents are
+default-authorized when available and safe. Use local role lenses only when
+subagents are unavailable or unsafe, and record that no subagents were spawned.
+
+A no-P1/P2 reviewer quorum may accept only the named gate and mutation
+boundary. Tier 3 acceptance also requires same-session evidence, explicit
+live-gate authority, recovery path, and closed-surface review.
+
+## Continuation decision
+
+End non-trivial work with a decision footer: `continue`, `ask_user`,
+`blocked`, `ready_for_mutation`, or `handoff`; the next gate or slice; owner
+role; evidence need; approved mutation boundary; validation command; required
+durable record; and authority limits.
 
 ## Project-local profiles
 
@@ -50,6 +61,7 @@ No feature or factual document should be considered accepted unless it has:
 - validation results,
 - an owner for the next action,
 - selected tier and mutation boundary for non-trivial work.
+- continuation decision and authority limits.
 
 Project-local Codex hooks under `.codex/hooks.json` add model-visible reminders
 for triage, subagent boundaries, and mutating tool calls. They are advisory

@@ -8,6 +8,8 @@ Project-local host tests:
 
 - `python3 tests/four_relay_safe_core/run_host_tests.py`
 - `python3 tests/custom_wireless_protocol/test_espnow_bbs_custom_protocol.py`
+- `python3 -m unittest discover -s tests/scaffold_audits -p 'test_*.py'`
+- `python3 scripts/scaffold_audit_agent_process.py`
 - `python3 tests/scaffold_audits/test_source_image_scan.py`
 - `python3 scripts/audit_public_manifest.py` after
   `python3 scripts/build_github_pages.py`

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -34,6 +35,7 @@ REQUIRED_SOURCE_IDS = [
     "SRC-LANGCHAIN-HANDOFFS-2026-05-27",
     "SRC-LANGCHAIN-CONTEXT-ENGINEERING-2026-05-27",
     "SRC-LOCAL-MULTI-AGENTIC-DEFAULT-PROCESS-2026-05-27",
+    "SRC-LOCAL-MULTI-AGENTIC-CONTINUATION-DECISION-2026-05-27",
 ]
 
 
@@ -43,6 +45,48 @@ def _read(path: Path) -> str:
 
 def _require_markers(text: str, markers: list[str], label: str) -> list[str]:
     return [f"{label} missing marker: {marker}" for marker in markers if marker not in text]
+
+
+def _run_hook(
+    root: Path,
+    script: str,
+    stdin_text: str,
+    event_name: str,
+    markers: list[str],
+) -> list[str]:
+    path = root / ".codex" / "hooks" / script
+    result = subprocess.run(
+        [sys.executable, str(path)],
+        input=stdin_text,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    failures: list[str] = []
+    label = f".codex/hooks/{script}"
+    if result.returncode != 0:
+        failures.append(f"{label} exited {result.returncode}: {result.stderr.strip()}")
+        return failures
+    if not result.stdout.strip():
+        failures.append(f"{label} did not emit hookSpecificOutput")
+        return failures
+    try:
+        output = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        failures.append(f"{label} emitted invalid JSON: {exc}")
+        return failures
+    hook_output = output.get("hookSpecificOutput")
+    if not isinstance(hook_output, dict):
+        failures.append(f"{label} missing hookSpecificOutput object")
+        return failures
+    if hook_output.get("hookEventName") != event_name:
+        failures.append(f"{label} hookEventName must be {event_name}")
+    context = hook_output.get("additionalContext")
+    if not isinstance(context, str) or not context.strip():
+        failures.append(f"{label} missing additionalContext")
+        return failures
+    failures.extend(_require_markers(context, markers, label))
+    return failures
 
 
 def audit_agent_process(root: Path = ROOT) -> list[str]:
@@ -57,14 +101,19 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "Tier 3",
         "selected tier",
         "owner role",
+        "evidence need",
         "mutation boundary",
         "validation plan",
+        "default-authorized",
+        "no-P1/P2",
     ], "AGENTS.md"))
 
     governance_text = _read(root / ".agents/GOVERNANCE.md")
     failures.extend(_require_markers(governance_text, [
         "## Multi-agent operating policy",
         "reviewer quorum",
+        "default-authorized",
+        "no-P1/P2",
         "Agent-process gate",
         "project-local Codex hooks remain trust-gated runtime aids",
     ], "governance"))
@@ -82,6 +131,7 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "## Coordinator",
         "## Agent Operations",
         "reviewer quorum",
+        "default-authorized",
     ], "roles"))
 
     docs_text = "\n".join(_read(root / rel) for rel in [
@@ -97,6 +147,10 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "UserPromptSubmit",
         "SubagentStart",
         "PreToolUse",
+        "evidence need",
+        "decision footer",
+        "ready_for_mutation",
+        "default-authorized",
         "bounded-implementation-worker",
     ], "agent process docs"))
 
@@ -158,11 +212,52 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         elif "hookSpecificOutput" not in _read(path):
             failures.append(f".codex/hooks/{script} missing hookSpecificOutput")
 
+    failures.extend(_run_hook(
+        root,
+        "user_prompt_submit_agent_process.py",
+        json.dumps({"hook_event_name": "UserPromptSubmit"}),
+        "UserPromptSubmit",
+        ["evidence need", "default-authorized", "decision footer", "advisory aids"],
+    ))
+    failures.extend(_run_hook(
+        root,
+        "subagent_start_agent_process.py",
+        json.dumps({"agent_type": "qa-validation-reviewer", "permission_mode": "read-only"}),
+        "SubagentStart",
+        ["default-authorized", "explicit disjoint write scope", "advisory aids"],
+    ))
+    failures.extend(_run_hook(
+        root,
+        "pre_tool_use_agent_process.py",
+        json.dumps({
+            "tool_name": "functions.exec_command",
+            "tool_input": {"cmd": "touch scaffold-audit-should-warn"},
+            "prompt": "Tier 2 validation plan mutation boundary",
+        }),
+        "PreToolUse",
+        ["verified facts", "assumptions", "unknowns", "owner role", "evidence need", "advisory aids"],
+    ))
+    for script, event_name in [
+        ("user_prompt_submit_agent_process.py", "UserPromptSubmit"),
+        ("subagent_start_agent_process.py", "SubagentStart"),
+        ("pre_tool_use_agent_process.py", "PreToolUse"),
+    ]:
+        failures.extend(_run_hook(
+            root,
+            script,
+            "[]",
+            event_name,
+            ["Hook input shape was unknown"],
+        ))
+
     docs_index = _read(root / "docs/index.md")
     for link in [
         "../.agents/TASK_LOG/0074-multi-agentic-default-process.md",
         "../.agents/handoffs/0063-multi-agentic-default-process-to-qa.md",
         "../knowledge-base/source-ledger/2026-05-27-multi-agentic-default-process.md",
+        "../.agents/TASK_LOG/0077-multi-agentic-continuation-decision.md",
+        "../.agents/handoffs/0066-multi-agentic-continuation-decision-to-qa.md",
+        "../knowledge-base/source-ledger/2026-05-27-multi-agentic-continuation-decision.md",
     ]:
         if link not in docs_index:
             failures.append(f"docs index missing multi-agent link: {link}")
@@ -176,10 +271,19 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0074-multi-agentic-default-process.md",
         ".agents/handoffs/0063-multi-agentic-default-process-to-qa.md",
         "knowledge-base/source-ledger/2026-05-27-multi-agentic-default-process.md",
+        ".agents/TASK_LOG/0077-multi-agentic-continuation-decision.md",
+        ".agents/handoffs/0066-multi-agentic-continuation-decision-to-qa.md",
+        "knowledge-base/source-ledger/2026-05-27-multi-agentic-continuation-decision.md",
     ]:
         path = root / rel
         if not path.exists():
             failures.append(f"missing record: {rel}")
+
+    tests_readme = _read(root / "tests/README.md")
+    failures.extend(_require_markers(tests_readme, [
+        "python3 -m unittest discover -s tests/scaffold_audits -p 'test_*.py'",
+        "python3 scripts/scaffold_audit_agent_process.py",
+    ], "tests README"))
 
     return failures
 

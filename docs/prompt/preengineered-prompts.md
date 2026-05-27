@@ -6,10 +6,14 @@ Use at the start of every ESP32 workspace task:
 
 ```text
 Apply the ESP32 default-multi-agentic-process. Classify the prompt as Tier 0,
-Tier 1, Tier 2, or Tier 3. State verified facts, assumptions, unknowns, owner
-role, mutation boundary, and validation plan before non-trivial mutation. Use
-project-local subagents only when explicitly authorized and safe; otherwise run
-the same role lenses locally and record that no subagents were spawned.
+Tier 1, Tier 2, or Tier 3. Emit a routing packet with verified facts,
+assumptions, unknowns, owner role, evidence need, mutation boundary, reviewer
+quorum, gate authority, validation plan, and trust boundary before
+non-trivial mutation. Project-local read-only subagents are default-authorized
+for safe Tier 2 and Tier 3 quorum; mutating workers require explicit disjoint
+write scopes. End with a decision footer: continue, ask_user, blocked,
+ready_for_mutation, or handoff; next gate; owner; evidence; approved mutation
+boundary; validation; durable records; and authority limits.
 ```
 
 ## Research prompt
@@ -24,7 +28,7 @@ source-index entries before updating any factual profile.
 
 ## Firmware prompt
 
-Use after ADR-0001 is accepted:
+Use after the scoped project has an accepted framework and board ADR:
 
 ```text
 Implement only the requested firmware behavior. Preserve framework and board

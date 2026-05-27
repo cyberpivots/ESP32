@@ -16,6 +16,7 @@
 
 - Coordinator triage owner: Agent operations.
 - Reviewer quorum owner: QA, with the relevant area owner for the selected tier.
+- Continuation decision owner: Agent operations, with QA validation evidence.
 - Worker-agent scope owner: the area owner whose files are in the explicit write
   boundary.
 - Hook trust follow-up owner: QA and Tooling.

@@ -2,7 +2,7 @@
 
 Source index: [../knowledge-base/source-index.md](../knowledge-base/source-index.md)
 
-Date: 2026-05-26
+Date: 2026-05-27
 
 This is the canonical planning-status ledger for the ESP32 workspace, with
 paired DOS-C evidence included only where ESP32 acceptance depends on DOS-C
@@ -25,6 +25,11 @@ bridge, operator, firmware, or live-proof truth.
   `ADR-0006`, accepted runtime requirements under `ADR-0007`, and a host-only
   Phase 5/6 runtime design/prototype under `ADR-0008`, but it does not accept
   runtime firmware implementation or live proof work.
+- Gate M1 full-service mesh discovery has an accepted host-only contract under
+  `ADR-0009` and source ID
+  `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`, but it does not
+  accept live ESP-WIFI-MESH, BLE pairing, Android app behavior, router/admin
+  mutation, firmware runtime migration, or live proof work.
 - The 2026-05-25 LAN DHCP/current-remap pass ended with a read-only preflight
   `ok:true` for the current Pi/coordinator/peer identities, but it did not run
   bridge, Win31/OPCON, BBS, flash, erase, monitor, or radio proof.
@@ -53,6 +58,8 @@ bridge, operator, firmware, or live-proof truth.
   no-MicroSD state was captured by this documentation review.
 - No current live proof opens BLE, ESP-WIFI-MESH, PCAP, relay, XBee, TFT,
   MicroSD, load, mains, erase, monitor, or serial-write expansion.
+- No firmware mapping from ESP-WIFI-MESH APIs/events into `mesh_discovery.v1`
+  is accepted.
 - The fullscreen fix did not require Windows 3.1 display-driver/runtime
   mutation.
 
@@ -78,6 +85,7 @@ bridge, operator, firmware, or live-proof truth.
 | DOS-C bridge/operator default path | accepted-live | paired live proof and source implementation | `SRC-LOCAL-DOSC-ESPNOW-BBS-BRIDGE-2026-05-20`, `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23`, `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25` | COM1/nullmodem/Pi bridge path is accepted for BBS status, message, download, and non-executing OTAP intent proof. | Runtime export controls and firmware ABI runtime behavior remain closed. | Continue DOS-C work through companion KB records and host tests before ESP32 claims depend on it. |
 | DOSBox-X PCAP/packet-driver path | blocked | historical diagnostic only | `SRC-DOSBOX-SERIAL-CONFIG`, `SRC-LOCAL-DOSC-ESPNOW-BBS-BRIDGE-2026-05-20` | No accepted PCAP proof. Serial-nullmodem is the accepted path. | Pi identity, wired `eth0`, capability setup/restore, redacted packet capture, and rollback proof. | Reopen only by explicit PCAP live-gate request. |
 | ESP-WIFI-MESH self-healing branch | design-only | source-backed design | `SRC-LOCAL-ESPNOW-NETWORK-LIVE-GATE-2026-05-23`, `SRC-ESP-IDF-WIFI-MESH`, `SRC-ESP-IDF-RF-COEXIST` | Optional metadata and Network view are simulator/source-level only. | No mesh route-table, parent, root, healing, coexistence, flash, or cleanup proof. | Accepted ADR plus fresh identity, backups, build hashes, mesh config, route/healing proof, rollback. |
+| Full-service mesh discovery Gate M1 | accepted-host-simulator-only | ADR/source ledger plus host tests | `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`, `SRC-ESP-IDF-WIFI-MESH`, `SRC-ESP-IDF-RF-COEXIST`, `SRC-ANDROID-BLE-OVERVIEW`, `SRC-ANDROID-BLE-GATT-CONNECT`, `SRC-ANDROID-BLUETOOTH-PERMISSIONS` | Accepted `ADR-0009` defines `mesh_discovery.v1`, host topology/service/capability/BLE-Android metadata, healing-event shape, compact bridge summaries, recursive secret-field rejection, 512-byte bridge bounds, runtime summary inclusion, and unchanged Gate F radio service codes. | No live mesh proof, BLE proof, Android app proof, router/admin policy, firmware mapping, or DOS-C companion Network/Services fixture support. | Gate M2 DOS-C companion fixtures and Win31 read-only Network/Services summary; Gate M3 firmware mapping review remains design-only. |
 | BLE/Android client-node branch | design-only | source-backed design | `SRC-LOCAL-ESPNOW-NETWORK-LIVE-GATE-2026-05-23`, `SRC-ESP-IDF-BLE-API`, `SRC-ESP-IDF-BLE-SMP`, `SRC-ANDROID-BLE-OVERVIEW`, `SRC-ANDROID-BLE-GATT-CONNECT`, `SRC-ANDROID-BLUETOOTH-PERMISSIONS` | BLE GATT/Android model is documented only. | No UUIDs, Android package, permissions proof, bonding/SMP proof, coexistence proof, or live GATT proof. | Separate BLE live gate. |
 | Web Serial, Web Bluetooth, and raw serial client work | blocked | source-backed future references | `SRC-MDN-WEB-SERIAL-2026-05-24`, `SRC-MDN-WEB-BLUETOOTH-2026-05-24`, `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24` | Browser APIs are documented as future experiments only. | No live browser serial writes, BLE pairing, or replacement of accepted Win31 path. | Keep closed behind separate browser/device gates. |
 | Cross-project Wi-Fi browser client UI and dummy output | design-only | source-backed plan | `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24`, `SRC-ESP-IDF-WIFI`, `SRC-ESP-IDF-HTTP-SERVER`, `SRC-GITHUB-PAGES-WHAT-IS` | Plan chooses Wi-Fi web first for phone and laptop and dummy-output-only first live control. | No selected board, current identity, Wi-Fi mode, browser proof, auth policy, dummy fixture, or no-relay/load/mains observation. | Stage 1 simulated UI, then selected-board read-only proof, then dummy-output gate. |
@@ -92,6 +100,6 @@ bridge, operator, firmware, or live-proof truth.
 ## Closed Gates
 
 Keep firmware runtime implementation, firmware persistence, Win31 export
-controls, bridge export request types, BLE, mesh, PCAP, relay/XBee, TFT,
+controls, bridge export request types, BLE pairing, live mesh, PCAP, relay/XBee, TFT,
 MicroSD, load, mains, erase, monitor, and serial-write expansion closed unless
 a later source-backed gate explicitly opens the exact surface.

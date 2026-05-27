@@ -46,6 +46,75 @@ RADIO_MAX_FRAGMENT_COUNT = 16
 ANALYTICS_SCHEMA_VERSION = "gate-g.analytics.v1"
 ANALYTICS_POLICY = "adr-0005-redacted-local-operator-v1"
 ANALYTICS_RETENTION = "7_days"
+DISCOVERY_SCHEMA_VERSION = "mesh_discovery.v1"
+DISCOVERY_TRANSPORT = "esp-wifi-mesh"
+DISCOVERY_MODE = "sim"
+DISCOVERY_ADMIN_GATE = "disabled"
+DISCOVERY_BRIDGE_REQUEST_TYPES = frozenset(
+    {
+        "discovery_snapshot",
+        "discovery_events",
+        "service_catalog",
+        "capability_report",
+    }
+)
+DISCOVERY_EVENT_TYPES = frozenset(
+    {
+        "node_seen",
+        "node_lost",
+        "parent_selected",
+        "root_elected",
+        "root_switched",
+        "route_added",
+        "route_removed",
+        "heal_started",
+        "heal_observed",
+        "service_seen",
+        "capability_seen",
+        "ble_client_seen",
+    }
+)
+DISCOVERY_SECRET_FIELD_MARKERS = frozenset(
+    {
+        "androidid",
+        "body",
+        "bondingkey",
+        "credential",
+        "credentials",
+        "key",
+        "keys",
+        "latitude",
+        "lmk",
+        "location",
+        "longitude",
+        "password",
+        "passwd",
+        "pairingkey",
+        "pairingtoken",
+        "pmk",
+        "rawbody",
+        "secret",
+        "secrets",
+        "token",
+        "tokens",
+    }
+)
+BLOCKED_LIVE_REQUEST_TYPES = frozenset(
+    {
+        "ble_pair",
+        "erase",
+        "flash",
+        "live_mesh",
+        "mesh_start",
+        "monitor",
+        "pcap_start",
+        "radio_set",
+        "relay_set",
+        "router_admin",
+        "serial_write",
+        "xbee_write",
+    }
+)
 
 SERVICE_CODES = {
     "direct_message": 1,
@@ -67,6 +136,36 @@ CUSTODY_CODES = {
     "expired": 6,
 }
 CODE_CUSTODY = {value: key for key, value in CUSTODY_CODES.items()}
+
+DEFAULT_DISCOVERY_SERVICES = (
+    "bbs_msg",
+    "file_xfer",
+    "telemetry",
+    "node_status",
+    "custody_ack",
+    "control_intent",
+    "ble_presence",
+    "android_meta",
+)
+DISCOVERY_SERVICE_BRIDGE_LABELS = {
+    "android_meta": "and",
+    "bbs_msg": "bbs",
+    "ble_presence": "ble",
+    "control_intent": "intent",
+    "custody_ack": "ack",
+    "file_xfer": "file",
+    "node_status": "stat",
+    "telemetry": "tel",
+}
+DISCOVERY_CAPABILITY_BRIDGE_LABELS = {
+    "android_client": "and",
+    "ble_gatt": "ble",
+    "heal_observer": "heal",
+    "mesh_child": "child",
+    "mesh_root": "root",
+    "route_leaf": "leaf",
+    "route_table": "route",
+}
 
 _HEADER = struct.Struct("!BBBBIIBB8s8sBB")
 
@@ -153,6 +252,68 @@ class DuplicateWindow:
         return True
 
 
+@dataclass(frozen=True)
+class DiscoveryNode:
+    """Host-only discovery record; not live mesh, BLE, or firmware evidence."""
+
+    node_id: str
+    mac: str
+    link: str
+    role: str
+    layer: int
+    parent: str
+    root: str
+    rssi: int
+    seen_ms: int
+    health: str
+    services: tuple[str, ...] = ()
+    capabilities: tuple[str, ...] = ()
+    security: str = "sim-summary-no-secrets"
+    evidence: tuple[str, ...] = ("sim-fixture",)
+
+    def full_record(self) -> dict[str, Any]:
+        payload = {
+            "node": self.node_id,
+            "mac": self.mac,
+            "link": self.link,
+            "role": self.role,
+            "layer": self.layer,
+            "parent": self.parent,
+            "root": self.root,
+            "rssi": self.rssi,
+            "seen_ms": self.seen_ms,
+            "health": self.health,
+            "services": list(self.services),
+            "capabilities": list(self.capabilities),
+            "security": self.security,
+            "evidence": list(self.evidence),
+        }
+        assert_no_discovery_secrets(payload)
+        return payload
+
+    def bridge_record(self) -> dict[str, Any]:
+        payload = {
+            "id": self.node_id,
+            "r": self.role,
+            "l": self.layer,
+            "p": self.parent,
+            "rt": self.root,
+            "rssi": self.rssi,
+            "age": self.seen_ms,
+            "h": self.health,
+            "svc": [
+                DISCOVERY_SERVICE_BRIDGE_LABELS.get(value, value)
+                for value in self.services[:2]
+            ],
+            "cap": [
+                DISCOVERY_CAPABILITY_BRIDGE_LABELS.get(value, value)
+                for value in self.capabilities[:2]
+            ],
+        }
+        assert_no_discovery_secrets(payload)
+        return payload
+
+
 @dataclass
 class ProtocolSimulator:
     """In-memory simulator for packet services behind the BBS bridge."""
@@ -168,8 +329,15 @@ class ProtocolSimulator:
     file_requests: dict[int, dict[str, Any]] = field(default_factory=dict)
     control_intents: list[dict[str, Any]] = field(default_factory=list)
     client_user_labels: set[str] = field(default_factory=set)
+    discovery_nodes: dict[str, DiscoveryNode] = field(default_factory=dict)
+    discovery_event_log: list[dict[str, Any]] = field(default_factory=list)
     custody_ack_count: int = 0
     blocked_state_changing_requests: int = 0
+
+    def __post_init__(self) -> None:
+        if not self.discovery_nodes:
+            for node in _default_discovery_nodes():
+                self.observe_discovery_node(node)
 
     def allocate_message_id(self) -> int:
         self.next_message_id += 1
@@ -292,6 +460,133 @@ class ProtocolSimulator:
         self.control_intents.append(intent)
         return intent
 
+    def observe_discovery_node(self, node: DiscoveryNode) -> None:
+        assert_no_discovery_secrets(node.full_record())
+        self.discovery_nodes[node.node_id] = node
+        self.record_discovery_event("node_seen", node.node_id, detail=node.health)
+        for service in node.services:
+            self.record_discovery_event("service_seen", node.node_id, detail=service)
+        for capability in node.capabilities:
+            self.record_discovery_event("capability_seen", node.node_id, detail=capability)
+
+    def record_discovery_event(self, event_type: str, node_id: str, detail: str = "") -> None:
+        if event_type not in DISCOVERY_EVENT_TYPES:
+            raise ProtocolError("discovery_event_unknown", event_type)
+        event = {
+            "seq": len(self.discovery_event_log) + 1,
+            "event": event_type,
+            "node": node_id,
+            "detail": detail,
+        }
+        assert_no_discovery_secrets(event)
+        self.discovery_event_log.append(event)
+
+    def expire_discovery_nodes(self, stale_after_ms: int) -> None:
+        if stale_after_ms < 0:
+            raise ProtocolError("field_type_invalid", "stale_after_ms")
+        for node_id, node in list(self.discovery_nodes.items()):
+            if node.seen_ms > stale_after_ms and node.health != "lost":
+                expired = DiscoveryNode(
+                    node_id=node.node_id,
+                    mac=node.mac,
+                    link=node.link,
+                    role=node.role,
+                    layer=node.layer,
+                    parent=node.parent,
+                    root=node.root,
+                    rssi=node.rssi,
+                    seen_ms=node.seen_ms,
+                    health="lost",
+                    services=node.services,
+                    capabilities=node.capabilities,
+                    security=node.security,
+                    evidence=node.evidence,
+                )
+                self.discovery_nodes[node_id] = expired
+                self.record_discovery_event("node_lost", node_id, detail="stale")
+
+    def discovery_summary(self) -> dict[str, Any]:
+        return {
+            "schema": DISCOVERY_SCHEMA_VERSION,
+            "mode": DISCOVERY_MODE,
+            "nodes": len(self.discovery_nodes),
+            "services": len(DEFAULT_DISCOVERY_SERVICES),
+            "events": len(self.discovery_event_log),
+            "heal": self._healing_state(),
+        }
+
+    def _healing_state(self) -> str:
+        events = {event["event"] for event in self.discovery_event_log}
+        if "heal_observed" in events:
+            return "observed"
+        if "heal_started" in events:
+            return "started"
+        if "node_lost" in events or "root_switched" in events:
+            return "pending"
+        return "untested"
+
+    def discovery_snapshot(self, limit: int = 2) -> dict[str, Any]:
+        response = {
+            "type": "discovery_snapshot",
+            "schema": DISCOVERY_SCHEMA_VERSION,
+            "transport": DISCOVERY_TRANSPORT,
+            "mode": DISCOVERY_MODE,
+            "admin_gate": DISCOVERY_ADMIN_GATE,
+            "simulator_only": True,
+            "nodes": [
+                node.bridge_record()
+                for node in sorted(self.discovery_nodes.values(), key=lambda item: item.node_id)[
+                    : _bounded_limit(limit, 1, 4)
+                ]
+            ],
+            "truncated": max(0, len(self.discovery_nodes) - _bounded_limit(limit, 1, 4)),
+        }
+        assert_no_discovery_secrets(response)
+        return response
+
+    def discovery_events(self, limit: int = 4) -> dict[str, Any]:
+        bounded = _bounded_limit(limit, 1, 8)
+        response = {
+            "type": "discovery_events",
+            "schema": DISCOVERY_SCHEMA_VERSION,
+            "mode": DISCOVERY_MODE,
+            "simulator_only": True,
+            "events": self.discovery_event_log[-bounded:],
+        }
+        assert_no_discovery_secrets(response)
+        return response
+
+    def service_catalog(self, limit: int = 8) -> dict[str, Any]:
+        response = {
+            "type": "service_catalog",
+            "schema": DISCOVERY_SCHEMA_VERSION,
+            "mode": DISCOVERY_MODE,
+            "services": list(DEFAULT_DISCOVERY_SERVICES[: _bounded_limit(limit, 1, 8)]),
+            "truncated": max(0, len(DEFAULT_DISCOVERY_SERVICES) - _bounded_limit(limit, 1, 8)),
+        }
+        assert_no_discovery_secrets(response)
+        return response
+
+    def capability_report(self) -> dict[str, Any]:
+        capability_counts: dict[str, int] = {}
+        for node in self.discovery_nodes.values():
+            for capability in node.capabilities:
+                capability_counts[capability] = capability_counts.get(capability, 0) + 1
+        response = {
+            "type": "capability_report",
+            "schema": DISCOVERY_SCHEMA_VERSION,
+            "mode": DISCOVERY_MODE,
+            "simulator_only": True,
+            "capabilities": capability_counts,
+            "ble_android": {
+                "presence": "metadata_only",
+                "android": "central_gatt_client",
+                "esp32": "peripheral_gatt_server",
+            },
+        }
+        assert_no_discovery_secrets(response)
+        return response
+
     def mark_sent(self, packet: WirelessPacket) -> None:
         record = self.custody.get(packet.message_id)
         if record is None:
@@ -326,6 +621,7 @@ class ProtocolSimulator:
             "telemetry": len(self.telemetry_reports),
             "files": len(self.file_requests),
             "control_intents": len(self.control_intents),
+            "discovery": self.discovery_summary(),
         }
 
     def analytics_report(self) -> dict[str, Any]:
@@ -443,6 +739,17 @@ def _process_bridge_request(
     message_type = _require_str(frame, "type")
     if message_type in {"protocol_report", "state_get"}:
         return simulator.reporting_frame()
+    if message_type == "discovery_snapshot":
+        limit = _optional_limit(frame, default=2, maximum=4)
+        return simulator.discovery_snapshot(limit)
+    if message_type == "discovery_events":
+        limit = _optional_limit(frame, default=4, maximum=8)
+        return simulator.discovery_events(limit)
+    if message_type == "service_catalog":
+        limit = _optional_limit(frame, default=8, maximum=8)
+        return simulator.service_catalog(limit)
+    if message_type == "capability_report":
+        return simulator.capability_report()
     if message_type == "msg_post":
         to_peer = _require_str(frame, "to")
         sender = _require_str(frame, "from")
@@ -508,7 +815,7 @@ def _process_bridge_request(
             "action": intent["action"],
             "reason": intent["reason"],
         }
-    if message_type in {"relay_set", "flash", "erase", "radio_set"}:
+    if message_type in BLOCKED_LIVE_REQUEST_TYPES:
         raise ProtocolError("state_changing_command_blocked", message_type)
     raise ProtocolError("message_type_unknown", message_type)
 
@@ -845,6 +1152,71 @@ def _with_bridge_version(response: Mapping[str, Any]) -> dict[str, Any]:
     versioned = dict(response)
     versioned.setdefault("v", BRIDGE_PROTOCOL_VERSION)
     return versioned
+
+
+def assert_no_discovery_secrets(payload: Any) -> None:
+    if isinstance(payload, Mapping):
+        for key, value in payload.items():
+            normalized = "".join(ch for ch in str(key).lower() if ch.isalnum())
+            if (
+                normalized in DISCOVERY_SECRET_FIELD_MARKERS
+                or normalized.endswith("key")
+                or normalized.endswith("token")
+                or "password" in normalized
+                or "secret" in normalized
+            ):
+                raise ProtocolError("secret_field_blocked", str(key))
+            assert_no_discovery_secrets(value)
+    elif isinstance(payload, (list, tuple)):
+        for item in payload:
+            assert_no_discovery_secrets(item)
+
+
+def _optional_limit(frame: Mapping[str, Any], *, default: int, maximum: int) -> int:
+    if "limit" not in frame:
+        return default
+    return _bounded_limit(_require_int(frame, "limit"), 1, maximum)
+
+
+def _bounded_limit(value: int, minimum: int, maximum: int) -> int:
+    if value < minimum or value > maximum:
+        raise ProtocolError("field_type_invalid", "limit")
+    return value
+
+
+def _default_discovery_nodes() -> tuple[DiscoveryNode, ...]:
+    return (
+        DiscoveryNode(
+            node_id="coord01",
+            mac="78:e3:6d:10:4d:6c",
+            link=DISCOVERY_TRANSPORT,
+            role="root",
+            layer=1,
+            parent="none",
+            root="coord01",
+            rssi=-38,
+            seen_ms=0,
+            health="ok",
+            services=("bbs_msg", "telemetry", "node_status"),
+            capabilities=("mesh_root", "route_table", "heal_observer"),
+            evidence=("SRC-ESP-IDF-WIFI-MESH", "sim-fixture"),
+        ),
+        DiscoveryNode(
+            node_id="peer01",
+            mac="94:b9:7e:da:17:d0",
+            link=DISCOVERY_TRANSPORT,
+            role="child",
+            layer=2,
+            parent="coord01",
+            root="coord01",
+            rssi=-57,
+            seen_ms=900,
+            health="ok",
+            services=("file_xfer", "ble_presence", "android_meta"),
+            capabilities=("mesh_child", "ble_gatt", "android_client"),
+            evidence=("SRC-ANDROID-BLE-OVERVIEW", "sim-fixture"),
+        ),
+    )
 
 
 def main() -> int:

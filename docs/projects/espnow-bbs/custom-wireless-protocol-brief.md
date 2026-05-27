@@ -86,7 +86,7 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
 | Interval telemetry | [inference] Model telemetry as compact reports with class, cadence, priority, and link-status metadata. | [official-source-verified] Ag sensor and asset-tracking classes are source-backed, but local schemas are not accepted. |
 | Node/client status | [inference] Keep node health/status as packetized radio telemetry summarized through the bridge UI. | [repo-verified] Existing status fields and peer counters already support operations visibility. |
 | Analytics/reporting | [inference] Generate reports from Pi bridge/spool records before firmware-resident analytics. | [repo-verified] `ADR-0005` accepts only local-admin redacted JSON export from the DOS-C/Pi bridge spool for v1. |
-| Mesh/BLE/PCAP/router/admin/relay | [assumption] Keep out of scope for this protocol brief. | [repo-verified] Live-gate docs keep those lanes closed unless a later explicit gate opens them. |
+| Mesh/BLE/PCAP/router/admin/relay | [accepted-host-only] Model mesh/BLE discovery as `mesh_discovery.v1` host summaries only; keep PCAP/router/admin/relay live lanes closed. | [repo-verified] `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27` accepts simulator summaries, not live ESP-WIFI-MESH or BLE. |
 
 ## 4. Proposed Protocol Model
 
@@ -180,6 +180,9 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
   state-changing serial commands.
 - [inference] Expose direct-message, file, telemetry, and node-status summaries
   through compact bridge responses that fit the Win31 line budget.
+- [inference] Expose host-only discovery summaries through
+  `discovery_snapshot`, `discovery_events`, `service_catalog`, and
+  `capability_report`; these remain separate from Gate F radio service codes.
 - [assumption] Client/user reporting and analytics are generated from bridge
   records first, not from ESP32 firmware state.
 - [repo-verified] Gate G simulator analytics remain fixture coverage for
@@ -193,6 +196,11 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
   export from a file-backed bridge spool into ignored proof/runtime roots. It
   remains closed to Win31/OPCON controls, firmware ABI/runtime export behavior,
   and bridge request types.
+- [repo-verified] `ADR-0009` accepts `mesh_discovery.v1` only as a host-only
+  discovery contract for topology, services, capabilities, BLE/Android
+  presence metadata, and healing-event summaries. It does not change Gate F
+  radio service codes or open live ESP-WIFI-MESH. Source ID:
+  `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`.
 
 ## 9. Test and Acceptance Plan
 
@@ -255,6 +263,9 @@ Source index: [../../../knowledge-base/source-index.md](../../../knowledge-base/
   firmware ABI design contract, Gate G simulator analytics, Gate G
   local-admin redacted export, Gate H structured transcript, and Gate H
   structured live acceptance are all recorded in source-index IDs.
+- [accepted-host-contract] Gate M1 full-service mesh discovery now has
+  accepted `ADR-0009` and source ID
+  `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`.
 - [accepted-design-contract] Gate F firmware ABI now has accepted `ADR-0006`,
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26`,
   and `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`,

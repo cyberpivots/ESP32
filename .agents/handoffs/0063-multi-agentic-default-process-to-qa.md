@@ -13,6 +13,9 @@ Date: 2026-05-27
   `PreToolUse` command hooks that inject checklist or warning context.
 - `scripts/scaffold_audit_agent_process.py` is wired into
   `scripts/verify_scaffold.py`.
+- Handoff `0066-multi-agentic-continuation-decision-to-qa.md` supersedes this
+  handoff for continuation-decision policy, default read-only reviewer
+  subagent use, and committed hook behavior tests.
 
 ## QA Focus
 
@@ -24,6 +27,7 @@ Date: 2026-05-27
    `python3 scripts/verify_scaffold.py` after any future profile or hook edit.
 4. Check that worker agents always receive disjoint write scopes before
    mutation.
+5. Use the 0066 handoff for the current continuation-decision validation path.
 
 ## Do Not Claim
 

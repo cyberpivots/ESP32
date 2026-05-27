@@ -141,6 +141,7 @@ PUBLIC_SOURCE_INDEX_REDACTIONS = [
     (re.compile(r"`?/dev/tty[A-Za-z0-9/_-]*`?"), "[serial device redacted]"),
     (re.compile(r"(?<!-)COM\d+", re.IGNORECASE), "COM port redacted"),
     (re.compile(r"`?[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}`?"), "[local device identifier redacted]"),
+    (re.compile(r"\b[A-Fa-f0-9]{32,}\b"), "[hash redacted]"),
     (re.compile(r"user_uploads/[A-Za-z0-9_.-]+"), "private upload archive"),
     (re.compile(r"IMG_\d+\.(?:jpe?g|png|webp)", re.IGNORECASE), "[photo filename redacted]"),
     (re.compile(r"private bench notes", re.IGNORECASE), "private bench records"),
@@ -213,9 +214,10 @@ def sanitize_public_source_index(source: Path) -> str:
     text = sanitize_public_markdown(source)
     notice = (
         "> Public copy: local paths, raw upload archive names, raw photo "
-        "filenames, serial device names, COM ports, and device identifiers are "
-        "redacted in the generated Pages artifact. The repository source index "
-        "keeps the full internal evidence references.\n\n"
+        "filenames, serial device names, COM ports, device identifiers, and "
+        "hash-like evidence values are redacted in the generated Pages "
+        "artifact. The repository source index keeps the full internal "
+        "evidence references.\n\n"
     )
     return text.replace("# Source Index\n\n", "# Source Index\n\n" + notice, 1)
 

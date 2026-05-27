@@ -14,6 +14,11 @@ Status: Draft Gate E candidate; not accepted as final firmware ABI.
 - The required request field is `type`.
 - The draft request set is `msg_post`, `download_queue`, `telemetry_report`,
   `node_status`, `protocol_report`, `state_get`, and `control_intent`.
+- `ADR-0009` adds separate host-only discovery summary request names:
+  `discovery_snapshot`, `discovery_events`, `service_catalog`, and
+  `capability_report`. They do not change the Gate E draft request set for
+  final firmware ABI review. Source ID:
+  `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`.
 - The draft stable bridge error reasons are `version_required`,
   `version_invalid`, `line_too_long`, `non_ascii`, `json_invalid`,
   `payload_invalid`, `field_type_invalid`, `hex_invalid`,

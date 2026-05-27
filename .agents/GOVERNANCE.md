@@ -23,13 +23,20 @@
 - Tier 1 prompts require the relevant owner lens and QA lens before mutation.
 - Tier 2 prompts require a read-only reviewer quorum before mutation for
   governance, protocol, firmware, evidence, hook/config, or broad code work.
+  Project-local read-only subagents are default-authorized when available and
+  safe.
 - Tier 3 prompts require explicit gate authority and same-session live evidence
   before any live bench, flashing, wiring, radio, serial-write, relay/load/mains,
   release-gate, or equivalent risky mutation.
+- For Tier 2 and Tier 3 gates, a no-P1/P2 reviewer quorum may approve only the
+  named gate and mutation boundary. Gate acceptance does not imply firmware
+  runtime, live bench, flash, serial-write, radio, relay/load/mains, release, or
+  other closed-surface authority unless that authority is named in the routing
+  packet.
 - Project-local Codex hooks and custom agents are advisory enforcement aids
   unless reviewed and trusted by the active Codex runtime.
-- If subagents are unavailable, unsafe, or not explicitly authorized, run the
-  same role perspectives locally and record that no subagents were spawned.
+- If read-only subagents are unavailable or unsafe, run the same role
+  perspectives locally and record that no subagents were spawned.
 
 ## Validation gates
 

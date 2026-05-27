@@ -35,8 +35,11 @@ custom agent profiles as advisory aids.
 
 - The project wants tiered triage for every prompt while avoiding automatic
   fan-out for trivial work.
-- Runtime subagent spawning is optional and depends on explicit authority,
-  safety, and available tools.
+- Runtime subagent spawning policy is superseded for continuation work by
+  `SRC-LOCAL-MULTI-AGENTIC-CONTINUATION-DECISION-2026-05-27`: project-local
+  read-only subagents are default-authorized for safe Tier 2 and Tier 3
+  reviewer quorum; mutating workers still require explicit disjoint write
+  scopes.
 
 ## Unknowns
 
@@ -51,6 +54,8 @@ custom agent profiles as advisory aids.
 - QA handoff: `.agents/handoffs/0063-multi-agentic-default-process-to-qa.md`
 - Hook config: `.codex/hooks.json`
 - Static verifier: `scripts/scaffold_audit_agent_process.py`
+- Continuation extension:
+  `knowledge-base/source-ledger/2026-05-27-multi-agentic-continuation-decision.md`
 
 ## Closed Gates
 

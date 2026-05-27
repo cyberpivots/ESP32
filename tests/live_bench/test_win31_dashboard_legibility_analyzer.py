@@ -231,6 +231,25 @@ class Win31DashboardLegibilityAnalyzerTests(unittest.TestCase):
         self.assertIn("normalizedSafeMarginsPx", layout)  # type: ignore[operator]
         self.assertIn("proof_capture_size_mismatch", risk_codes(screen))
 
+    def test_visual_only_mode_does_not_require_vision_gate_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            screenshot_dir = root / "screenshots"
+            screenshot_dir.mkdir()
+            path = screenshot_dir / "03-home-dashboard.png"
+            write_win31_layout_screen(path, clipped=False)
+            result = analyzer.analyze_evidence(
+                root,
+                None,
+                screenshot_dir,
+                "fixture",
+                visual_only=True,
+            )
+        aggregate = result["aggregate"]  # type: ignore[index]
+        self.assertTrue(result["visualOnly"])  # type: ignore[index]
+        self.assertEqual(aggregate["visionGateStatus"], "visual_only")  # type: ignore[index]
+        self.assertIn(aggregate["advisoryVisualFitStatus"], {"visual_only_pass", "needs_manual_review"})  # type: ignore[index]
+
     def test_strong_and_weak_ocr_cases_are_separated(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

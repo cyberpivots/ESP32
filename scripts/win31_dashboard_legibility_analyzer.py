@@ -952,6 +952,13 @@ def layout_margin_values(screens: list[dict[str, Any]], side: str) -> list[int]:
 
 def advisory_visual_fit_status(aggregate: dict[str, Any]) -> str:
     risks = aggregate.get("riskCounts") if isinstance(aggregate.get("riskCounts"), dict) else {}
+    visual_only = bool(aggregate.get("visualOnly"))
+    if visual_only:
+        if risks.get("console_fit_risk") or risks.get("log_region_overflow"):
+            return "fail"
+        if risks.get("proof_capture_size_mismatch"):
+            return "needs_manual_review"
+        return "visual_only_pass"
     if aggregate.get("visionGateStatus") != "pass":
         return "needs_manual_review"
     if risks.get("console_fit_risk") or risks.get("log_region_overflow"):
@@ -1226,6 +1233,7 @@ def build_analysis(
     analysis_date: str,
     display_probe: dict[str, Any] | None = None,
     dosbox_display_config: dict[str, Any] | None = None,
+    visual_only: bool = False,
 ) -> dict[str, Any]:
     records_by_name = vision_records_by_name(vision_gate)
     screens = [
@@ -1289,6 +1297,7 @@ def build_analysis(
         "visionGateStatus": vision_gate.get("status"),
         "visionGateOk": bool(vision_gate.get("ok")),
         "visionGateFailures": vision_gate.get("failures", []),
+        "visualOnly": visual_only,
     }
     aggregate["advisoryVisualFitStatus"] = advisory_visual_fit_status(aggregate)
     coordinate_stack = {
@@ -1329,11 +1338,19 @@ def build_analysis(
         verified_facts.append("This run measures a revised visual-fit screenshot packet.")
     else:
         unknowns.insert(0, "No revised UI screenshot packet has been measured by this task.")
+    if visual_only:
+        verified_facts.append(
+            "Visual-only mode was selected; cleanup proof and DOS-C vision-gate JSON are not required for this advisory run."
+        )
+        unknowns.append(
+            "Without DOS-C vision-gate JSON, OCR confidence and transcript-first acceptance remain unverified by this analyzer."
+        )
 
     return {
         "tool": "scripts/win31_dashboard_legibility_analyzer.py",
         "analysisDate": analysis_date,
         "advisoryOnly": True,
+        "visualOnly": visual_only,
         "evidenceRoot": str(evidence_root),
         "sources": SOURCE_IDS,
         "verifiedFacts": verified_facts,
@@ -1359,21 +1376,32 @@ def analyze_evidence(
     analysis_date: str,
     display_probe_path: Path | None = None,
     dosbox_config_path: Path | None = None,
+    visual_only: bool = False,
 ) -> dict[str, Any]:
     root = evidence_root.resolve()
     if not root.exists():
         raise SystemExit(f"evidence root missing: {root}")
     vision_path = (vision_gate_path or root / "vision-gate.json").resolve()
-    if not vision_path.exists():
+    if not vision_path.exists() and not visual_only:
         raise SystemExit(f"vision gate JSON missing: {vision_path}")
     screenshots = collect_screenshots(root, screenshot_dir.resolve() if screenshot_dir else None)
+    if vision_path.exists():
+        vision_gate = load_json(vision_path)
+    else:
+        vision_gate = {
+            "ok": False,
+            "status": "visual_only",
+            "failures": ["vision_gate_not_supplied"],
+            "screenshots": [],
+        }
     return build_analysis(
         root,
         screenshots,
-        load_json(vision_path),
+        vision_gate,
         analysis_date,
         load_optional_json(display_probe_path),
         parse_display_config(dosbox_config_path),
+        visual_only,
     )
 
 
@@ -1434,9 +1462,10 @@ def render_report(analysis: dict[str, Any]) -> str:
         "## Scope",
         "",
         "This is a local-only, advisory research backlog for Win31 OPCON dashboard",
-        "visual legibility. It reads copied screenshots and `vision-gate.json` from",
-        "the accepted baseline packet and does not change firmware, bridge wire",
-        "protocol, live hardware behavior, or completion acceptance.",
+        "visual legibility. It reads copied screenshots plus `vision-gate.json`",
+        "when available; `--visual-only` allows screenshot/layout checks while a",
+        "live dashboard is intentionally left open. It does not change firmware,",
+        "bridge wire protocol, live hardware behavior, or completion acceptance.",
         "",
         "The pass/fail path remains transcript-first: DOS-C `win31_dashboard_vision_gate.py`",
         "and ESP32 `scripts/espnow_bbs_live_gate.py complete` own acceptance. This",
@@ -1582,6 +1611,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--screenshot-dir", type=Path)
     parser.add_argument("--display-probe", type=Path)
     parser.add_argument("--dosbox-config", type=Path)
+    parser.add_argument(
+        "--visual-only",
+        action="store_true",
+        help="Analyze screenshots without requiring DOS-C vision-gate JSON or cleanup proof.",
+    )
     parser.add_argument("--analysis-date", default="2026-05-24")
     parser.add_argument("--out-json", type=Path)
     parser.add_argument("--out-report", type=Path)
@@ -1597,6 +1631,7 @@ def main() -> int:
         args.analysis_date,
         args.display_probe,
         args.dosbox_config,
+        args.visual_only,
     )
     if args.out_json:
         json_write(args.out_json.resolve(), analysis)

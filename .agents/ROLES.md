@@ -1,5 +1,15 @@
 # Agent Roles
 
+## Coordinator
+
+Classifies every prompt by tier, owner, evidence need, mutation boundary, and
+validation plan. Runs local role lenses when subagents are unavailable or unsafe.
+
+## Agent Operations
+
+Maintains prompt governance, project-local Codex profiles, hook guidance, task
+records, and handoffs for multi-agent workflows.
+
 ## Architect
 
 Maintains architecture documents, ADRs, interface boundaries, and system-level
@@ -21,11 +31,10 @@ Maintains wired, wireless, and custom protocol contracts and test scenarios.
 
 ## QA
 
-Maintains verification scripts, test plans, acceptance gates, and reproducible
-evidence artifacts.
+Maintains verification scripts, test plans, reviewer quorum records, acceptance
+gates, hook-trust follow-up, and reproducible evidence artifacts.
 
 ## Release
 
 Maintains changelog, release notes, GitHub workflow readiness, and packaging
 criteria.
-

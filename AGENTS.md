@@ -16,6 +16,41 @@ custom firmware, communication interfaces, and verified hardware integrations.
 - Hardware bring-up work must identify power, voltage, boot-pin, and isolation
   risks before recommending bench actions.
 
+## Multi-Agent Process For Every Prompt
+
+Every prompt starts with coordinator triage. The coordinator must select a tier,
+owner role, evidence need, mutation boundary, and validation plan before
+non-trivial mutation. Trivial read-only prompts can stay lightweight, but they
+still use the same classification.
+
+- Tier 0: trivial or read-only lookup. Use coordinator triage plus a local role
+  lens. Subagents are not required.
+- Tier 1: normal docs, tests, or bounded code. Use coordinator triage plus the
+  relevant owner and QA lens. Subagents are optional when they reduce risk.
+- Tier 2: governance, protocol, firmware, evidence, hook/config, or broad code
+  work. Run a read-only reviewer quorum before mutation, either through
+  project-local subagents when explicitly authorized and safe or through local
+  role perspectives when subagents are unavailable.
+- Tier 3: live bench, flashing, wiring, radio configuration, serial writes,
+  relay/load/mains work, release gates, or other risky hardware-adjacent work.
+  Require same-session evidence, explicit gate authority, recovery path, and
+  reviewer quorum before mutation.
+
+Before Tier 1 or higher mutation, state:
+
+- verified facts,
+- assumptions,
+- unknowns,
+- selected tier,
+- owner role,
+- mutation boundary,
+- validation plan.
+
+For Tier 2 and Tier 3 work, preserve dirty-tree boundaries, keep write scopes
+disjoint for worker agents, and do not spawn mutating workers unless their
+write scope is explicit. If subagents are unavailable or unsafe, run the same
+role lenses locally and record that no subagents were spawned.
+
 ## Required reading before edits
 
 1. `.agents/GOVERNANCE.md`
@@ -34,4 +69,3 @@ or `docs/architecture/` must cite a source listed in
 
 Each non-trivial task must leave a task record in `.agents/TASK_LOG/` and, when
 another role needs to continue the work, a handoff in `.agents/handoffs/`.
-

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import sys
 
+from scaffold_audit_agent_process import audit_agent_process
 from scaffold_audit_docs import audit_docs
 from scaffold_audit_firmware import audit_firmware
 from scaffold_audit_pages import audit_pages
@@ -18,6 +19,7 @@ AUDITS = [
     audit_docs,
     audit_firmware,
     audit_pages,
+    audit_agent_process,
 ]
 
 

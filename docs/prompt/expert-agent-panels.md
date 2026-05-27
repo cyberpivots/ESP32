@@ -5,7 +5,15 @@
 This guidance references `SRC-OPENAI-LATEST-MODEL`,
 `SRC-OPENAI-REASONING`, `SRC-CODEX-SUBAGENTS`,
 `SRC-CODEX-CONFIG-REFERENCE`, and
-`SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-05-19`.
+`SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-05-19`. The default workspace
+multi-agent process also references `SRC-CODEX-HOOKS-2026-05-27`,
+`SRC-CODEX-SUBAGENTS-2026-05-27`,
+`SRC-CODEX-CONFIG-REFERENCE-2026-05-27`,
+`SRC-OPENAI-AGENTS-SDK-2026-05-27`,
+`SRC-OPENAI-AGENTS-ORCHESTRATION-2026-05-27`,
+`SRC-ANTHROPIC-MULTI-AGENT-RESEARCH-2026-05-27`,
+`SRC-LANGCHAIN-HANDOFFS-2026-05-27`, and
+`SRC-LANGCHAIN-CONTEXT-ENGINEERING-2026-05-27`.
 
 ## Intent
 
@@ -13,6 +21,11 @@ Use the global `$expert-agent-panels` skill when a task needs a specialist
 review loop that can inspect workspace truth, inventory skills, close knowledge
 gaps, perform source-backed research, choose a bounded next action, validate
 the result, and update durable records.
+
+This workspace now uses the same role-lens discipline for every prompt. That
+does not mean every prompt spawns subagents. It means every prompt is classified
+by tier, owner, evidence need, mutation boundary, and validation plan before
+non-trivial mutation.
 
 ## Verified facts
 
@@ -30,6 +43,15 @@ the result, and update durable records.
   project-scoped `.codex/agents/*.toml` file for the v1 panel skill.
 - The verified local skill inventory for this pass uses plugin cache hash
   `eed16198`; older plugin cache hashes are stale for this session.
+- Current Codex hooks guidance documents project-local hooks, `UserPromptSubmit`,
+  `SubagentStart`, and `PreToolUse`, but also states that non-managed command
+  hooks require review/trust and that `PreToolUse` interception is incomplete.
+- Current OpenAI Agents SDK guidance separates handoffs from manager-style
+  agents-as-tools workflows and recommends adding specialists only when the
+  contract materially changes.
+- Current Anthropic and LangChain guidance supports bounded delegation,
+  explicit context strategy, cost awareness, and careful handoff/context
+  handling rather than automatic fan-out for every prompt.
 
 ## Assumptions
 
@@ -44,6 +66,16 @@ the result, and update durable records.
 - Future sessions may expose additional skills, plugins, MCP servers, or
   subagent types. Run a fresh inventory before relying on the list in this
   document.
+- Project-local hooks may be skipped until reviewed and trusted by the active
+  Codex runtime.
+
+## Default prompt tiers
+
+- Tier 0: coordinator triage plus local role lens.
+- Tier 1: coordinator plus relevant owner and QA lens.
+- Tier 2: read-only reviewer quorum before mutation.
+- Tier 3: explicit gate authority, same-session evidence, and reviewer quorum
+  before mutation.
 
 ## Prompt pattern
 
@@ -53,6 +85,16 @@ this task. Read the workspace contract first, inventory available skills,
 separate verified facts from assumptions and unknowns, use official or primary
 sources for missing facts, spawn subagents only when explicitly authorized, then
 implement the best bounded action and validate it.
+```
+
+## Default multi-agentic process prompt
+
+```text
+Apply the ESP32 default-multi-agentic-process. Classify the prompt as Tier 0,
+Tier 1, Tier 2, or Tier 3; state verified facts, assumptions, unknowns, owner
+role, mutation boundary, and validation plan before non-trivial mutation; use
+project-local subagents only when explicitly authorized and safe; otherwise run
+the same role lenses locally and say no subagents were spawned.
 ```
 
 ## Expected output

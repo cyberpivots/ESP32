@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/user_prompt_submit_agent_process.py\"",
+            "timeout": 30,
+            "statusMessage": "Injecting ESP32 agent-process checklist"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/subagent_start_agent_process.py\"",
+            "timeout": 30,
+            "statusMessage": "Injecting ESP32 subagent boundaries"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/pre_tool_use_agent_process.py\"",
+            "timeout": 30,
+            "statusMessage": "Checking ESP32 mutation checklist"
+          }
+        ]
+      }
+    ]
+  }
+}

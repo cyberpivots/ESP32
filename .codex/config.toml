@@ -1,5 +1,9 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
+[agents]
+max_threads = 6
+max_depth = 1
+
 [agents.governance-cartographer]
 description = "Read-only mapper for repo governance, docs index coverage, ownership boundaries, and task-log continuity."
 config_file = "agents/governance-cartographer.toml"
@@ -27,6 +31,22 @@ config_file = "agents/source-skill-curator.toml"
 [agents.prompt-token-triage]
 description = "Read-only prompt triage role for decomposing fragile work, preserving gates, and minimizing context load."
 config_file = "agents/prompt-token-triage.toml"
+
+[agents.qa-validation-reviewer]
+description = "Read-only reviewer for validation plans, test coverage, scaffold gates, and release/handoff evidence."
+config_file = "agents/qa-validation-reviewer.toml"
+
+[agents.governance-doc-worker]
+description = "Worker for bounded governance documentation edits after coordinator triage and reviewer quorum."
+config_file = "agents/governance-doc-worker.toml"
+
+[agents.kb-record-worker]
+description = "Worker for bounded knowledge-base, source-ledger, prompt-registry, task-log, and handoff records."
+config_file = "agents/kb-record-worker.toml"
+
+[agents.bounded-implementation-worker]
+description = "Worker for explicitly scoped implementation edits after a clear mutation boundary and validation plan."
+config_file = "agents/bounded-implementation-worker.toml"
 
 [[skills.config]]
 path = "skills/esp32-live-gate-coordinator"

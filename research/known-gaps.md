@@ -85,10 +85,14 @@
   after the Pi/router path was restored at `192.168.137.105` and the current
   `COM9`/`COM6`/`COM7` peer remap matched accepted peer MACs. A later
   structured Gate H live rerun captured `bridge-transcript.jsonl` and passed
-  the DOS-C vision gate plus ESP32 completion gate. `ADR-0005` is now accepted
-  for local-admin redacted Gate G JSON export only; firmware ABI runtime
-  behavior, Win31 export controls, and bridge export request types still need
-  separate owner review.
+  the DOS-C vision gate plus ESP32 completion gate. That Gate H remap is
+  historical live-proof lineage; the later LAN DHCP/current-remap record
+  identifies the current read-only mapping as Pi `192.168.200.153`,
+  `peer01=COM6`, `peer02=COM10`, and `peer03=COM12` without bridge, Win31,
+  BBS, prepare, flash, erase, monitor, or radio proof. `ADR-0005` is now
+  accepted for local-admin redacted Gate G JSON export only; firmware ABI
+  runtime behavior, Win31 export controls, and bridge export request types
+  still need separate owner review.
 - Gate F firmware ABI has an accepted design contract only. ESP32 now has
   accepted `ADR-0006`,
   `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26`,
@@ -151,7 +155,9 @@
 
 ## Medium priority
 
-- Select first protocol to implement.
+- Select first protocol only for lanes that do not already have accepted or
+  simulator-proven protocol records; ESP-NOW BBS custom wireless work already
+  has Gate B/C/D/E/F/G/H and Gate M1 records.
 - Add a checked-in browser QA script for the public Prototype Build Packet so
   desktop/mobile rendering, decoded WebP dimensions, no console errors, no
   failed same-origin requests, keyboard focus visibility, and no horizontal

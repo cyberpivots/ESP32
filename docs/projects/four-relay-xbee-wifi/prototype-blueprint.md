@@ -106,8 +106,9 @@ bench authorization. Treat them as a checklist for what must be verified next.
 - Relay contacts stay disconnected or attached only to a reviewed low-voltage
   dummy load during prototype work.
 - XBee work uses the Waveshare adapter as a PC dock for read-only discovery.
-- Firmware, framework files, XBee setting writes, relay switching, and mains
-  wiring stay out of scope for this documentation pass.
+- New framework selection, hardware-facing firmware enablement, XBee setting
+  writes, relay switching, and mains wiring stay out of scope for this
+  documentation pass.
 - TFT wiring, expander-to-relay wiring, and relay driver-stage wiring stay out
   of scope until exact module and bench evidence exist.
 

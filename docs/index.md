@@ -4,6 +4,7 @@
 
 - [Agent coordination](agent-coordination.md)
 - [Handoff and review](handoff-and-review.md)
+- [Consolidated development plan](../research/development-plan.md)
 - [Development status review task log](../.agents/TASK_LOG/0053-development-status-review.md)
 - [Development status review owner handoff](../.agents/handoffs/0042-development-status-review-to-owners.md)
 - [Gate F firmware ABI planning task log](../.agents/TASK_LOG/0054-custom-wireless-protocol-gate-f-firmware-abi.md)
@@ -49,8 +50,12 @@
 - [Multi-agentic default process QA handoff](../.agents/handoffs/0063-multi-agentic-default-process-to-qa.md)
 - [Full-service mesh discovery task log](../.agents/TASK_LOG/0075-full-service-mesh-discovery.md)
 - [Full-service mesh discovery QA handoff](../.agents/handoffs/0064-full-service-mesh-discovery-to-qa.md)
+- [ESP-NOW BBS companion SoftAP live-gate tooling task log](../.agents/TASK_LOG/0076-espnow-bbs-companion-softap-live-gate-tooling.md)
+- [ESP-NOW BBS companion SoftAP live-gate tooling QA handoff](../.agents/handoffs/0065-espnow-bbs-companion-softap-live-gate-tooling-to-qa.md)
 - [Multi-agentic continuation decision task log](../.agents/TASK_LOG/0077-multi-agentic-continuation-decision.md)
 - [Multi-agentic continuation decision QA handoff](../.agents/handoffs/0066-multi-agentic-continuation-decision-to-qa.md)
+- [Development plan consolidation task log](../.agents/TASK_LOG/0078-development-plan-consolidation.md)
+- [Development plan consolidation QA handoff](../.agents/handoffs/0067-development-plan-consolidation-to-qa.md)
 - [Risk and safety](risk-and-safety.md)
 - [Known limitations](known-limitations.md)
 - [GitHub Pages public site](github-pages-public-site.md)
@@ -167,6 +172,7 @@
 - [ESP-NOW BBS structured Gate H transcript source ledger](../knowledge-base/source-ledger/2026-05-25-structured-gate-h-transcript.md)
 - [ESP-NOW BBS custom wireless protocol Gate H structured live acceptance source ledger](../knowledge-base/source-ledger/2026-05-25-custom-wireless-protocol-gate-h-structured-live-acceptance.md)
 - [ESP-NOW BBS development status review source ledger](../knowledge-base/source-ledger/2026-05-26-development-status-review.md)
+- [ESP32 development plan consolidation source ledger](../knowledge-base/source-ledger/2026-05-27-development-plan-consolidation.md)
 - [ESP-NOW BBS full-service mesh discovery source ledger](../knowledge-base/source-ledger/2026-05-27-full-service-mesh-discovery.md)
 - [Win31 dashboard ML live gate source ledger](../knowledge-base/source-ledger/2026-05-23-win31-dashboard-ml-live-gate.md)
 - [Win31 dashboard legibility research source ledger](../knowledge-base/source-ledger/2026-05-24-win31-dashboard-legibility-research.md)
@@ -197,6 +203,7 @@
 
 ## Research
 
+- [Consolidated development plan](../research/development-plan.md)
 - [Development status ledger](../research/development-status-ledger.md)
 - [Known gaps](../research/known-gaps.md)
 - [Triage status](../research/triage-status.md)

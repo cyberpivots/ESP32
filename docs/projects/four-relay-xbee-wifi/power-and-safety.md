@@ -109,7 +109,7 @@ close a gate.
 | Write XBee configuration | Blocked | Current settings backup, address plan, AES key process, and rollback are not documented. |
 | Connect XBee DIN/DOUT to ESP32 UART | Blocked | Final carrier, voltage path, and DIN/DOUT routing are unknown. |
 | Build static UI prototype | Allowed | No hardware mutation. |
-| Write ESP-IDF firmware source | Deferred | This pass is documentation and validation only. |
+| Hardware-facing firmware or live output enablement | Deferred | The project-local disabled ESP-IDF skeleton is separate from relay/load enablement. |
 
 ## Unknowns
 

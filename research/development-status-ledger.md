@@ -8,6 +8,10 @@ This is the canonical planning-status ledger for the ESP32 workspace, with
 paired DOS-C evidence included only where ESP32 acceptance depends on DOS-C
 bridge, operator, firmware, or live-proof truth.
 
+Current action routing is consolidated in
+[development-plan.md](development-plan.md). This ledger remains the detailed
+status and evidence table.
+
 ## Verified Facts
 
 - Transcript and proof packets are authoritative for live ESP-NOW BBS status.
@@ -37,6 +41,11 @@ bridge, operator, firmware, or live-proof truth.
   DOSBox-X now uses X11 fullscreen at `1024x600`, OPCON was rebuilt with a
   compact 640-logical-pixel layout, and final live proof shows zero
   right/bottom margin.
+- Companion SoftAP Gate 1 tooling is implemented and host-validated under
+  `SRC-LOCAL-ESPNOW-BBS-COMPANION-SOFTAP-LIVE-GATE-TOOLING-2026-05-27`, but
+  it does not accept live SoftAP proof, Windows Wi-Fi mutation, physical dummy
+  output, flash, bridge proof, vision proof, completion proof, cleanup
+  acceptance, or live hardware work.
 
 ## Assumptions
 
@@ -77,6 +86,7 @@ bridge, operator, firmware, or live-proof truth.
 | Custom wireless protocol Gate D DOS-C pairing | implemented-simulator-only | paired simulator fixture replay | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-D-DOSC-PAIRING-2026-05-25` | DOS-C test fixtures replay through the ESP32 Gate C adapter within 512-byte bounds while live `download_queue` remains payload-free. | No live file transfer or final ABI freeze. | Keep DOS-C live operator request shapes payload-free unless a later gate changes them. |
 | Gate E bridge ABI candidate | design-only | draft doc plus simulator validation | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-E-BRIDGE-ABI-2026-05-25` | Draft `v:1` ASCII JSON request set and stable error reasons exist for owner review. | Final firmware ABI, runtime migration, bridge mutation, and live proof are not accepted. | Owner ADR/review for final ABI. |
 | Gate F firmware ABI and runtime requirements | accepted-host-prototype-only | ADR/source ledger plus host tests | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26`, `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`, `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-GOLDEN-VECTORS-2026-05-26`, `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-RUNTIME-REQUIREMENTS-2026-05-26`, `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-PHASE-5-6-RUNTIME-DESIGN-REVIEW-2026-05-26` | Accepted `ADR-0006` mirrors simulator packet budgets, service codes, custody codes, packet header layout, non-executing `control_intent` semantics, and host-only full packet golden vectors. Accepted `ADR-0007` adds requirements-only runtime planning. Accepted `ADR-0008` adds host-only runtime defaults, bounded queue/backpressure behavior, scheduler order, retry/expiry handling, duplicate handling, and visible counters in the simulator. | Firmware runtime implementation, firmware memory budgets, task ownership, firmware persistence, migration, recovery, and live proof are not accepted. | Add/keep DOS-C companion source assurance; keep firmware runtime implementation closed until a later implementation gate. |
+| Companion SoftAP Gate 1 tooling | implemented-host-tooling-only | task/handoff plus host tests | `SRC-LOCAL-ESPNOW-BBS-COMPANION-SOFTAP-LIVE-GATE-TOOLING-2026-05-27` | ESP32 tooling adds prepare-time companion HTTP config, redacted manifest metadata, Windows proof collection script, and completion-audit enforcement; validation recorded ESP32 live-gate unit tests, py_compile, scaffold checks, paired DOS-C generator/bridge tests, no-flash companion-enabled builds, and PowerShell parser check. | No live preflight, backup, flash, SoftAP gateway, Windows Wi-Fi proof, bridge proof, vision gate, completion gate, cleanup proof, physical dummy output, or Gate 2 GPIO fixture evidence exists. | Before any live continuation, re-run ESP32 and paired DOS-C tests, then open a fresh Tier 3 gate with identity, recovery, Windows Wi-Fi, companion proof, no-output evidence, and cleanup criteria. |
 | Gate G simulator analytics | superseded | simulator tests | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-G-ANALYTICS-2026-05-25`, `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25` | Simulator analytics remain useful for test coverage, but policy fields are superseded by accepted ADR-0005 and live export implementation. | Simulator reports are not live export authority. | Treat as fixture coverage only. |
 | Gate G local-admin redacted JSON export | accepted-live | policy plus local-admin live proof | `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-POLICY-2026-05-25`, `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25` | Accepted `ADR-0005`, file-backed spool export, redacted `analytics-report.v1.json`, approved ignored roots, existing-destination refusal, raw identifier/body omission, and stale cleanup proof. | No Win31 export UI, firmware export ABI, or live bridge export request type. | Keep export CLI local-admin only until separate owner gates open additional surfaces. |
 | Win31 dashboard CV/OCR gate | implemented-validated | corroboration tooling and fixture tests | `SRC-LOCAL-WIN31-DASHBOARD-ML-LIVE-GATE-2026-05-23`, `SRC-LOCAL-WIN31-DASHBOARD-LEGIBILITY-RESEARCH-2026-05-24` | DOS-C vision gate can corroborate required views and passed the structured Gate H packet. | Screenshots remain secondary to transcript and cleanup evidence. | Use OCR/CV only after transcript proof is present. |
@@ -100,6 +110,8 @@ bridge, operator, firmware, or live-proof truth.
 ## Closed Gates
 
 Keep firmware runtime implementation, firmware persistence, Win31 export
-controls, bridge export request types, BLE pairing, live mesh, PCAP, relay/XBee, TFT,
-MicroSD, load, mains, erase, monitor, and serial-write expansion closed unless
-a later source-backed gate explicitly opens the exact surface.
+controls, bridge export request types, live SoftAP proof, Windows Wi-Fi
+mutation, physical output proof, BLE pairing, live mesh, PCAP, relay/XBee, TFT,
+MicroSD, load, mains, erase, monitor, cleanup acceptance, and serial-write
+expansion closed unless a later source-backed gate explicitly opens the exact
+surface.

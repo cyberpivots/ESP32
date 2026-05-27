@@ -32,7 +32,7 @@ The first implementation slices are DOS-C packaging and launch work:
   `SRC-DOSBOX-SERIAL-CONFIG` support the tracked DOSBox-X config surface.
 - `SRC-RASPBERRY-PI-CONFIGURATION` supports keeping Pi identity and SSH
   launcher installation evidence source-backed.
-- `SRC-LOCAL-DOSC-WIN31-DASHBOARD-INTERFACE-IMPROVEMENT-2026-05-27` records
+- `SRC-LOCAL-WIN31-DASHBOARD-INTERFACE-IMPROVEMENT-2026-05-27` records
   the paired DOS-C Phase 0/1/2 implementation records for this backlog.
 - `SRC-LOCAL-WIN31-CBBS-INPUT-RENAME-ICON-UI-2026-05-27` records the current
   CBBS user-facing rename, icon replacement, primary UI plain-language pass,

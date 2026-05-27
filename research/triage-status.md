@@ -2,12 +2,14 @@
 
 | Area | Status | Next action |
 | --- | --- | --- |
+| Consolidated development plan | Current | Use [development plan](development-plan.md) for current action routing and [development status ledger](development-status-ledger.md) for detailed evidence/status classifications. |
 | Canonical development status | Current | Use [development status ledger](development-status-ledger.md) for current lane status and superseded blocker links. |
 | ESP-NOW BBS live proof | Accepted-live | Treat `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25` as the current authoritative structured proof packet. |
 | ESP-NOW BBS LAN/current remap | Implemented-validated | Use `SRC-LOCAL-ESPNOW-LAN-DHCP-CURRENT-REMAP-2026-05-25` only as read-only preflight/cleanup evidence; rerun proof gates before new live acceptance. |
 | Gate G analytics export | Accepted-live, limited | Keep open only for local-admin redacted JSON export under accepted `ADR-0005`; Win31 controls, firmware ABI runtime behavior, and bridge request types remain closed. |
 | Custom wireless Gate B/C/D | Implemented-simulator-only | Continue simulator and DOS-C fixture work without claiming live radio or runtime bridge acceptance. |
 | Custom wireless Gate E/F ABI | Gate F accepted-host-prototype-only | Gate E is draft bridge ABI; Gate F `ADR-0006` is accepted as a design contract with host packet golden vectors, `ADR-0007` accepts runtime requirements, and `ADR-0008` accepts host-only runtime defaults/prototype behavior; firmware runtime implementation, persistence, and live proof remain closed. |
+| Companion SoftAP Gate 1 tooling | Implemented-host-tooling-only | Keep live SoftAP, Windows Wi-Fi mutation, physical output, flash, and cleanup acceptance closed until a fresh Tier 3 live gate opens them. |
 | Firmware framework | Open outside accepted project ADRs | Keep workspace framework-neutral except accepted project ADRs; write ADR comparison before any new framework decision. |
 | XBee `XBP9B-DPUT-001 RevF` | Blocked | Verify Waveshare adapter serial path, voltage, DIN/DOUT routing, settings backup, and operating constraints before reads or writes. |
 | Relay boards/load/mains | Blocked | Identify exact module and complete low-voltage evidence before relay action; require qualified review before mains/load work. |

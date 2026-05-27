@@ -16,6 +16,8 @@ The first implementation slices are DOS-C packaging and launch work:
   `/mnt/h/dos-c/.agents/tasks/0039-win31-opcon-package-bundle.md`.
 - Phase 2 DOS-C launcher slice:
   `/mnt/h/dos-c/.agents/tasks/0040-win31-opcon-launchers.md`.
+- Current CBBS rename/icon/input/UI slice:
+  `/mnt/h/dos-c/.agents/tasks/0043-cbbs-input-rename-icon-ui.md`.
 
 ## Source Basis
 
@@ -32,6 +34,9 @@ The first implementation slices are DOS-C packaging and launch work:
   launcher installation evidence source-backed.
 - `SRC-LOCAL-DOSC-WIN31-DASHBOARD-INTERFACE-IMPROVEMENT-2026-05-27` records
   the paired DOS-C Phase 0/1/2 implementation records for this backlog.
+- `SRC-LOCAL-WIN31-CBBS-INPUT-RENAME-ICON-UI-2026-05-27` records the current
+  CBBS user-facing rename, icon replacement, primary UI plain-language pass,
+  stale-branding screenshot guard, and blocked live input diagnosis.
 
 ## Ranked Backlog
 
@@ -54,6 +59,11 @@ The first implementation slices are DOS-C packaging and launch work:
   and user-level Pi launch entries.
 - Program Manager launch remains DDE-based through `PMOPCON.EXE`; direct
   `.GRP` editing remains out of scope.
+- Current user-facing name is `CBBS`; historical OPCON/RETRO records are
+  superseded for current UI naming.
+- Pointer root cause/fix is not accepted; current evidence is input inventory
+  only and live acceptance is blocked by stale runtime plus missing physical
+  A/B proof.
 - The backlog does not change bridge protocol, ESP32 firmware, live-gate
   authority, PCAP, router/admin, relay/XBee, BLE, mesh runtime, flash, erase,
   monitor, serial-write expansion, or unsafe controls.
@@ -71,6 +81,8 @@ The first implementation slices are DOS-C packaging and launch work:
   user request and Pi identity confirmation.
 - Future persistence for style/settings/shortcuts still needs an explicit
   file-format decision before implementation.
+- A fresh CBBS Program Manager/icon live proof has not been captured after the
+  current rename/icon pass.
 
 ## Next Implementation Slices
 
@@ -78,8 +90,9 @@ The first implementation slices are DOS-C packaging and launch work:
   only from ignored output.
 - Complete Phase 2 live launcher proof only after a fresh Pi identity check
   and explicit user request to install/run it.
-- Keep the remaining backlog items as source-backed UI refinements until the
-  packaging and launch slices have been reviewed.
+- For CBBS live acceptance, start with fresh preflight, resolve or explicitly
+  preserve stale runtime, capture physical input A/B proof, and then capture
+  Program Manager `COMMUNICATIONS` showing item `CBBS`.
 
 ## Closed Surfaces
 

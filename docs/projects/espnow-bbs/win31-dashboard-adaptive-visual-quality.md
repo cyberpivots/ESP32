@@ -85,3 +85,12 @@ The current fullscreen recovery status is `fixed-live-open`. Final proof
 `final-live-20260527T014831Z` captured `1024x600`, bbox `(0,1)-(1023,599)`,
 zero right/bottom margin, and the fixed dashboard was left open for human
 panel confirmation.
+
+## CBBS Rename And Input Follow-Up
+
+The 2026-05-27 CBBS pass updates the current user-facing name, primary
+navigation, icon, package/launcher prefixes, and copied-screenshot stale
+branding guard in DOS-C. It is a local build/source validation pass only for
+visual acceptance: live pointer behavior and the new Program Manager `CBBS`
+icon are not accepted until fresh screenshots, physical input A/B proof, and
+cleanup or explicit left-running proof are captured.

@@ -73,6 +73,7 @@ because this session did not include explicit subagent authority.
 - `python3 tests/live_bench/test_espnow_bbs_live_gate.py`
 - `python3 scripts/verify_scaffold.py` where practical
 - `python3 scripts/scaffold_audit_agent_process.py` where practical
+- PowerShell parser check for `scripts/companion_softap_windows_proof.ps1`
 - `git diff --check`
 - ESP-IDF readiness probe from DOS-C before any later live `prepare`
 
@@ -86,7 +87,9 @@ because this session did not include explicit subagent authority.
 - PASS: paired DOS-C generator test and companion bridge suite
 - PASS: paired DOS-C no-flash temporary ESP-IDF build of companion-enabled
   coordinator and peer01 using generated ignored live config
-- SKIPPED: PowerShell parse because `pwsh` is not installed in this environment.
+- PASS: PowerShell 7.6.2 parser check for
+  `scripts/companion_softap_windows_proof.ps1` (`errorCount: 0`, `tokenCount:
+  1888`).
 - Not run: live `prepare`, `flash`, Windows Wi-Fi proof, bridge proof,
   vision gate, completion gate, or cleanup proof.
 

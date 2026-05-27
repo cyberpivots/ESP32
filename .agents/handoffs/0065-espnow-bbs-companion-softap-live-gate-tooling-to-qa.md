@@ -33,7 +33,9 @@ only and does not claim live proof.
 - PASS: `git diff --check`
 - PASS: paired DOS-C generator test, bridge suite, scaffold verification, and
   no-flash companion-enabled coordinator plus peer01 ESP-IDF build.
-- SKIPPED: PowerShell parse because `pwsh` is not installed in this environment.
+- PASS: PowerShell 7.6.2 parser check for
+  `scripts/companion_softap_windows_proof.ps1` (`errorCount: 0`, `tokenCount:
+  1888`).
 - Not run: live `prepare`, `flash`, Windows Wi-Fi proof, bridge proof,
   vision gate, completion gate, or cleanup proof.
 

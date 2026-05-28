@@ -65,6 +65,10 @@ PUBLIC_BUNDLE_FILES = [
     ("docs/projects/four-relay-xbee-wifi/tft-relay-expansion.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/web-interface.md", "four-relay"),
     ("docs/projects/four-relay-xbee-wifi/firmware-task-model.md", "four-relay"),
+    (
+        "docs/projects/hardware-rapid-prototyping/four-relay-low-voltage-fixture-kit.md",
+        "hardware-rapid-prototyping",
+    ),
     ("hardware-profiles/device-matrix.md", "hardware-profile"),
     (
         "hardware-profiles/esp32/esp-wroom-32-dev-board/README.md",
@@ -139,6 +143,14 @@ PUBLIC_SOURCE_INDEX_REDACTIONS = [
     (re.compile(r"`?/mnt/c/[^`|,) ]+`?"), "[local path redacted]"),
     (re.compile(r"`?/home/[A-Za-z0-9_.-]+/[^`|,) ]+`?"), "[local path redacted]"),
     (re.compile(r"`?/dev/tty[A-Za-z0-9/_-]*`?"), "[serial device redacted]"),
+    (
+        re.compile(r"`?research/hardware-rapid-prototyping/[^`|,) ]+`?"),
+        "[internal evidence workbook redacted]",
+    ),
+    (
+        re.compile(r"`?cad/hardware-rapid-prototyping/[^`|,) ]+`?"),
+        "[internal CAD source redacted]",
+    ),
     (re.compile(r"(?<!-)COM\d+", re.IGNORECASE), "COM port redacted"),
     (re.compile(r"`?[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}`?"), "[local device identifier redacted]"),
     (re.compile(r"\b[A-Fa-f0-9]{32,}\b"), "[hash redacted]"),
@@ -302,6 +314,11 @@ def build(out_dir: Path) -> dict[str, object]:
                 "vendor PDFs",
                 "bulky binaries",
                 "private bench records",
+                "internal evidence workbooks",
+                "CAD source and generated CAD/print artifacts",
+                "slicer projects",
+                "G-code",
+                "raw scanner captures",
                 "image binaries except named site/github-pages/assets/**/*.webp",
             ],
         },

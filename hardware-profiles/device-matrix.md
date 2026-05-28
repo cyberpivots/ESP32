@@ -12,6 +12,10 @@
 | XBee | Digi `XBP9B-DPUT-001 RevF` with Waveshare XBee USB Adapter as first PC dock | Photo-backed exact radio label; source-backed part ID, adapter docs, and API-mode docs | PC dock read-only discovery only; needs adapter voltage, DIN/DOUT, carrier, address, and configuration validation before writes or ESP32 wiring |
 | Relay boards | Four-channel module populated with Songle `SRD-05VDC-SL-C` relays for first project; 1/8/16 channel future profiles | Photo-backed relay can identity plus Songle relay component source | Four-channel profile is verification-only; module trigger/isolation behavior and direct-GPIO 3.3 V/current gate unresolved |
 | Heltec | WiFi LoRa 32(V2) | Product-level source | Needs physical revision validation |
+| Fabrication printer - smaller engineering parts | User-stated Creality K1 with user-stated hardened-nozzle upgrade | Official K1 support specs cover FFF/CoreXY, direct-drive extrusion, 0.4 mm nozzle, nozzle temperature below 300 C, heatbed below 100 C, and listed engineering/CF filament families; hardened-nozzle upgrade is not locally verified | Default only for smaller brackets, fixtures, cable anchors, and engineering-material trials after nozzle, SDS, ventilation, drying, and calibration evidence |
+| Fabrication printer - large parts | User-stated Anycubic Kobra 2 Max | Official Anycubic Kobra 2 Max records cover 420 x 420 x 500 mm volume and PLA/ABS/PETG/TPU support | Default only for large enclosures, panels, and jigs after bed calibration, adhesion proof, material profile, and ventilation decision |
+| Fabrication printer - batch/long parts | User-stated Creality CR-30 | Official Creality CR-30 records identify the printer as a 3DPrintMill / infinite-Z belt printer for batch and long-model production | Use only after belt adhesion, slicer-angle, calibration, first-article, and continuous-run stop-rule proof |
+| 3D scanning | User-stated Creality CR-Scan Lizard | Official Creality materials claim 0.05 mm precision and STL/OBJ/PLY output | Fit/reference scans only; dimensional evidence requires known-dimension or caliper validation before use in CAD acceptance |
 
 ## Source IDs
 
@@ -49,6 +53,17 @@
 - Relay boards: `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`,
   `SRC-SONGLE-SRD-05VDC-SL-C`, `SRC-ESP32-HARDWARE-DESIGN-GUIDELINES`; exact
   module schematic/source remains unresolved
+- Fabrication and scanning: `SRC-LOCAL-HARDWARE-RAPID-PROTOTYPING-2026-05-28`,
+  `SRC-CREALITY-K1-SUPPORT-2026-05-28`,
+  `SRC-ANYCUBIC-KOBRA2-MAX-2026-05-28`, `SRC-CREALITY-CR30-2026-05-28`,
+  `SRC-CREALITY-CR-SCAN-LIZARD-2026-05-28`,
+  `SRC-NIOSH-SAFE-3D-PRINTING-2024-103`,
+  `SRC-PRUSA-FILAMENT-MATERIAL-GUIDE-2026-05-28`,
+  `SRC-BAMBULAB-PA6-CF-2026-05-28`
+- CAD and fit workflow: `SRC-OPENSCAD-DOCS-2026-05-28`,
+  `SRC-CADQUERY-DOCS-2026-05-28`,
+  `SRC-FREECAD-FEATURES-2026-05-28`,
+  `SRC-KICAD9-PCBNEW-3D-EXPORT-2026-05-28`
 
 ## Unknowns
 
@@ -58,3 +73,10 @@
   IDs: `SRC-NIOSH-ELECTRICAL-SAFETY`, `SRC-OSHA-DEENERGIZED-WORK`,
   `SRC-OSHA-GFCI`, `SRC-OSHA-AEGCP`, `SRC-OSHA-GROUNDING-OVERCURRENT`,
   `SRC-NEMA-ENCLOSURES`.
+- 3D-printing and scanner readiness is blocked until local equipment identity,
+  K1 hardened-nozzle proof, filament SDS, dry-state/humidity record,
+  ventilation/exposure controls, printer/material calibration coupons, CR-30
+  belt proof, CR-Scan Lizard known-dimension validation, and lane-specific
+  measurements are recorded. Source IDs:
+  `SRC-LOCAL-HARDWARE-RAPID-PROTOTYPING-2026-05-28`,
+  `SRC-NIOSH-SAFE-3D-PRINTING-2024-103`.

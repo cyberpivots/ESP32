@@ -71,6 +71,8 @@ def audit_pages_build(root: Path = ROOT) -> list[str]:
         "user_uploads/",
         "vendor PDFs",
         "bulky binaries",
+        "internal evidence workbooks",
+        "CAD source and generated CAD/print artifacts",
         "PRIVATE_BENCH_RECORDS",
     ]:
         if blocked_marker == "PRIVATE_BENCH_RECORDS":
@@ -98,6 +100,7 @@ def audit_pages_build(root: Path = ROOT) -> list[str]:
         "docs/projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md",
         "docs/projects/four-relay-xbee-wifi/hardware-circuit-improvement-research.md",
         "docs/projects/four-relay-xbee-wifi/rd-loop.md",
+        "docs/projects/hardware-rapid-prototyping/four-relay-low-voltage-fixture-kit.md",
         "hardware-profiles/relays/four-channel/README.md",
         "hardware-profiles/xbee/xbp9b-dput-001/README.md",
         "hardware-profiles/storage/spi-microsd-reader/README.md",
@@ -112,6 +115,8 @@ def audit_pages_build(root: Path = ROOT) -> list[str]:
     for marker in [
         "public-file-manifest.json",
         "research/bench-records/",
+        "research/hardware-rapid-prototyping/",
+        "cad/hardware-rapid-prototyping/",
         "user_uploads",
         ".agents",
         "ALLOWED_IMAGE_SOURCES",

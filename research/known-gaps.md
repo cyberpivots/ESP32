@@ -122,6 +122,13 @@
   These gates do not close live ESP-WIFI-MESH, BLE pairing, Android app,
   router/admin, firmware mapping, flash, serial-write, PCAP, or live proof
   gaps.
+- The BBS UI System Operation Improvement Program is now recorded in
+  `SRC-LOCAL-BBS-UI-SYSTEM-OPERATION-PROGRAM-2026-05-28` as planning/status
+  only. It still needs UI-0 ranked operator-facing improvements, M2-B
+  host-only Network/Services UX proof, M3 firmware mapping design review,
+  Client-1 static/simulated browser evidence, and a future separate Tier 3
+  Client-2 selected-board read-only Wi-Fi gate before any live client proof is
+  accepted.
 - Select and verify agricultural telemetry hardware profiles before treating
   center-pivot controllers, soil probes, SDI-12 adapters, Modbus adapters, GPS
   pivot positioning, or GPS asset tracking as implementation targets. Required
@@ -136,6 +143,21 @@
 - The `remote-lcd-xbee-solar-client` private hardware submodules now exist and
   are docs-only evidence lanes. They do not close exact hardware identity,
   wiring, charging, radio-write, firmware, or live bench gaps.
+- The Hardware Rapid Prototyping Program is recorded under
+  `SRC-LOCAL-HARDWARE-RAPID-PROTOTYPING-2026-05-28` as planning/status only.
+  It still needs same-session K1, Kobra 2 Max, CR-30, and CR-Scan Lizard
+  identity and condition records; K1 hardened-nozzle physical proof; filament
+  SDS and dry-state evidence; ventilation/exposure controls; printer/material
+  calibration coupons; CR-30 belt adhesion proof; CR-Scan Lizard
+  known-dimension/caliper validation; and lane-specific measurement packets
+  before any guide becomes a repeatable build procedure.
+- The four-relay low-voltage fixture kit is recorded under
+  `SRC-LOCAL-FOUR-RELAY-LOW-VOLTAGE-FIXTURE-KIT-2026-05-28` with one
+  provisional OpenSCAD source and public guide only. It still needs the
+  internal workbook to be filled with printer identity, K1 hardened-nozzle
+  proof if needed, filament SDS/dry state, ventilation controls, calibration
+  coupon, board/relay/XBee/MicroSD/TFT/expander dimensions, and reviewer
+  signoff before any live print, fit, or repeatable build claim.
 - Define the cross-project client UI live-gate target before implementation:
   selected board, current identity, Wi-Fi mode, browser support matrix, phone
   and laptop proof packet, safety-supervisor state model, authentication,
@@ -195,9 +217,12 @@
 | First flashing target board | Flash target and recovery record with exact board, boot/recovery method, toolchain proof, and rollback path. |
 | ESP-NOW BBS coordinator/client lane | Closed for the first one-coordinator/one-peer encrypted proof by `SRC-LOCAL-ESPNOW-ENCRYPTED-PEER-2026-05-22`. `SRC-LOCAL-ESPNOW-LIVE-GATE-TOOLING-2026-05-23` adds tooling for the three-peer gate, `SRC-LOCAL-ESPNOW-THREE-PEER-LIVE-ATTEMPT-2026-05-23` records the initial coordinator backup CRC/checksum blocker plus the corrected USB-only three-peer live completion with backups, build hashes, flash/verify evidence, three `espnow-enc` peers, moving RX/TX/ACK counters, and cleanup, and `SRC-LOCAL-WIN31-DASHBOARD-ML-LIVE-GATE-2026-05-23` adds a copied-evidence completion gate only. Future evidence is still required for chunked message delivery, provisioning UX, BLE, ESP-WIFI-MESH, any physical wiring beyond USB-only, or any new live acceptance claim. |
 | Custom wireless protocol implementation | Gate B simulator proof exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-SIM-2026-05-25`, Gate C bridge-adapter proof exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-BRIDGE-SIM-2026-05-25`, Gate D DOS-C fixture replay exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-D-DOSC-PAIRING-2026-05-25`, Gate E draft bridge ABI candidate exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-E-BRIDGE-ABI-2026-05-25`, Gate F owner-review design-contract acceptance exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-FIRMWARE-ABI-2026-05-26` and `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-OWNER-REVIEW-2026-05-26`, Gate F host-only packet golden vectors exist in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-GOLDEN-VECTORS-2026-05-26`, Gate F requirements-only runtime planning exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-F-RUNTIME-REQUIREMENTS-2026-05-26`, Gate M1 full-service mesh discovery host contract exists in `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`, Gate M2-A DOS-C companion bridge/operator support exists in `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27`, Gate G simulator-only analytics exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-G-ANALYTICS-2026-05-25`, Gate G live export policy is accepted in `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-POLICY-2026-05-25`, Gate G local-admin redacted export implementation exists in `SRC-LOCAL-ESPNOW-GATE-G-LIVE-EXPORT-IMPLEMENTATION-2026-05-25`, Gate H live acceptance exists in `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-GATE-H-LIVE-ACCEPTANCE-2026-05-25`, the structured transcript shape exists in `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-TRANSCRIPT-2026-05-25`, and structured Gate H live acceptance exists in `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25`; future evidence is still required for firmware runtime implementation, firmware persistence, firmware mesh discovery mapping, Win31 export controls, and any live bridge export request type. |
+| BBS UI system operation improvement program | UI-0 ranked improvement packet; M2-B host-only Network/Services UX proof showing 512-byte bounds, read-only behavior, no coordinator serial ABI expansion, and no Gate F service-code changes; M3 firmware mapping design review/fixtures only; Client-1 static/simulated or read-only browser proof with screenshots and logs; future Client-2 Tier 3 selected-board read-only Wi-Fi proof with same-session identity, power/voltage/boot-pin/isolation, recovery, browser evidence, and cleanup. Dummy-output control needs a later explicit GPIO/fixture/no-load/no-relay/no-mains record. |
 | Development status review | Current canonical ledger `research/development-status-ledger.md` plus `SRC-LOCAL-ESPNOW-DEVELOPMENT-STATUS-REVIEW-2026-05-26`; use it to classify planned lanes and superseded blocked evidence without rewriting historical task records. |
 | Agricultural telemetry hardware profiles | Source-backed records for selected center-pivot controller, soil probes, SDI-12/Modbus adapter, GPS pivot positioning device, GPS asset tracker, power/voltage/isolation limits, connector pinout, protocol, calibration, units, and live-proof plan. |
 | Remote LCD XBee solar client private submodules | Seven private docs-only submodule repos exist under `submodules/hardware/`, but closure still requires exact vendor sources and physical inspection records for ESP32 board, 20x4 LCD/backpack, rotary encoder, 18650 cell, BMS/protection board, solar panel, charger/power path, XBee carrier, antenna, fuse/protection, and enclosure; include power, voltage, boot-pin, isolation, charge/current limit, pullup, and recovery notes before any bench action. |
+| Hardware rapid prototyping and CAD | Same-session printer/scanner inventory for K1, Kobra 2 Max, CR-30, and CR-Scan Lizard; K1 hardened-nozzle physical proof; ventilation/exposure record aligned with `SRC-NIOSH-SAFE-3D-PRINTING-2024-103`; filament SDS and dry-state/humidity records; material/printer calibration coupons; CR-30 belt adhesion and slicer-angle proof; CR-Scan Lizard scan-to-caliper/known-dimension validation; CAD source/export packet; and lane-specific measurement packets before any nontechnical build guide is treated as repeatable. |
+| Four-relay low-voltage fixture kit | Complete the internal workbook with printer identity, K1 hardened-nozzle proof if needed, filament SDS and dry-state/humidity records, ventilation controls, calibration coupon, board/relay/XBee/MicroSD/TFT/expander dimensions, cable-tie and label-zone review, public-bundle exclusion proof for workbook/CAD, and reviewer signoff before live print, fit, or repeatable guide acceptance. |
 | Cross-project client UI live gate | Stage 1 static or simulated phone/laptop UI proof; Stage 2 selected-board Wi-Fi read-only proof with identity, power, voltage, boot-pin, isolation, recovery, browser screenshot, and cleanup evidence; Stage 3 exact dummy-output GPIO/fixture proof with no relay/load/mains path, sequence logs, all-off, safety-lock rejection, and observed dummy output. |
 | DOS-C Windows 3.1 TCP bridge | SLIRP acceptance record showing guest ICMP/TCP path to the Pi simulator and operator-console state proof, with generated screenshots and captures kept out of Git. |
 | DOSBox-X PCAP bridge | Pi identity record, wired `eth0` evidence, capability setup and restore evidence, redacted packet-flow proof, and rollback result. |

@@ -15,8 +15,24 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = ROOT / "build" / "github-pages" / "public-file-manifest.json"
 
 BLOCKED_PATH_PARTS = {".agents", ".git", "user_uploads"}
-BLOCKED_PREFIXES = ("research/bench-records/",)
-BLOCKED_SUFFIXES = {".pdf"}
+BLOCKED_PREFIXES = (
+    "research/bench-records/",
+    "research/hardware-rapid-prototyping/",
+    "cad/hardware-rapid-prototyping/",
+)
+BLOCKED_SUFFIXES = {
+    ".3mf",
+    ".gcode",
+    ".gco",
+    ".nc",
+    ".obj",
+    ".pdf",
+    ".ply",
+    ".scad",
+    ".step",
+    ".stl",
+    ".stp",
+}
 IMAGE_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
 URL_PATTERN = re.compile(r"url\((?:'|\")?([^'\"\)]+)(?:'|\")?\)")
 SOURCE_ID_PATTERN = re.compile(r"\bSRC-[A-Z0-9-]+\b")
@@ -44,6 +60,10 @@ PUBLIC_TEXT_PATTERNS = [
     (re.compile(r"(?<!-)\bCOM\d+\b", re.IGNORECASE), "COM port"),
     (re.compile(r"`?[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}`?"), "local device identifier"),
     (re.compile(r"user_uploads"), "private upload path"),
+    (re.compile(r"research/hardware-rapid-prototyping/"), "internal workbook path"),
+    (re.compile(r"cad/hardware-rapid-prototyping/"), "internal CAD path"),
+    (re.compile(r"four-relay-low-voltage-fixture-kit-workbook"), "internal workbook name"),
+    (re.compile(r"low_voltage_fixture_plate_v0"), "internal CAD source name"),
     (re.compile(r"IMG_\d+\.(?:jpe?g|png|webp)", re.IGNORECASE), "raw photo filename"),
     (re.compile(r"private bench notes", re.IGNORECASE), "private bench-note language"),
     (re.compile(r"\b[A-Fa-f0-9]{32,}\b"), "possible key or raw identifier"),

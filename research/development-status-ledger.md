@@ -2,7 +2,7 @@
 
 Source index: [../knowledge-base/source-index.md](../knowledge-base/source-index.md)
 
-Date: 2026-05-27
+Date: 2026-05-28
 
 This is the canonical planning-status ledger for the ESP32 workspace, with
 paired DOS-C evidence included only where ESP32 acceptance depends on DOS-C
@@ -39,6 +39,26 @@ status and evidence table.
   `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27`,
   but it does not extend the coordinator serial ABI or accept firmware runtime,
   live mesh, BLE, Android, router/admin, PCAP, or hardware work.
+- The BBS UI System Operation Improvement Program is recorded under
+  `SRC-LOCAL-BBS-UI-SYSTEM-OPERATION-PROGRAM-2026-05-28` as a Tier 2
+  documentation/status/source-record plan. It preserves the accepted
+  serial-nullmodem path and does not alter runtime APIs, firmware ABI, bridge
+  ABI, coordinator serial ABI, `mesh_discovery.v1`, Gate F radio service codes,
+  or Win31 transport.
+- The Hardware Rapid Prototyping Program is recorded under
+  `SRC-LOCAL-HARDWARE-RAPID-PROTOTYPING-2026-05-28` as a Tier 2
+  documentation/status/source-record plan for 3D-printed enclosures, brackets,
+  fixtures, cable guides, scanner fit checks, parametric CAD workflows, and
+  nontechnical guide templates. It does not authorize live printing, live
+  scanning, wiring, flashing, serial/radio writes, firmware runtime changes,
+  battery/solar charging, relay/load/mains, framework selection, or ABI/API
+  changes.
+- The four-relay low-voltage fixture kit is recorded under
+  `SRC-LOCAL-FOUR-RELAY-LOW-VOLTAGE-FIXTURE-KIT-2026-05-28` as the first
+  concrete package in that lane. It adds one public guide, one internal
+  evidence workbook, and one provisional OpenSCAD source model, but it does
+  not accept live printing, live scanning, hardware fit, relay/load/mains, or
+  hardware gate closure.
 - The 2026-05-25 LAN DHCP/current-remap pass ended with a read-only preflight
   `ok:true` for the current Pi/coordinator/peer identities, but it did not run
   bridge, Win31/OPCON, BBS, flash, erase, monitor, or radio proof.
@@ -74,6 +94,15 @@ status and evidence table.
   MicroSD, load, mains, erase, monitor, or serial-write expansion.
 - No firmware mapping from ESP-WIFI-MESH APIs/events into `mesh_discovery.v1`
   is accepted.
+- No UI-0 ranked improvement packet, M2-B host-only Network/Services UX proof,
+  M3 firmware mapping review, Client-1 static/simulated browser proof, or
+  Client-2 selected-board read-only Wi-Fi proof is accepted yet.
+- No same-session printer/scanner identity, nozzle proof, filament SDS,
+  ventilation/exposure record, drying record, calibration coupon, caliper
+  validation, slicer packet, print proof, scan proof, or fit acceptance is
+  accepted for the hardware rapid-prototyping lane. One provisional OpenSCAD
+  source exists for the four-relay low-voltage fixture kit, but it is not
+  measurement or fit evidence.
 - The fullscreen fix did not require Windows 3.1 display-driver/runtime
   mutation.
 
@@ -102,6 +131,7 @@ status and evidence table.
 | ESP-WIFI-MESH self-healing branch | design-only | source-backed design | `SRC-LOCAL-ESPNOW-NETWORK-LIVE-GATE-2026-05-23`, `SRC-ESP-IDF-WIFI-MESH`, `SRC-ESP-IDF-RF-COEXIST` | Optional metadata and Network view are simulator/source-level only. | No mesh route-table, parent, root, healing, coexistence, flash, or cleanup proof. | Accepted ADR plus fresh identity, backups, build hashes, mesh config, route/healing proof, rollback. |
 | Full-service mesh discovery Gate M1 | accepted-host-simulator-only | ADR/source ledger plus host tests | `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`, `SRC-ESP-IDF-WIFI-MESH`, `SRC-ESP-IDF-RF-COEXIST`, `SRC-ANDROID-BLE-OVERVIEW`, `SRC-ANDROID-BLE-GATT-CONNECT`, `SRC-ANDROID-BLUETOOTH-PERMISSIONS` | Accepted `ADR-0009` defines `mesh_discovery.v1`, host topology/service/capability/BLE-Android metadata, healing-event shape, compact bridge summaries, recursive secret-field rejection, 512-byte bridge bounds, runtime summary inclusion, and unchanged Gate F radio service codes. | No live mesh proof, BLE proof, Android app proof, router/admin policy, or firmware mapping. | Superseded for DOS-C companion status by Gate M2-A; Gate M3 firmware mapping review remains design-only. |
 | Full-service mesh discovery Gate M2-A DOS-C companion | implemented-host-only | paired DOS-C commit, task/handoff, source ledger, and focused host tests | `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27`, `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27` | DOS-C commit `62c4db6` adds read-only `discovery_snapshot`, `discovery_events`, `service_catalog`, and `capability_report` bridge/operator support, Win31 Network/Services summaries, ASCII schema-versioned response parsing, capped event/service rows, 512-byte bridge bounds, and no coordinator serial ABI expansion. Focused Gate M2-A bridge/operator tests passed; full DOS-C Win31/scaffold suites were blocked by unrelated dirty Star Trek fullscreen-fill worktree changes. | No live mesh proof, BLE proof, Android app proof, router/admin policy, firmware mapping, PCAP, serial-write expansion, or hardware proof. | Gate M3 firmware mapping review/design-only; live proof requires a separate future Tier 3 gate with same-session evidence and recovery path. |
+| BBS UI system operation improvement program | planned-doc-status-program | Tier 2 plan/source ledger/task/handoff plus read-only quorum | `SRC-LOCAL-BBS-UI-SYSTEM-OPERATION-PROGRAM-2026-05-28`, `SRC-LOCAL-WIN31-DASHBOARD-INTERFACE-IMPROVEMENT-2026-05-27`, `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24`, `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27` | The singular plan now contains an agent execution packet, human-readable phase plan, weighted reviewer voting, continuous update rule, and skill routing for UI-0, M2-B, M3, Client-1, and Client-2. | No UI-0 ranked packet, M2-B host-only UX proof, M3 mapping review, Client-1 simulated/static proof, Client-2 live read-only Wi-Fi proof, or dummy-output proof exists. No runtime public API, firmware ABI, bridge ABI, serial ABI, Gate F service-code map, `mesh_discovery.v1`, or Win31 transport change is accepted. | Start UI-0 and M2-B as host-only/source-backed planning and evidence slices; any live proof requires a separate future Tier 3 gate. |
 | BLE/Android client-node branch | design-only | source-backed design | `SRC-LOCAL-ESPNOW-NETWORK-LIVE-GATE-2026-05-23`, `SRC-ESP-IDF-BLE-API`, `SRC-ESP-IDF-BLE-SMP`, `SRC-ANDROID-BLE-OVERVIEW`, `SRC-ANDROID-BLE-GATT-CONNECT`, `SRC-ANDROID-BLUETOOTH-PERMISSIONS` | BLE GATT/Android model is documented only. | No UUIDs, Android package, permissions proof, bonding/SMP proof, coexistence proof, or live GATT proof. | Separate BLE live gate. |
 | Web Serial, Web Bluetooth, and raw serial client work | blocked | source-backed future references | `SRC-MDN-WEB-SERIAL-2026-05-24`, `SRC-MDN-WEB-BLUETOOTH-2026-05-24`, `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24` | Browser APIs are documented as future experiments only. | No live browser serial writes, BLE pairing, or replacement of accepted Win31 path. | Keep closed behind separate browser/device gates. |
 | Cross-project Wi-Fi browser client UI and dummy output | design-only | source-backed plan | `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24`, `SRC-ESP-IDF-WIFI`, `SRC-ESP-IDF-HTTP-SERVER`, `SRC-GITHUB-PAGES-WHAT-IS` | Plan chooses Wi-Fi web first for phone and laptop and dummy-output-only first live control. | No selected board, current identity, Wi-Fi mode, browser proof, auth policy, dummy fixture, or no-relay/load/mains observation. | Stage 1 simulated UI, then selected-board read-only proof, then dummy-output gate. |
@@ -110,6 +140,8 @@ status and evidence table.
 | Four-relay board, relay, power, load, and mains lane | blocked | design/source-backed gaps | `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`, `SRC-ESP32-HARDWARE-DESIGN-GUIDELINES`, `SRC-ESP32-WROOM-32-DATASHEET`, `SRC-SONGLE-SRD-05VDC-SL-C`, `SRC-NIOSH-ELECTRICAL-SAFETY`, `SRC-OSHA-DEENERGIZED-WORK`, `SRC-OSHA-1910-305` | Photo/source records exist only for visible components and candidate hazard context. | Exact board, shield schematic, regulator, relay module, trigger polarity, isolation, current, rail budget, load type, enclosure, grounding, and qualified review. | Low-voltage inspection and bench records before any relay or load work; qualified review before mains. |
 | XBee lane | blocked | source-backed hardware gap | `SRC-DIGI-XBP9B-DPUT-001`, `SRC-DIGI-XBEE-PRO-900HP`, `SRC-DIGI-XBEE-900HP-USER-GUIDE`, `SRC-WAVESHARE-XBEE-USB-ADAPTER`, `SRC-LOCAL-XBEE-READONLY-PROBE-2026-05-18` | Candidate XBee and adapter sources exist; old local probe found no accepted serial path. | Adapter serial path, UART voltage, DIN/DOUT routing, settings backup, legal/antenna constraints, and read-only Tier A/Tier B evidence. | Run read-only XBee bench proof only after current adapter identity is verified. |
 | Remote LCD XBee solar client hardware-device stream | private-submodule-scaffolded-design-only | parent coordination plus private docs-only submodules | `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-SCAFFOLD-2026-05-26`, `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-PRIVATE-SUBMODULES-2026-05-26`, `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-SEPARATE-HARDWARE-STREAM-2026-05-26` | Seven private `rlxsc-*` hardware submodules exist and the lane is now recorded as separate from ESP-NOW BBS, Win31/DOS-C, Gate F runtime, Gate G export, Gate H proof, mesh, BLE, network, relay, TFT, MicroSD, load, and mains work. | Exact ESP32 board, LCD/backpack, encoder, cell, BMS, charger/power path, panel, XBee carrier, antenna, fuse/protection, enclosure, power budget, pin map, framework ADR, and read-only bench proof remain open. | Start source-backed identity intake inside the private submodules, prioritizing cell, BMS/protection, charger/power path, panel, fuse/protection, enclosure, and current-limit evidence before board or interface bench action. |
+| Hardware rapid prototyping and CAD | planned-doc-status-program | Tier 2 plan/source ledger/task/handoff plus official equipment/material/CAD/safety sources | `SRC-LOCAL-HARDWARE-RAPID-PROTOTYPING-2026-05-28`, `SRC-LOCAL-FOUR-RELAY-LOW-VOLTAGE-FIXTURE-KIT-2026-05-28`, `SRC-CREALITY-K1-SUPPORT-2026-05-28`, `SRC-ANYCUBIC-KOBRA2-MAX-2026-05-28`, `SRC-CREALITY-CR30-2026-05-28`, `SRC-CREALITY-CR-SCAN-LIZARD-2026-05-28`, `SRC-NIOSH-SAFE-3D-PRINTING-2024-103`, `SRC-OPENSCAD-DOCS-2026-05-28`, `SRC-CADQUERY-DOCS-2026-05-28`, `SRC-FREECAD-FEATURES-2026-05-28`, `SRC-KICAD9-PCBNEW-3D-EXPORT-2026-05-28`, `SRC-PRUSA-FILAMENT-MATERIAL-GUIDE-2026-05-28`, `SRC-BAMBULAB-PA6-CF-2026-05-28` | The program maps printer/scanner defaults, CAD workflow, material gates, lane-specific prototype needs, and a nontechnical build-guide template. The first four-relay kit adds one public guide, one internal workbook, and one provisional OpenSCAD source only. K1, Kobra 2 Max, CR-30, and CR-Scan Lizard roles are planning defaults only. | No local printer/scanner condition, hardened-nozzle proof, ventilation record, filament SDS, drying record, calibration coupon, scan-to-caliper proof, slicer packet, live print, live scan, or fit acceptance is recorded. No hardware gate is closed. | Complete the four-relay fixture workbook and per-lane measurement packets before any guide becomes repeatable procedure. |
+| Four-relay low-voltage fixture kit | provisional-doc-cad-package | public guide, internal workbook, source ledger/task/handoff, and one OpenSCAD source | `SRC-LOCAL-FOUR-RELAY-LOW-VOLTAGE-FIXTURE-KIT-2026-05-28`, `SRC-LOCAL-HARDWARE-RAPID-PROTOTYPING-2026-05-28`, `SRC-NIOSH-SAFE-3D-PRINTING-2024-103`, `SRC-OPENSCAD-DOCS-2026-05-28` | Public-safe guide, internal evidence workbook, Pages allowlist limited to the public guide, public source-index redaction for workbook/CAD paths, and a provisional plate model with cable-tie slots, label zones, measurement grid, and no board-specific mounting holes. | Printer/scanner identity, K1 hardened-nozzle proof, filament SDS/dry state, ventilation, calibration coupon, board/relay/XBee/MicroSD/TFT/expander dimensions, fit proof, live print, live scan, and hardware acceptance remain open. | Fill the workbook and rerun review before printing or treating the plate as fit evidence. |
 | TFT, MicroSD, expander, storage, and instrument support lanes | design-only | source-backed candidates | `SRC-LCDWIKI-R61509V-MRB2802`, `SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`, `SRC-ESP-IDF-SDMMC`, `SRC-ESP-IDF-SDSPI`, `SRC-ESP-IDF-SD-PULLUP`, `SRC-SD-ASSOCIATION-FORMATTER`, `SRC-TI-TCA9555`, `SRC-ESPRESSIF-MCP23017-COMPONENT`, `SRC-FLUKE-87V`, `SRC-KEYSIGHT-E36200`, `SRC-SALEAE-LOGIC-8` | Candidate references exist for planning only. | Exact modules, wiring, voltage, boot-pin conflicts, bus pullups, address pins, card policy, and bench instrument inventory. | Create source-backed profiles and bench records before wiring or firmware dependencies. |
 | Agricultural telemetry, pivot, soil, and GPS planning | design-only | external candidate sources | `SRC-LINDSAY-FIELDNET-PIVOT-MONITOR-2026-05-25`, `SRC-METER-TEROS12-2026-05-25`, `SRC-SENTEK-DRILLDROP-2026-05-25`, `SRC-IRROMETER-SOIL-SENSORS-2026-05-25`, `SRC-GEOTAB-ASSET-TRACKING-2026-05-25` | Candidate telemetry classes are source-backed. | No selected local hardware, wiring, controller protocol, calibration, units, power, voltage, isolation, connector, GPS integration, or live-proof plan. | Source-backed hardware profile and protocol ADR before implementation. |
 
@@ -118,6 +150,8 @@ status and evidence table.
 Keep firmware runtime implementation, firmware persistence, Win31 export
 controls, bridge export request types, live SoftAP proof, Windows Wi-Fi
 mutation, physical output proof, BLE pairing, live mesh, PCAP, relay/XBee, TFT,
-MicroSD, load, mains, erase, monitor, cleanup acceptance, and serial-write
-expansion closed unless a later source-backed gate explicitly opens the exact
-surface.
+MicroSD, load, mains, battery/solar charging, live printing, live scanning,
+additional CAD source implementation beyond the approved four-relay fixture
+source, generated CAD/print artifacts, slicer projects, G-code, raw scanner
+captures, erase, monitor, cleanup acceptance, and serial-write expansion closed
+unless a later source-backed gate explicitly opens the exact surface.

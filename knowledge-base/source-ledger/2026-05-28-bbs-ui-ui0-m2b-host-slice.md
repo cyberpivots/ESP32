@@ -21,6 +21,9 @@ Program with UI-0 and M2-B as host-only paired ESP32/DOS-C evidence slices.
   slices under the BBS UI System Operation Improvement Program.
 - [repo-verified] DOS-C commit `7f0b5df` adds Network/Services wording and a
   source test for host-only/read-only/512-byte/schema/no-serial-ABI boundaries.
+- [repo-verified] DOS-C commit `7819b93` refreshes the BBS records after a
+  later unrelated offgrid submodule pointer update allowed the broad DOS-C
+  scaffold check to pass.
 - [repo-verified] DOS-C `m2a.discovery.v1` is companion output derived from
   the ESP32 host `mesh_discovery.v1` contract. This slice does not change
   `mesh_discovery.v1`.

@@ -26,7 +26,9 @@ transport.
   records existing DOS-C companion support for `discovery_snapshot`,
   `discovery_events`, `service_catalog`, and `capability_report`.
 - DOS-C commit `7f0b5df` records the paired UI-0/M2-B host-only operator
-  wording and source-test slice.
+  wording and source-test slice. DOS-C commit `7819b93` refreshes the paired
+  BBS records after a later unrelated offgrid submodule pointer update allowed
+  the broad DOS-C scaffold check to pass.
 - DOS-C `m2a.discovery.v1` is companion output derived from the ESP32 host
   `mesh_discovery.v1` contract. This slice does not change
   `mesh_discovery.v1`.

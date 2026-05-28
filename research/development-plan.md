@@ -69,7 +69,7 @@ are not rewritten as current truth.
 | ESP-NOW BBS live baseline | accepted-live | Use structured Gate H transcript proof as the current live baseline; any rerun starts with fresh Tier 3 preflight and authority. | Communications + QA | Tier 3 for live, Tier 2 for docs | `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25` | Flash/erase/monitor unless a new live gate opens them | `research/development-status-ledger.md` |
 | Custom wireless Gate F | accepted-host-prototype-only | Keep runtime firmware implementation closed; continue only host or owner-review slices until a later implementation gate is accepted. | Communications + Firmware + QA | Tier 2 | `SRC-LOCAL-ESPNOW-CUSTOM-WIRELESS-PROTOCOL-PHASE-5-6-RUNTIME-DESIGN-REVIEW-2026-05-26` | Firmware runtime, persistence, live proof | ADR-0006, ADR-0007, ADR-0008 |
 | Full-service mesh discovery | gate-m2a-implemented-host-only | Gate M3: firmware mapping review/design-only for `mesh_discovery.v1`; live proof remains a separate future Tier 3 gate. | Communications + Architecture + QA | Tier 2 | `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`, `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27` | Live mesh, BLE pairing, Android app, router/admin, firmware mapping | ADR-0009 plus DOS-C commit `62c4db6` |
-| BBS UI system operation program | planned-doc-status-program | Run UI-0 and M2-B as host-only/source-backed review slices before Gate M3 mapping review or client UI proof. | Agent Operations + UI/Protocol + Communications + QA | Tier 2 docs/status; Tier 3 for any later live proof | `SRC-LOCAL-BBS-UI-SYSTEM-OPERATION-PROGRAM-2026-05-28`, `SRC-LOCAL-WIN31-DASHBOARD-INTERFACE-IMPROVEMENT-2026-05-27`, `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24` | Runtime API changes, firmware ABI, bridge ABI, serial ABI, Gate F service-code changes, live browser proof, live mesh, BLE, PCAP, router/admin, flash, serial writes, hardware | This file, status ledger, task 0080, handoff 0069 |
+| BBS UI system operation program | ui0-m2b-implemented-host-only | Continue with Gate M3 mapping review/design-only or Client-1 static/simulated browser proof; live proof remains a separate future Tier 3 gate. | Agent Operations + UI/Protocol + Communications + QA | Tier 2 docs/status; Tier 3 for any later live proof | `SRC-LOCAL-BBS-UI-SYSTEM-OPERATION-PROGRAM-2026-05-28`, `SRC-LOCAL-BBS-UI-UI0-M2B-HOST-SLICE-2026-05-28`, `SRC-LOCAL-WIN31-DASHBOARD-INTERFACE-IMPROVEMENT-2026-05-27`, `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24` | Runtime API changes, firmware ABI, bridge ABI, serial ABI, Gate F service-code changes, live browser proof, live mesh, BLE, PCAP, router/admin, flash, serial writes, hardware | UI-0/M2-B packet, task 0083, handoff 0072, DOS-C commit `7f0b5df` |
 | Companion SoftAP Gate 1 | implemented-host-tooling-only | Re-run ESP32 and paired DOS-C host tests before any continuation; live proof needs fresh Tier 3 identity, recovery, Windows Wi-Fi, companion proof, and cleanup evidence. | Communications + QA | Tier 2 tooling; Tier 3 live | `SRC-LOCAL-ESPNOW-BBS-COMPANION-SOFTAP-LIVE-GATE-TOOLING-2026-05-27` | Live SoftAP, Windows Wi-Fi mutation, dummy GPIO/output, flash, cleanup acceptance | Task 0076 and handoff 0065 |
 | Win31/OPCON and DOS-C companion | mixed | Treat Gate H and serial-nullmodem path as accepted; keep fullscreen human acceptance, CBBS input proof, and launcher/live proof as separate gated work. | QA + UI/Protocol | Tier 2 or Tier 3 by action | `SRC-LOCAL-WIN31-CBBS-INPUT-RENAME-ICON-UI-2026-05-27`, `SRC-LOCAL-WIN31-DASHBOARD-FULLSCREEN-RECOVERY-2026-05-26` | PCAP, packet-driver replacement, unsafe controls | Status ledger and Win31 task/handoff records |
 | Four-relay XBee Wi-Fi | blocked hardware-facing | Complete low-voltage identity, power, relay, XBee adapter, TFT, MicroSD, expander, and instrument records before hardware-facing enablement. | Hardware + Firmware + QA | Tier 2 docs; Tier 3 bench | `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`, `SRC-LOCAL-FOUR-RELAY-SAFE-CORE-CONTRACT-2026-05-19` | Relay/load/mains, XBee writes, flashing, live output enablement | Four-relay docs and known gaps |
@@ -145,6 +145,13 @@ Do not create a second roadmap for this program.
 | Client-1 | Plan browser/client-node interface testing from simulated/static or read-only browser evidence. | Screenshots, console/network logs, smoke checks, and optional CV/OCR review for generated/static UI artifacts. | Do not label connected devices as coordinator/router/end-node until same-session read-only inventory verifies identity and role. |
 | Client-2 | Future selected-board read-only Wi-Fi browser proof after a separate Tier 3 gate. | Same-session board identity, power/voltage/boot-pin/isolation review, recovery path, browser proof, and cleanup evidence. | Dummy-output control remains later and requires explicit GPIO, fixture, no-load/no-relay/no-mains evidence. |
 
+Current UI-0/M2-B result:
+[../docs/projects/espnow-bbs/bbs-ui-ui0-m2b-host-slice.md](../docs/projects/espnow-bbs/bbs-ui-ui0-m2b-host-slice.md)
+records the ranked UI-0 packet and M2-B host-only Network/Services proof.
+DOS-C commit `7f0b5df` supplies the paired operator wording and source tests.
+This result does not open M3 firmware mapping, Client-1 browser proof, Client-2
+selected-board proof, dummy-output control, or any live/hardware gate.
+
 ## Hardware Design And 3D-Printed Prototype Program
 
 Detailed plan:
@@ -191,11 +198,10 @@ Detailed plan:
    and live launcher proof remain separate gates.
 
 4. Improve BBS UI operation through gated, source-backed slices.
-   Start with UI-0 and M2-B: make the Win31/CBBS and Network/Services views
-   easier for a non-technical operator to understand, while keeping transcript
-   proof authoritative and discovery summaries host-only. Gate M3 is only a
-   firmware mapping review. Client browser work starts with static/simulated or
-   read-only proof before any selected-board live gate.
+   UI-0 and M2-B now have a host-only source packet and paired DOS-C operator
+   proof. Next choose Gate M3 firmware mapping review/design-only or Client-1
+   static/simulated browser proof; transcript proof remains authoritative and
+   live proof requires a separate Tier 3 gate.
 
 5. Use rapid prototyping as evidence support, not hardware acceptance.
    3D-printed enclosures, brackets, fixtures, cable guides, scanner fit checks,

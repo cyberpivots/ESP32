@@ -40,11 +40,12 @@ status and evidence table.
   but it does not extend the coordinator serial ABI or accept firmware runtime,
   live mesh, BLE, Android, router/admin, PCAP, or hardware work.
 - The BBS UI System Operation Improvement Program is recorded under
-  `SRC-LOCAL-BBS-UI-SYSTEM-OPERATION-PROGRAM-2026-05-28` as a Tier 2
-  documentation/status/source-record plan. It preserves the accepted
-  serial-nullmodem path and does not alter runtime APIs, firmware ABI, bridge
-  ABI, coordinator serial ABI, `mesh_discovery.v1`, Gate F radio service codes,
-  or Win31 transport.
+  `SRC-LOCAL-BBS-UI-SYSTEM-OPERATION-PROGRAM-2026-05-28`; UI-0 and M2-B now
+  have a host-only source/proof slice under
+  `SRC-LOCAL-BBS-UI-UI0-M2B-HOST-SLICE-2026-05-28`. The work preserves the
+  accepted serial-nullmodem path and does not alter runtime APIs, firmware ABI,
+  bridge ABI, coordinator serial ABI, `mesh_discovery.v1`, Gate F radio service
+  codes, or Win31 transport.
 - The Hardware Rapid Prototyping Program is recorded under
   `SRC-LOCAL-HARDWARE-RAPID-PROTOTYPING-2026-05-28` as a Tier 2
   documentation/status/source-record plan for 3D-printed enclosures, brackets,
@@ -94,9 +95,10 @@ status and evidence table.
   MicroSD, load, mains, erase, monitor, or serial-write expansion.
 - No firmware mapping from ESP-WIFI-MESH APIs/events into `mesh_discovery.v1`
   is accepted.
-- No UI-0 ranked improvement packet, M2-B host-only Network/Services UX proof,
-  M3 firmware mapping review, Client-1 static/simulated browser proof, or
-  Client-2 selected-board read-only Wi-Fi proof is accepted yet.
+- UI-0 and M2-B are accepted only as host-only source/test proof. No M3
+  firmware mapping review, Client-1 static/simulated browser proof, Client-2
+  selected-board read-only Wi-Fi proof, dummy-output proof, or live browser
+  proof is accepted yet.
 - No same-session printer/scanner identity, nozzle proof, filament SDS,
   ventilation/exposure record, drying record, calibration coupon, caliper
   validation, slicer packet, print proof, scan proof, or fit acceptance is
@@ -131,7 +133,7 @@ status and evidence table.
 | ESP-WIFI-MESH self-healing branch | design-only | source-backed design | `SRC-LOCAL-ESPNOW-NETWORK-LIVE-GATE-2026-05-23`, `SRC-ESP-IDF-WIFI-MESH`, `SRC-ESP-IDF-RF-COEXIST` | Optional metadata and Network view are simulator/source-level only. | No mesh route-table, parent, root, healing, coexistence, flash, or cleanup proof. | Accepted ADR plus fresh identity, backups, build hashes, mesh config, route/healing proof, rollback. |
 | Full-service mesh discovery Gate M1 | accepted-host-simulator-only | ADR/source ledger plus host tests | `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`, `SRC-ESP-IDF-WIFI-MESH`, `SRC-ESP-IDF-RF-COEXIST`, `SRC-ANDROID-BLE-OVERVIEW`, `SRC-ANDROID-BLE-GATT-CONNECT`, `SRC-ANDROID-BLUETOOTH-PERMISSIONS` | Accepted `ADR-0009` defines `mesh_discovery.v1`, host topology/service/capability/BLE-Android metadata, healing-event shape, compact bridge summaries, recursive secret-field rejection, 512-byte bridge bounds, runtime summary inclusion, and unchanged Gate F radio service codes. | No live mesh proof, BLE proof, Android app proof, router/admin policy, or firmware mapping. | Superseded for DOS-C companion status by Gate M2-A; Gate M3 firmware mapping review remains design-only. |
 | Full-service mesh discovery Gate M2-A DOS-C companion | implemented-host-only | paired DOS-C commit, task/handoff, source ledger, and focused host tests | `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27`, `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27` | DOS-C commit `62c4db6` adds read-only `discovery_snapshot`, `discovery_events`, `service_catalog`, and `capability_report` bridge/operator support, Win31 Network/Services summaries, ASCII schema-versioned response parsing, capped event/service rows, 512-byte bridge bounds, and no coordinator serial ABI expansion. Focused Gate M2-A bridge/operator tests passed; full DOS-C Win31/scaffold suites were blocked by unrelated dirty Star Trek fullscreen-fill worktree changes. | No live mesh proof, BLE proof, Android app proof, router/admin policy, firmware mapping, PCAP, serial-write expansion, or hardware proof. | Gate M3 firmware mapping review/design-only; live proof requires a separate future Tier 3 gate with same-session evidence and recovery path. |
-| BBS UI system operation improvement program | planned-doc-status-program | Tier 2 plan/source ledger/task/handoff plus read-only quorum | `SRC-LOCAL-BBS-UI-SYSTEM-OPERATION-PROGRAM-2026-05-28`, `SRC-LOCAL-WIN31-DASHBOARD-INTERFACE-IMPROVEMENT-2026-05-27`, `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24`, `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27` | The singular plan now contains an agent execution packet, human-readable phase plan, weighted reviewer voting, continuous update rule, and skill routing for UI-0, M2-B, M3, Client-1, and Client-2. | No UI-0 ranked packet, M2-B host-only UX proof, M3 mapping review, Client-1 simulated/static proof, Client-2 live read-only Wi-Fi proof, or dummy-output proof exists. No runtime public API, firmware ABI, bridge ABI, serial ABI, Gate F service-code map, `mesh_discovery.v1`, or Win31 transport change is accepted. | Start UI-0 and M2-B as host-only/source-backed planning and evidence slices; any live proof requires a separate future Tier 3 gate. |
+| BBS UI system operation improvement program | ui0-m2b-implemented-host-only | Tier 2 plan/source ledger/task/handoff, read-only quorum, and paired DOS-C host proof | `SRC-LOCAL-BBS-UI-SYSTEM-OPERATION-PROGRAM-2026-05-28`, `SRC-LOCAL-BBS-UI-UI0-M2B-HOST-SLICE-2026-05-28`, `SRC-LOCAL-WIN31-DASHBOARD-INTERFACE-IMPROVEMENT-2026-05-27`, `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24`, `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-GATE-M2A-DOSC-2026-05-27` | UI-0 now has a ranked source-backed operator packet. M2-B now has host-only Network/Services UX proof tied to DOS-C commit `7f0b5df`; DOS-C `m2a.discovery.v1` companion output is distinguished from ESP32 host `mesh_discovery.v1`, and source tests preserve 512-byte/read-only/no-secret/no-serial-ABI boundaries. | No M3 firmware mapping review, Client-1 simulated/static proof, Client-2 live read-only Wi-Fi proof, dummy-output proof, copied screenshot proof, live browser proof, runtime public API, firmware ABI, bridge ABI, serial ABI, Gate F service-code map, `mesh_discovery.v1`, or Win31 transport change is accepted. | Continue with Gate M3 design-only mapping review or Client-1 static/simulated browser proof; any live proof requires a separate future Tier 3 gate. |
 | BLE/Android client-node branch | design-only | source-backed design | `SRC-LOCAL-ESPNOW-NETWORK-LIVE-GATE-2026-05-23`, `SRC-ESP-IDF-BLE-API`, `SRC-ESP-IDF-BLE-SMP`, `SRC-ANDROID-BLE-OVERVIEW`, `SRC-ANDROID-BLE-GATT-CONNECT`, `SRC-ANDROID-BLUETOOTH-PERMISSIONS` | BLE GATT/Android model is documented only. | No UUIDs, Android package, permissions proof, bonding/SMP proof, coexistence proof, or live GATT proof. | Separate BLE live gate. |
 | Web Serial, Web Bluetooth, and raw serial client work | blocked | source-backed future references | `SRC-MDN-WEB-SERIAL-2026-05-24`, `SRC-MDN-WEB-BLUETOOTH-2026-05-24`, `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24` | Browser APIs are documented as future experiments only. | No live browser serial writes, BLE pairing, or replacement of accepted Win31 path. | Keep closed behind separate browser/device gates. |
 | Cross-project Wi-Fi browser client UI and dummy output | design-only | source-backed plan | `SRC-LOCAL-CLIENT-UI-LIVE-GATE-2026-05-24`, `SRC-ESP-IDF-WIFI`, `SRC-ESP-IDF-HTTP-SERVER`, `SRC-GITHUB-PAGES-WHAT-IS` | Plan chooses Wi-Fi web first for phone and laptop and dummy-output-only first live control. | No selected board, current identity, Wi-Fi mode, browser proof, auth policy, dummy fixture, or no-relay/load/mains observation. | Stage 1 simulated UI, then selected-board read-only proof, then dummy-output gate. |

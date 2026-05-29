@@ -90,6 +90,10 @@ user-launched `codex --yolo` session; admin-strict is explicit opt-in only.
 - Weighted veto: required roles must be present, approval weight must be at
   least 70 percent, and no P1/P2 blockers may remain. Tier 3 prerequisites
   cannot be waived by weights.
+- Missing evidence is a continuation condition when safe evidence collection
+  remains. Use `scripts/agent_process_decision.py` to turn weighted reviewer
+  records into `continue`, `ask_user`, `blocked`, `ready_for_mutation`, or
+  `handoff` without prematurely ending a gate.
 
 ## Prompt pattern
 

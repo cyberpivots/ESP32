@@ -46,6 +46,9 @@ This proof has two tiers:
   snapshots with `identity-delta`, and emit a locked XCTU local-discovery
   checklist without opening serial ports or launching XCTU. Source ID:
   `SRC-LOCAL-XBEE-READONLY-LIVE-GATE-2026-05-29`.
+- The workspace now records missing evidence as a continuation condition when
+  safe no-serial evidence collection remains. Source ID:
+  `SRC-LOCAL-MULTI-AGENTIC-CONTINUOUS-ENFORCEMENT-2026-05-29`.
 
 ## Assumptions
 
@@ -84,6 +87,17 @@ The read-only proof does not allow:
 - Adapter use as an ESP32 carrier before a separate voltage, direction, power,
   and continuity review.
 - Any mains/load wiring.
+
+## Continuation Rule
+
+Use `scripts/agent_process_decision.py` or the same weighted-vote packet shape
+for this lane. Missing host evidence should route to `continue` when the next
+step is no-serial inventory, offline `identity-delta`, redaction review, or
+locked checklist generation. Missing physical facts should route to one
+specific `ask_user` item, such as adapter markings, antenna state, isolation,
+or voltage evidence. Use `blocked` only when the next action would cross into
+serial open, XCTU launch, write/apply/transmit/recovery, ESP32 wiring, or
+relay/load/mains work without the named Tier 3 prerequisites.
 
 ## Tier A - Passive Discovery
 

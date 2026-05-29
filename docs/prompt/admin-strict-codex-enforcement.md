@@ -70,6 +70,12 @@ at least 70 percent, and there are no P1/P2 blockers. P1/P2 blockers, QA veto,
 safety veto, missing required roles, or missing Tier 3 prerequisites fail the
 gate regardless of weighted percentage.
 
+`scripts/agent_process_decision.py` is the repo-local packet evaluator for this
+rule. Missing evidence should route to `continue` when the next evidence step is
+automatable, to `ask_user` only for one irreducible physical fact, and to
+`blocked` only at a hard safety or authority boundary. `ready_for_mutation` is
+valid only after the named gate passes.
+
 ## Managed Hook Contract
 
 - `UserPromptSubmit`: inject routing requirements and block obvious attempts to
@@ -80,9 +86,11 @@ gate regardless of weighted percentage.
   routing or Tier 3 authority.
 - `SubagentStart`: inject read-only or explicit-write-scope boundaries.
 - `SubagentStop`: require reviewer outputs to include role, evidence reviewed,
-  P1/P2 findings, vote, conditions, and confidence.
+  P1/P2 findings, vote, conditions, and confidence; continue the reviewer when
+  it reports open blockers or rejects the gate.
 - `Stop`: continue non-trivial mutation turns that omit the required decision
-  footer.
+  footer or try to end with a non-terminal `continue` or `ready_for_mutation`
+  decision.
 - `bypassPermissions`: when hook input reports this permission mode, PreToolUse,
   PermissionRequest, SubagentStop, and Stop must not deny or block. Advisory
   context is allowed; overriding the user's `codex --yolo` intent is not.

@@ -141,6 +141,8 @@ def _emit_warning(missing: list[str]) -> None:
         f"the hook can see {', '.join(missing)} in the prompt context. "
         "Before continuing, state verified facts, assumptions, unknowns, selected "
         "tier, owner role, evidence need, mutation boundary, and validation plan. "
+        "For Tier 2/Tier 3 work, include weighted reviewer disposition and continue "
+        "automatable evidence acquisition instead of stopping on missing evidence. "
         "Project-local hooks and prompt packets are advisory aids; source-backed "
         "records and explicit gate authority remain authoritative."
     )

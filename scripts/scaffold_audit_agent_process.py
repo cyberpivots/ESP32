@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tempfile
 import tomllib
 from pathlib import Path
 
@@ -41,6 +42,7 @@ REQUIRED_SOURCE_IDS = [
     "SRC-LOCAL-MULTI-AGENTIC-CONTINUATION-DECISION-2026-05-27",
     "SRC-LOCAL-ADMIN-STRICT-CODEX-ENFORCEMENT-2026-05-28",
     "SRC-LOCAL-AGENT-INSTRUCTION-YOLO-ENFORCEMENT-2026-05-28",
+    "SRC-LOCAL-MULTI-AGENTIC-CONTINUOUS-ENFORCEMENT-2026-05-29",
 ]
 
 
@@ -117,6 +119,47 @@ def _run_admin_hook(
         failures.append(f"{label} should not emit output for this fixture: {result.stdout.strip()}")
         return failures
     failures.extend(_require_markers(result.stdout + result.stderr, markers, label))
+    return failures
+
+
+def _run_decision_helper(root: Path) -> list[str]:
+    path = root / "scripts" / "agent_process_decision.py"
+    failures: list[str] = []
+    label = "scripts/agent_process_decision.py"
+    result = subprocess.run(
+        [sys.executable, str(path), "template", "--json"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return [f"{label} template exited {result.returncode}: {result.stderr.strip()}"]
+    try:
+        packet = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        return [f"{label} template emitted invalid JSON: {exc}"]
+    packet["evidenceGaps"] = []
+    packet["workRemaining"] = []
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as handle:
+        json.dump(packet, handle)
+        packet_path = Path(handle.name)
+    try:
+        evaluated = subprocess.run(
+            [sys.executable, str(path), "evaluate", "--packet", str(packet_path), "--json"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    finally:
+        packet_path.unlink(missing_ok=True)
+    if evaluated.returncode != 0:
+        failures.append(f"{label} evaluate exited {evaluated.returncode}: {evaluated.stdout}{evaluated.stderr}")
+        return failures
+    failures.extend(_require_markers(evaluated.stdout, [
+        '"decision": "ready_for_mutation"',
+        '"gatePasses": true',
+        '"approvalRatio"',
+    ], label))
     return failures
 
 
@@ -197,10 +240,29 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "PreToolUse",
         "evidence need",
         "decision footer",
+        "Missing evidence",
+        "agent_process_decision.py",
         "ready_for_mutation",
         "default-authorized",
         "bounded-implementation-worker",
     ], "agent process docs"))
+
+    decision_helper = root / "scripts" / "agent_process_decision.py"
+    if not decision_helper.exists():
+        failures.append("missing script: scripts/agent_process_decision.py")
+    else:
+        helper_text = _read(decision_helper)
+        failures.extend(_require_markers(helper_text, [
+            "weighted",
+            "approvalThreshold",
+            "P1",
+            "P2",
+            "same-session evidence",
+            "continue",
+            "ask_user",
+            "ready_for_mutation",
+        ], "scripts/agent_process_decision.py"))
+        failures.extend(_run_decision_helper(root))
 
     config_path = root / ".codex/config.toml"
     config = tomllib.loads(_read(config_path))
@@ -258,6 +320,9 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         command_text = json.dumps(groups)
         if ".codex/hooks/" not in command_text or "python3" not in command_text:
             failures.append(f"{event} hook does not call repo-local python script")
+    pretool_text = json.dumps(hooks.get("PreToolUse", []))
+    if "functions\\\\.exec_command" not in pretool_text:
+        failures.append(".codex/hooks.json PreToolUse matcher must include functions.exec_command")
     for script in [
         "user_prompt_submit_agent_process.py",
         "subagent_start_agent_process.py",
@@ -389,14 +454,14 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "user_prompt_submit_agent_process.py",
         json.dumps({"hook_event_name": "UserPromptSubmit"}),
         "UserPromptSubmit",
-        ["evidence need", "default-authorized", "decision footer", "advisory aids"],
+        ["evidence need", "default-authorized", "Weighted vote", "Missing evidence", "decision footer", "advisory aids"],
     ))
     failures.extend(_run_hook(
         root,
         "subagent_start_agent_process.py",
         json.dumps({"agent_type": "qa-validation-reviewer", "permission_mode": "read-only"}),
         "SubagentStart",
-        ["default-authorized", "explicit disjoint write scope", "advisory aids"],
+        ["default-authorized", "explicit disjoint write scope", "role, weight", "premature stop", "advisory aids"],
     ))
     failures.extend(_run_hook(
         root,
@@ -407,7 +472,7 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
             "prompt": "Tier 2 validation plan mutation boundary",
         }),
         "PreToolUse",
-        ["verified facts", "assumptions", "unknowns", "owner role", "evidence need", "advisory aids"],
+        ["verified facts", "assumptions", "unknowns", "owner role", "evidence need", "weighted reviewer disposition", "advisory aids"],
     ))
     for script, event_name in [
         ("user_prompt_submit_agent_process.py", "UserPromptSubmit"),
@@ -436,6 +501,9 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "../.agents/TASK_LOG/0085-agent-instruction-yolo-enforcement.md",
         "../.agents/handoffs/0074-agent-instruction-yolo-enforcement-to-qa.md",
         "../knowledge-base/source-ledger/2026-05-28-agent-instruction-yolo-enforcement.md",
+        "../.agents/TASK_LOG/0089-multi-agentic-continuous-enforcement.md",
+        "../.agents/handoffs/0078-multi-agentic-continuous-enforcement-to-qa.md",
+        "../knowledge-base/source-ledger/2026-05-29-multi-agentic-continuous-enforcement.md",
         "prompt/admin-strict-codex-enforcement.md",
     ]:
         if link not in docs_index:
@@ -459,6 +527,9 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0085-agent-instruction-yolo-enforcement.md",
         ".agents/handoffs/0074-agent-instruction-yolo-enforcement-to-qa.md",
         "knowledge-base/source-ledger/2026-05-28-agent-instruction-yolo-enforcement.md",
+        ".agents/TASK_LOG/0089-multi-agentic-continuous-enforcement.md",
+        ".agents/handoffs/0078-multi-agentic-continuous-enforcement-to-qa.md",
+        "knowledge-base/source-ledger/2026-05-29-multi-agentic-continuous-enforcement.md",
     ]:
         path = root / rel
         if not path.exists():

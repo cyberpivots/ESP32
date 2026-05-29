@@ -110,6 +110,34 @@ class AdminPolicyHookTests(unittest.TestCase):
         self.assertEqual("block", data["decision"])
         self.assertIn("reviewer output missing", data["reason"])
 
+    def test_subagent_stop_rejects_open_blocker_or_reject_vote(self) -> None:
+        messages = [
+            (
+                "Role: QA\n"
+                "Evidence reviewed: tests\n"
+                "P1/P2 findings: P2 missing decision helper\n"
+                "Vote: approve\n"
+                "Conditions: add tests\n"
+                "Confidence: high\n",
+                "open P1/P2",
+            ),
+            (
+                "Role: QA\n"
+                "Evidence reviewed: tests\n"
+                "P1/P2 findings: none\n"
+                "Vote: reject acceptance\n"
+                "Conditions: add tests\n"
+                "Confidence: high\n",
+                "rejected",
+            ),
+        ]
+        for message, marker in messages:
+            with self.subTest(marker=marker):
+                result = run_hook({"hook_event_name": "SubagentStop", "last_assistant_message": message})
+                data = self.assert_clean_json(result)
+                self.assertEqual("block", data["decision"])
+                self.assertIn(marker, data["reason"])
+
     def test_stop_continues_when_footer_missing_after_mutation(self) -> None:
         result = run_hook({
             "hook_event_name": "Stop",
@@ -118,6 +146,60 @@ class AdminPolicyHookTests(unittest.TestCase):
         data = self.assert_clean_json(result)
         self.assertEqual("block", data["decision"])
         self.assertIn("decision footer", data["reason"])
+
+    def test_stop_blocks_nonterminal_or_incomplete_footer(self) -> None:
+        messages = [
+            (
+                "Implemented changes.\n"
+                "Decision: continue\n"
+                "Next gate: more tests\n"
+                "Owner role: QA\n"
+                "Evidence: local\n"
+                "Validation: unittest\n"
+                "Durable records: task log\n"
+                "Authority limits: no live hardware\n",
+                "not terminal",
+            ),
+            (
+                "Implemented changes.\n"
+                "Decision: ready_for_mutation\n"
+                "Next gate: mutation\n"
+                "Owner role: QA\n"
+                "Evidence: local\n"
+                "Validation: unittest\n"
+                "Durable records: task log\n"
+                "Authority limits: no live hardware\n",
+                "not terminal",
+            ),
+            (
+                "Implemented changes.\n"
+                "Decision: handoff\n"
+                "Next gate: QA\n"
+                "Owner role: QA\n"
+                "Evidence: local\n"
+                "Validation: pending\n"
+                "Durable records: task log\n"
+                "Authority limits: no live hardware\n",
+                "validation is pending",
+            ),
+            (
+                "Implemented changes.\n"
+                "Decision: handoff\n"
+                "Next gate: QA\n"
+                "Owner role: QA\n"
+                "Evidence: local\n"
+                "Validation: unittest\n"
+                "Durable records: missing\n"
+                "Authority limits: no live hardware\n",
+                "durable records are pending",
+            ),
+        ]
+        for message, marker in messages:
+            with self.subTest(marker=marker):
+                result = run_hook({"hook_event_name": "Stop", "last_assistant_message": message})
+                data = self.assert_clean_json(result)
+                self.assertEqual("block", data["decision"])
+                self.assertIn(marker, data["reason"])
 
     def test_stop_allows_complete_footer(self) -> None:
         message = (

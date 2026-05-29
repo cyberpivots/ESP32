@@ -22,6 +22,7 @@ ROUTING_PACKET = """ESP32 yolo-compatible routing packet advisory before Tier 1+
 - Reviewer quorum: required for Tier 2 and Tier 3 before mutation.
 - Weighted veto: coordinator/architecture-risk weight 5, high-reasoning specialist 3, medium specialist 2, low-risk helper 1; pass requires required roles, at least 70 percent weighted approval, and no P1/P2 blockers.
 - Tier 3 remains closed unless explicit live-gate authority, same-session evidence, recovery path, reviewer quorum, and closed-surface review are present.
+- Missing evidence is a continuation state when the next evidence step is automatable; ask the user only for one irreducible physical fact, and block only at a hard safety or authority boundary.
 """
 
 SUBAGENT_BOUNDARY = """ESP32 yolo-compatible subagent boundary:
@@ -29,6 +30,7 @@ SUBAGENT_BOUNDARY = """ESP32 yolo-compatible subagent boundary:
 - Stay read-only unless the parent prompt gives an explicit disjoint write scope.
 - Keep verified facts, assumptions, and unknowns separate.
 - Reviewer outputs must include role, evidence reviewed, P1/P2 findings, vote, conditions, and confidence.
+- Reviewer outputs must preserve the weighted-vote model and must not mark a gate accepted while P1/P2 blockers remain.
 - Do not run live hardware, flash, erase, monitor, serial-write, BLE, mesh, PCAP, relay, XBee write, TFT, MicroSD, load, wiring, mains, router/admin, or release-gate actions.
 - Do not commit or push unless the user explicitly requested it and validation passed.
 """
@@ -67,6 +69,17 @@ FOOTER_PATTERNS = {
     "durable records": re.compile(r"\bdurable records\s*:", re.IGNORECASE),
     "authority limits": re.compile(r"\bauthority limits\s*:", re.IGNORECASE),
 }
+FIELD_PATTERNS = {
+    "decision": re.compile(r"^\s*decision\s*:\s*(.*)$", re.IGNORECASE | re.MULTILINE),
+    "validation": re.compile(r"^\s*validation\s*:\s*(.*)$", re.IGNORECASE | re.MULTILINE),
+    "durable records": re.compile(r"^\s*durable records\s*:\s*(.*)$", re.IGNORECASE | re.MULTILINE),
+    "P1/P2 findings": re.compile(r"^\s*P1/P2 findings\s*:\s*(.*)$", re.IGNORECASE | re.MULTILINE),
+    "vote": re.compile(r"^\s*vote\s*:\s*(.*)$", re.IGNORECASE | re.MULTILINE),
+}
+NON_TERMINAL_DECISIONS = {"continue", "ready_for_mutation"}
+TERMINAL_DECISIONS = {"ask_user", "blocked", "handoff", "complete"}
+PENDING_OR_MISSING_RE = re.compile(r"\b(pending|missing|not run|not performed|todo|tbd)\b", re.IGNORECASE)
+NO_BLOCKERS_RE = re.compile(r"\b(none|no p1/p2|no blockers|no p1|no p2|n/a|na)\b", re.IGNORECASE)
 BYPASS_RE = re.compile(
     r"\b(ignore|bypass|disable|skip|override)\b.{0,80}\b(AGENTS\.md|governance|hook|requirements|reviewer quorum|Tier 3|safety gate)\b",
     re.IGNORECASE | re.DOTALL,
@@ -240,6 +253,43 @@ def _missing(patterns: dict[str, re.Pattern[str]], text: str) -> list[str]:
     return [name for name, pattern in patterns.items() if not pattern.search(text)]
 
 
+def _field_value(text: str, name: str) -> str:
+    pattern = FIELD_PATTERNS[name]
+    match = pattern.search(text)
+    return match.group(1).strip() if match else ""
+
+
+def _open_p1_p2_findings(text: str) -> bool:
+    value = _field_value(text, "P1/P2 findings")
+    if not value:
+        return False
+    if NO_BLOCKERS_RE.search(value):
+        return False
+    return True
+
+
+def _reject_vote(text: str) -> bool:
+    value = _field_value(text, "vote").lower()
+    return "reject" in value or "veto" in value
+
+
+def _footer_semantic_failure(message: str) -> str | None:
+    decision = _field_value(message, "decision").lower()
+    if decision in NON_TERMINAL_DECISIONS:
+        return f"decision {decision!r} is not terminal; continue the turn."
+    if decision and decision not in TERMINAL_DECISIONS:
+        return f"decision {decision!r} is not a recognized final decision."
+
+    validation = _field_value(message, "validation")
+    if PENDING_OR_MISSING_RE.search(validation):
+        return "validation is pending or missing."
+
+    durable_records = _field_value(message, "durable records")
+    if PENDING_OR_MISSING_RE.search(durable_records) or durable_records.lower() in {"none", "n/a", "na"}:
+        return "durable records are pending or missing."
+    return None
+
+
 def _is_mutating(tool_name: str, tool_input: Any) -> bool:
     normalized = tool_name.lower()
     if normalized in {"apply_patch", "edit", "write"}:
@@ -350,6 +400,12 @@ def _handle_subagent_stop(payload: dict[str, Any], shape_unknown: bool) -> int:
     missing = _missing(REVIEWER_PATTERNS, message)
     if missing:
         _block("Continue subagent: reviewer output missing " + ", ".join(missing) + ".")
+        return 0
+    if _open_p1_p2_findings(message):
+        _block("Continue subagent: reviewer output reports open P1/P2 findings.")
+        return 0
+    if _reject_vote(message):
+        _block("Continue subagent: reviewer output rejected or vetoed the gate.")
     return 0
 
 
@@ -365,6 +421,10 @@ def _handle_stop(payload: dict[str, Any], shape_unknown: bool) -> int:
     missing = _missing(FOOTER_PATTERNS, message)
     if missing:
         _block("Continue turn: non-trivial mutation summary missing decision footer fields: " + ", ".join(missing) + ".")
+        return 0
+    semantic_failure = _footer_semantic_failure(message)
+    if semantic_failure:
+        _block("Continue turn: " + semantic_failure)
     return 0
 
 

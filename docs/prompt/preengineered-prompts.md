@@ -16,6 +16,19 @@ ready_for_mutation, or handoff; next gate; owner; evidence; approved mutation
 boundary; validation; durable records; and authority limits.
 ```
 
+## Continuous weighted decision prompt
+
+```text
+Use scripts/agent_process_decision.py or the same packet shape to evaluate the
+reviewer quorum. Record role, weight, evidence reviewed, P1/P2 findings, vote,
+conditions, and confidence. Missing evidence is a continuation state when a
+safe evidence step remains: continue automatable evidence acquisition, ask the
+user only for one irreducible physical fact, and block only at a hard safety or
+authority boundary. A gate passes only with required roles present, at least
+70 percent weighted approval, no P1/P2 blockers, and all named Tier 3
+prerequisites when live hardware or radio work is in scope.
+```
+
 ## Yolo-compatible managed-hook prompt
 
 ```text

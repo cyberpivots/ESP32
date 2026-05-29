@@ -51,6 +51,12 @@ block and may provide advisory context only. Weighted veto passes only when
 required roles are present, approval weight is at least 70 percent, and no
 P1/P2 blockers remain.
 
+Missing evidence is not by itself a final answer. Use
+`scripts/agent_process_decision.py` to classify the next action: continue when
+safe evidence collection is automatable, ask the user only for one
+machine-unobservable physical fact, block at hard safety or authority
+boundaries, and use `ready_for_mutation` only after the named gate passes.
+
 Instruction-file enforcement is the default: `AGENTS.md` is canonical, and
 `.codex/agents/*.toml` profiles must not ask agents to create, install, or rely
 on `/etc/codex/requirements.toml` to override `codex --yolo` unless the user

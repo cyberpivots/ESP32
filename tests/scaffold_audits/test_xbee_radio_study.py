@@ -167,6 +167,12 @@ class XBeeRadioStudyTests(unittest.TestCase):
 
         self.assertEqual("confirmation_required", ctx.exception.code)
 
+    def test_readonly_allowlist_excludes_write_and_setting_value_forms(self) -> None:
+        forbidden = {"WR", "AC", "KY", "DH", "DL", "FR", "RE"}
+        self.assertTrue(set(study.READ_ONLY_AT_QUERIES).isdisjoint(forbidden))
+        for command in study.READ_ONLY_AT_QUERIES:
+            self.assertRegex(command, r"^[A-Z]{2}$")
+
     def test_readonly_delegates_fixed_allowlist_after_confirmation(self) -> None:
         args = argparse.Namespace(
             port="COM13",
@@ -297,7 +303,8 @@ class XBeeRadioStudyTests(unittest.TestCase):
             "xctu-discovery-plan",
         ]:
             self.assertIn(command, subparser_action.choices)
-        self.assertNotIn("apply", subparser_action.choices)
+        for forbidden in ["apply", "write", "firmware", "update", "recovery", "api-transmit"]:
+            self.assertNotIn(forbidden, subparser_action.choices)
 
 
 if __name__ == "__main__":

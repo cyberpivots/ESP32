@@ -49,6 +49,12 @@ End non-trivial work with a decision footer: `continue`, `ask_user`,
 role; evidence need; approved mutation boundary; validation command; required
 durable record; and authority limits.
 
+Missing evidence is a continuation condition when safe evidence collection
+remains. Use `scripts/agent_process_decision.py` or the same packet shape to
+record weighted votes and choose the next action: continue automatable work,
+ask for one irreducible physical fact, or block at a hard safety or authority
+boundary.
+
 ## Project-local profiles
 
 - Read-only reviewers: `governance-cartographer`, `evidence-record-auditor`,

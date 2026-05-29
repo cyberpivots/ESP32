@@ -12,6 +12,8 @@ CHECKLIST = """ESP32 workspace default-multi-agentic-process:
 - Emit a routing packet with verified facts, assumptions, unknowns, selected tier, owner role, evidence need, mutation boundary, reviewer quorum, gate authority, validation plan, and trust boundary before Tier 1+ mutation.
 - Tier 2 work needs a read-only reviewer quorum before mutation; project-local read-only subagents are default-authorized when available and safe.
 - Tier 3 work needs same-session evidence, explicit gate authority, recovery path, and reviewer quorum before live bench, flashing, wiring, radio, serial-write, relay/load/mains, or release-gate mutation.
+- Weighted vote is the default: coordinator/architecture-risk weight 5, high specialists 3, medium specialists 2, helpers 1; pass requires required roles, at least 70 percent weighted approval, and no P1/P2 blockers.
+- Missing evidence is not a final answer when safe evidence acquisition remains: continue automatable evidence steps, ask the user only for one irreducible physical fact, and block only at a hard safety or authority boundary.
 - Mutating workers require explicit disjoint write scopes; preserve dirty work and never revert user or other-agent changes.
 - End non-trivial work with a decision footer: continue, ask_user, blocked, ready_for_mutation, or handoff; next gate; owner; evidence; approved mutation boundary; validation; durable records; and authority limits.
 - Project-local hooks and prompt packets are advisory aids; source-backed records and explicit gate authority remain authoritative."""

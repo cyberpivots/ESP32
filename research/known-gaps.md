@@ -186,6 +186,10 @@
 
 ## Medium priority
 
+- Keep project-local hook runtime trust and continuous weighted-agent
+  enforcement advisory unless the active Codex runtime reports managed hook
+  support. `scripts/agent_process_decision.py` proves packet evaluation only;
+  it does not replace same-session evidence or Tier 3 live-gate prerequisites.
 - Select first protocol only for lanes that do not already have accepted or
   simulator-proven protocol records; ESP-NOW BBS custom wireless work already
   has Gate B/C/D/E/F/G/H and Gate M1/M2-A records.

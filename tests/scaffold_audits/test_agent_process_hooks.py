@@ -62,6 +62,8 @@ class AgentProcessHookTests(unittest.TestCase):
             "UserPromptSubmit",
             "evidence need",
             "default-authorized",
+            "Weighted vote",
+            "Missing evidence",
             "decision footer",
             "advisory aids",
         )
@@ -76,6 +78,8 @@ class AgentProcessHookTests(unittest.TestCase):
             "SubagentStart",
             "default-authorized",
             "explicit disjoint write scope",
+            "role, weight",
+            "premature stop",
             "advisory aids",
         )
 
@@ -111,9 +115,15 @@ class AgentProcessHookTests(unittest.TestCase):
             "evidence need",
             "mutation boundary",
             "validation path",
+            "weighted reviewer disposition",
             "advisory aids",
         )
         self.assertIn("explicit gate authority", context)
+
+    def test_hooks_json_matches_current_exec_tool_name(self) -> None:
+        hooks = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+        pretool = json.dumps(hooks["hooks"]["PreToolUse"])
+        self.assertIn("functions\\\\.exec_command", pretool)
 
     def test_pre_tool_partial_triage_still_warns_for_missing_fields(self) -> None:
         result = run_hook(

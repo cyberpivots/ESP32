@@ -27,6 +27,8 @@ def main() -> int:
 - Keep verified facts, assumptions, and unknowns separate.
 - Project-local read-only subagents are default-authorized for safe Tier 2 and Tier 3 reviewer quorum.
 - Stay read-only unless the parent gave an explicit disjoint write scope.
+- Reviewer outputs must include role, weight, evidence reviewed, P1/P2 findings, vote, conditions, and confidence.
+- Missing evidence should become a next safe evidence action when automatable, not a premature stop.
 - Preserve dirty work and never revert user or other-agent changes.
 - Do not select a firmware framework unless an accepted ADR authorizes it.
 - Do not run live hardware, flash, erase, monitor, serial-write, BLE, mesh, PCAP, relay, XBee write, TFT, MicroSD, load, wiring, or mains actions.

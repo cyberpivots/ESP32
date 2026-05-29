@@ -21,6 +21,28 @@ import xbee_radio_study as study  # noqa: E402
 
 
 class XBeeRadioStudyTests(unittest.TestCase):
+    def test_emit_writes_out_under_safe_bench_root(self) -> None:
+        study.OUT_ROOT.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=study.OUT_ROOT) as tmp:
+            out_path = Path(tmp) / "record.json"
+            record = study.base_record("inventory")
+            with mock.patch("builtins.print"):
+                exit_code = study.emit(record, argparse.Namespace(out=out_path))
+
+            written = json.loads(out_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual("inventory", written["command"])
+        self.assertEqual(study.repository_relative(out_path), written["outputPath"])
+
+    def test_out_rejects_paths_outside_bench_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = Path(tmp) / "record.json"
+            with self.assertRaises(study.StudyError) as ctx:
+                study.write_optional_output(study.base_record("inventory"), out_path)
+
+        self.assertEqual("invalid_output_path", ctx.exception.code)
+
     def test_inventory_does_not_open_serial_ports(self) -> None:
         args = argparse.Namespace(local_show_identifiers=False)
         with (
@@ -32,8 +54,69 @@ class XBeeRadioStudyTests(unittest.TestCase):
             record = study.command_inventory(args)
 
         self.assertTrue(record["ok"])
+        self.assertFalse(record["serialOpenAttempted"])
+        self.assertFalse(record["serialWritesAttempted"])
         self.assertFalse(record["serial"]["serialOpenAttempted"])
         self.assertFalse(record["v1Boundary"]["inventoryOpensSerialPorts"])
+
+    def test_identity_delta_is_file_only_and_redacts_device_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            before = tmp_path / "before.json"
+            after = tmp_path / "after.json"
+            before.write_text(
+                json.dumps(
+                    {
+                        "serial": {
+                            "windowsPnp": {
+                                "devices": [
+                                    {
+                                        "name": "Silicon Labs CP210x USB to UART Bridge (COM13)",
+                                        "manufacturer": "Silicon Labs",
+                                        "status": "OK",
+                                        "deviceId": "USB\\\\VID_10C4&PID_EA60\\\\SECRET-A",
+                                    }
+                                ]
+                            },
+                            "windowsComHints": {"ports": [{"windowsPort": "COM13", "wslLegacyHint": "/dev/ttyS12"}]},
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            after.write_text(
+                json.dumps(
+                    {
+                        "serial": {
+                            "windowsPnp": {
+                                "devices": [
+                                    {
+                                        "name": "Silicon Labs CP210x USB to UART Bridge (COM14)",
+                                        "manufacturer": "Silicon Labs",
+                                        "status": "OK",
+                                        "deviceId": "USB\\\\VID_10C4&PID_EA60\\\\SECRET-B",
+                                    }
+                                ]
+                            },
+                            "windowsComHints": {"ports": [{"windowsPort": "COM14", "wslLegacyHint": "/dev/ttyS13"}]},
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(before=before, after=after)
+            with mock.patch.object(study.probe, "open_serial_port", side_effect=AssertionError("serial opened")):
+                record = study.command_identity_delta(args)
+
+        rendered = json.dumps(record)
+        self.assertTrue(record["ok"])
+        self.assertFalse(record["serialOpenAttempted"])
+        self.assertFalse(record["serialWritesAttempted"])
+        self.assertEqual(2, record["summary"]["added"])
+        self.assertEqual(2, record["summary"]["removed"])
+        self.assertNotIn("SECRET-A", rendered)
+        self.assertNotIn("SECRET-B", rendered)
+        self.assertNotIn("VID_10C4", rendered)
 
     def test_local_tool_presence_expands_known_path_globs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -177,9 +260,43 @@ class XBeeRadioStudyTests(unittest.TestCase):
         self.assertEqual(1, len(record["proposedActions"]))
         self.assertEqual("blocked_pending_tier3", record["proposedActions"][0]["reviewStatus"])
 
-    def test_parser_has_no_apply_command(self) -> None:
+    def test_xctu_discovery_plan_is_locked_and_does_not_touch_serial(self) -> None:
+        args = argparse.Namespace(ports=["com13", "COM14"])
+        with (
+            mock.patch.object(study.probe, "open_serial_port", side_effect=AssertionError("serial opened")),
+            mock.patch.object(study.probe, "run_short_command", side_effect=AssertionError("subprocess launched")),
+        ):
+            record = study.command_xctu_discovery_plan(args)
+
+        self.assertTrue(record["ok"])
+        self.assertEqual(["COM13", "COM14"], record["requestedPorts"])
+        self.assertEqual("locked_pending_prerequisites", record["gateStatus"])
+        self.assertFalse(record["serialOpenAttempted"])
+        self.assertFalse(record["serialWritesAttempted"])
+        self.assertFalse(record["xctuLaunchAttempted"])
+        self.assertFalse(record["xctuDiscoveryAttempted"])
+        blocked_text = " ".join(record["blockedOperations"])
+        for marker in ["all-port discovery", "network discovery", "firmware", "throughput"]:
+            self.assertIn(marker, blocked_text)
+
+    def test_xctu_discovery_plan_rejects_non_com_ports(self) -> None:
+        with self.assertRaises(study.StudyError) as ctx:
+            study.command_xctu_discovery_plan(argparse.Namespace(ports=["/dev/ttyUSB0"]))
+
+        self.assertEqual("invalid_port", ctx.exception.code)
+
+    def test_parser_has_expected_commands_and_no_apply_command(self) -> None:
         parser = study.build_parser()
         subparser_action = next(action for action in parser._actions if action.dest == "command")
+        for command in [
+            "inventory",
+            "identity-delta",
+            "readonly",
+            "profile-diff",
+            "write-plan",
+            "xctu-discovery-plan",
+        ]:
+            self.assertIn(command, subparser_action.choices)
         self.assertNotIn("apply", subparser_action.choices)
 
 

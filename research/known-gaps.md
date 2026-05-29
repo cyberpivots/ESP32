@@ -41,9 +41,11 @@
 - Run the XBee read-only bench proof Tier A, then optionally Tier B with
   `--confirm-sends-read-commands`, to capture `VR`, `HV`, `SH`, `SL`, `AP`,
   `AO`, `BD`, and `NP` without setting writes.
-- Complete XCTU/XBee Studio host evidence before relying on GUI behavior:
-  official support URL, installer SHA-256 if downloaded, install path,
-  first-run version, and update prompt state.
+- XCTU host install evidence is recorded, but live XCTU behavior remains
+  blocked. Complete XBee Studio host evidence separately if it becomes the
+  selected GUI, and do not rely on GUI discovery until exact ports, physical
+  isolation, voltage/carrier evidence, recovery, and cleanup criteria are
+  recorded.
 - Identify the SPI MicroSD reader module, 3.3 V power path, pull-ups,
   card-detect/write-protect behavior, and shield continuity for candidate
   `GPIO18`, `GPIO19`, `GPIO23`, and `GPIO32` before any storage wiring.

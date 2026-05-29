@@ -40,6 +40,12 @@ This proof has two tiers:
   pyserial 3.5, `lsusb` and PowerShell available, no `xctu` on PATH, and only
   redacted serial-device candidates visible at probe time. Source ID:
   `SRC-LOCAL-XBEE-READONLY-PROBE-2026-05-18`.
+- Parent host-tooling evidence installed Digi XCTU 6.5.13.2 as a reference GUI
+  only. Source ID: `SRC-LOCAL-XCTU-INSTALL-PROOF-2026-05-29`.
+- The continued study CLI can save local inventory records, compare inventory
+  snapshots with `identity-delta`, and emit a locked XCTU local-discovery
+  checklist without opening serial ports or launching XCTU. Source ID:
+  `SRC-LOCAL-XBEE-READONLY-LIVE-GATE-2026-05-29`.
 
 ## Assumptions
 
@@ -94,7 +100,19 @@ Required bench record:
 
 ```bash
 python3 scripts/xbee_read_only_probe.py list --json
+python3 scripts/xbee_radio_study.py inventory --json
 ```
+
+Optional local-only inventory records may use `--out` under
+`research/bench-records/xbee-readonly/`. Use `identity-delta` to compare
+before/after snapshots from one-at-a-time adapter disconnect/reconnect tests:
+
+```bash
+python3 scripts/xbee_radio_study.py identity-delta --before <before.json> --after <after.json> --json
+```
+
+The delta is host evidence only. It does not prove radio identity unless the
+bench record also contains the matching physical disconnect/reconnect notes.
 
 Optional passive observation:
 
@@ -157,6 +175,26 @@ Stop if:
 - The next proposed action is a setting write instead of a review record.
 - XBee discovery is used to justify relay commands, API transmit frames, or
   ESP32 carrier wiring.
+
+## XCTU Local Discovery Gate
+
+XCTU local discovery is blocked until Tier A proves the exact local ports and
+the task record includes same-session physical evidence: adapter markings,
+antenna state, no ESP32 DIN/DOUT wiring, no relay/load/mains connection, and
+adapter voltage/carrier review.
+
+The repo CLI can generate only the locked checklist:
+
+```bash
+python3 scripts/xbee_radio_study.py xctu-discovery-plan --ports COMx COMy --json
+```
+
+The checklist does not launch XCTU. If a future approved gate uses XCTU, select
+only the confirmed ports, use default port parameters only, add selected local
+devices only, and capture redacted evidence. Do not use all-port discovery,
+broad parameter scans, network discovery, remote devices, AT/API console
+transmit actions, write/apply controls, firmware tools, recovery, range test,
+or throughput test.
 
 ## Evidence Storage
 

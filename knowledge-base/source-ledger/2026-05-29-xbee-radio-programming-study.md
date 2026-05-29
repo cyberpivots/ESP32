@@ -37,10 +37,11 @@ The later XCTU host install proof is recorded separately by
 ## Implementation evidence
 
 - `inventory` reports host/tool state without opening serial ports.
-- Same-session `inventory --json` validation ran in WSL2 with pyserial 3.5,
-  found Windows CP210x COM candidates with PnP identifiers redacted by default,
-  found no `xctu` command or known XCTU install path, found no XBee Studio
-  command or known install path, and found `digi-xbee` not installed/importable.
+- Pre-install same-session `inventory --json` validation ran in WSL2 with
+  pyserial 3.5, found Windows CP210x candidate host ports with PnP identifiers
+  redacted by default, found no `xctu` command or known XCTU install path,
+  found no XBee Studio command or known install path, and found `digi-xbee` not
+  installed/importable.
 - `readonly` delegates to `scripts/xbee_read_only_probe.py at-query` and
   requires `--confirm-sends-read-commands`.
 - `profile-diff` compares JSON files offline, redacts `SH`, `SL`, and `KY` by
@@ -66,8 +67,8 @@ serial-write operations.
 - Future XCTU application or firmware-library update prompts remain unresolved
   beyond the first-run 6.5.13 change-log screen captured by the later
   host-tooling continuation.
-- COM13/COM14 or any other host ports remain candidate ports only until
-  disconnect/delta evidence or read-only identification proves the adapter.
+- Any host ports remain candidate ports only until disconnect/delta evidence or
+  read-only identification proves the adapter.
 - Future radio programming remains blocked until a Tier 3 gate records
   same-session adapter identity, current-setting backup, address/security plan,
   antenna and regulatory review, carrier voltage/DIN/DOUT proof, rollback

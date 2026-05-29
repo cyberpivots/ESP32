@@ -27,9 +27,11 @@ import xbee_read_only_probe as probe
 
 
 READ_ONLY_AT_QUERIES = tuple(probe.DEFAULT_AT_QUERIES)
+OUT_ROOT = probe.OUT_ROOT
 ADDRESS_COMMANDS = {"SH", "SL"}
 SECRET_COMMANDS = {"KY"}
 SENSITIVE_COMMANDS = ADDRESS_COMMANDS | SECRET_COMMANDS
+PORT_RE = re.compile(r"^COM[1-9][0-9]*$", flags=re.IGNORECASE)
 FORBIDDEN_AT_COMMANDS = {
     "AC",
     "DH",
@@ -49,6 +51,16 @@ BLOCKED_OPERATIONS = [
     "range tests or RF transmit exercises",
     "ESP32 DIN/DOUT carrier wiring",
     "relay, load, or mains actions",
+]
+XCTU_BLOCKED_OPERATIONS = BLOCKED_OPERATIONS + [
+    "all-port discovery",
+    "broad port-parameter scans",
+    "network discovery",
+    "remote device discovery",
+    "AT or API console transmit actions",
+    "write, apply, restore, or reset controls",
+    "firmware library update, firmware update, or recovery tools",
+    "throughput tests",
 ]
 KNOWN_SETTING_COMMANDS = set(READ_ONLY_AT_QUERIES) | FORBIDDEN_AT_COMMANDS | {"AP", "AO", "BD", "EE", "ID", "CE", "TO", "NI"}
 
@@ -96,7 +108,36 @@ def error_record(command: str, code: str, message: str, details: dict[str, Any] 
     return record
 
 
-def emit(record: dict[str, Any]) -> int:
+def repository_relative(path: Path) -> str:
+    return probe.repository_relative(path)
+
+
+def write_optional_output(record: dict[str, Any], out_path: Path | None) -> None:
+    if out_path is None:
+        return
+
+    resolved = out_path.resolve()
+    out_root = OUT_ROOT.resolve()
+    if resolved == out_root or out_root not in resolved.parents:
+        raise StudyError(
+            "invalid_output_path",
+            "--out must write under research/bench-records/xbee-readonly/",
+            {"requested": str(out_path), "allowedRoot": repository_relative(OUT_ROOT)},
+        )
+    if resolved.exists():
+        raise StudyError(
+            "output_exists",
+            "refusing to overwrite an existing bench record",
+            {"requested": repository_relative(resolved)},
+        )
+
+    record["outputPath"] = repository_relative(resolved)
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    resolved.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def emit(record: dict[str, Any], args: argparse.Namespace | None = None) -> int:
+    write_optional_output(record, getattr(args, "out", None) if args is not None else None)
     print(json.dumps(record, indent=2, sort_keys=True))
     return 0 if record.get("ok") else 2
 
@@ -199,10 +240,18 @@ def command_inventory(args: argparse.Namespace) -> dict[str, Any]:
         "/mnt/c/Program Files/Digi/XCTU-NG/XCTU.exe",
         "/mnt/c/Users/*/AppData/Local/Digi/XCTU-NG/XCTU.exe",
         "/mnt/c/Users/*/AppData/Local/Digi/XCTU/XCTU.exe",
+        "C:/Program Files (x86)/Digi/XCTU/XCTU.exe",
+        "C:/Program Files/Digi/XCTU/XCTU.exe",
+        "C:/Program Files (x86)/Digi/XCTU-NG/XCTU.exe",
+        "C:/Program Files/Digi/XCTU-NG/XCTU.exe",
+        "C:/Users/*/AppData/Local/Digi/XCTU-NG/XCTU.exe",
+        "C:/Users/*/AppData/Local/Digi/XCTU/XCTU.exe",
     ]
     xbee_studio_paths = [
         "/mnt/c/Program Files/Digi/XBee Studio/XBee Studio.exe",
         "/mnt/c/Program Files (x86)/Digi/XBee Studio/XBee Studio.exe",
+        "C:/Program Files/Digi/XBee Studio/XBee Studio.exe",
+        "C:/Program Files (x86)/Digi/XBee Studio/XBee Studio.exe",
     ]
     record.update(
         {
@@ -214,6 +263,8 @@ def command_inventory(args: argparse.Namespace) -> dict[str, Any]:
                 "pyserialVersion": getattr(probe.serial, "VERSION", None) if probe.serial else None,
                 "pyserialImportError": probe.SERIAL_IMPORT_ERROR,
             },
+            "serialOpenAttempted": False,
+            "serialWritesAttempted": False,
             "serial": {
                 "serialOpenAttempted": False,
                 "wslCandidates": probe.collect_serial_candidates(),
@@ -281,6 +332,188 @@ def load_json_file(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise StudyError("invalid_json_shape", "profile JSON must be an object", {"path": str(path)})
     return data
+
+
+def extract_com_label(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    match = re.search(r"\bCOM[1-9][0-9]*\b", value, flags=re.IGNORECASE)
+    return match.group(0).upper() if match else None
+
+
+def stable_candidate_key(source: str, item: dict[str, Any]) -> str:
+    for field in ("deviceIdSha256", "hwidSha256", "fingerprint"):
+        value = item.get(field)
+        if isinstance(value, str) and value:
+            return f"{source}:{field}:{value}"
+    if source == "windowsComHint" and item.get("windowsPort"):
+        return f"{source}:port:{item['windowsPort']}"
+    if source == "wslCandidate" and item.get("path"):
+        return f"{source}:path:{item['path']}"
+    return f"{source}:hash:{sha256_text(json.dumps(item, sort_keys=True))}"
+
+
+def sanitize_windows_pnp(item: dict[str, Any]) -> dict[str, Any]:
+    raw_device_id = item.get("deviceId") or item.get("DeviceID")
+    device_id_hash = item.get("deviceIdSha256")
+    if not device_id_hash and raw_device_id:
+        device_id_hash = sha256_text(raw_device_id)
+    sanitized: dict[str, Any] = {
+        "source": "windowsPnp",
+        "name": item.get("name") or item.get("Name"),
+        "port": extract_com_label(item.get("name") or item.get("Name")),
+        "manufacturer": item.get("manufacturer") or item.get("Manufacturer"),
+        "pnpClass": item.get("pnpClass") or item.get("PNPClass"),
+        "status": item.get("status") or item.get("Status"),
+        "deviceIdRedacted": bool(device_id_hash or raw_device_id or item.get("deviceIdRedacted")),
+    }
+    if device_id_hash:
+        sanitized["deviceIdSha256"] = device_id_hash
+    return {key: value for key, value in sanitized.items() if value not in (None, "")}
+
+
+def sanitize_windows_com_hint(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source": "windowsComHint",
+        "windowsPort": str(item.get("windowsPort", "")).upper(),
+        "wslLegacyHint": item.get("wslLegacyHint"),
+    }
+
+
+def sanitize_wsl_candidate(item: dict[str, Any]) -> dict[str, Any]:
+    sanitized: dict[str, Any] = {
+        "source": "wslCandidate",
+        "path": item.get("path"),
+        "candidateSource": item.get("source"),
+        "description": item.get("description"),
+    }
+    hwid = item.get("hwid")
+    if hwid:
+        sanitized["hwidSha256"] = sha256_text(hwid)
+        sanitized["hwidRedacted"] = True
+    return {key: value for key, value in sanitized.items() if value not in (None, "")}
+
+
+def inventory_candidates(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    serial = data.get("serial") if isinstance(data.get("serial"), dict) else {}
+    candidates: dict[str, dict[str, Any]] = {}
+
+    for item in serial.get("wslCandidates", []) if isinstance(serial.get("wslCandidates"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        sanitized = sanitize_wsl_candidate(item)
+        candidates[stable_candidate_key("wslCandidate", sanitized)] = sanitized
+
+    windows_hints = serial.get("windowsComHints") if isinstance(serial.get("windowsComHints"), dict) else {}
+    for item in windows_hints.get("ports", []) if isinstance(windows_hints.get("ports"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        sanitized = sanitize_windows_com_hint(item)
+        candidates[stable_candidate_key("windowsComHint", sanitized)] = sanitized
+
+    windows_pnp = serial.get("windowsPnp") if isinstance(serial.get("windowsPnp"), dict) else {}
+    for item in windows_pnp.get("devices", []) if isinstance(windows_pnp.get("devices"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        sanitized = sanitize_windows_pnp(item)
+        candidates[stable_candidate_key("windowsPnp", sanitized)] = sanitized
+
+    return candidates
+
+
+def command_identity_delta(args: argparse.Namespace) -> dict[str, Any]:
+    before = inventory_candidates(load_json_file(args.before))
+    after = inventory_candidates(load_json_file(args.after))
+    before_keys = set(before)
+    after_keys = set(after)
+    changed = []
+    for key in sorted(before_keys & after_keys):
+        if before[key] != after[key]:
+            changed.append({"key": key, "before": before[key], "after": after[key]})
+
+    record = base_record("identity-delta")
+    record.update(
+        {
+            "beforeFile": str(args.before),
+            "afterFile": str(args.after),
+            "serialOpenAttempted": False,
+            "serialWritesAttempted": False,
+            "xctuLaunchAttempted": False,
+            "rawIdentifiersRedacted": True,
+            "candidateCounts": {"before": len(before), "after": len(after)},
+            "added": [after[key] | {"key": key} for key in sorted(after_keys - before_keys)],
+            "removed": [before[key] | {"key": key} for key in sorted(before_keys - after_keys)],
+            "changed": changed,
+            "summary": {
+                "added": len(after_keys - before_keys),
+                "removed": len(before_keys - after_keys),
+                "changed": len(changed),
+                "unchanged": len((before_keys & after_keys) - {item["key"] for item in changed}),
+            },
+            "notes": [
+                "identity-delta compares inventory JSON files only and does not open serial ports.",
+                "Deltas are host evidence; physical one-at-a-time disconnect/reconnect notes are still required before a radio identity claim.",
+                "Raw PnP IDs and hardware IDs are hashed or omitted in this output.",
+            ],
+        }
+    )
+    return record
+
+
+def normalize_com_ports(ports: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for port in ports:
+        value = port.strip().upper()
+        if not PORT_RE.fullmatch(value):
+            raise StudyError("invalid_port", "ports must use Windows COMx names", {"port": port})
+        if value not in normalized:
+            normalized.append(value)
+    if not normalized:
+        raise StudyError("no_ports", "at least one confirmed port is required")
+    return normalized
+
+
+def command_xctu_discovery_plan(args: argparse.Namespace) -> dict[str, Any]:
+    ports = normalize_com_ports(args.ports)
+    record = base_record("xctu-discovery-plan")
+    record.update(
+        {
+            "requestedPorts": ports,
+            "serialOpenAttempted": False,
+            "serialWritesAttempted": False,
+            "xctuLaunchAttempted": False,
+            "xctuDiscoveryAttempted": False,
+            "gateStatus": "locked_pending_prerequisites",
+            "preconditions": [
+                "Two local ports are confirmed by one-at-a-time physical disconnect/reconnect identity-delta evidence.",
+                "Local-only physical evidence records adapter markings, antenna state, no ESP32 DIN/DOUT wiring, no relay/load/mains connection, and no battery/solar wiring.",
+                "Voltage/carrier review records adapter power path, UART level, DIN/DOUT direction, reset/sleep/flow-control exposure, and recovery stop rules.",
+                "All raw COM/PnP identifiers, SH/SL values, passive bytes, AES keys, and full setting snapshots remain local-only.",
+            ],
+            "manualChecklist": [
+                {"order": 1, "step": "Close other serial clients and leave XCTU closed until prerequisites are present.", "status": "locked"},
+                {"order": 2, "step": "Open XCTU manually only after the gate packet names these exact ports.", "status": "locked"},
+                {"order": 3, "step": "Use Discover radio modules and select only the confirmed ports.", "status": "locked"},
+                {"order": 4, "step": "Use default port parameters only; do not broaden baud/parameter scans.", "status": "locked"},
+                {"order": 5, "step": "Add selected local devices only if found; capture redacted read-only evidence.", "status": "locked"},
+                {"order": 6, "step": "Stop immediately on update, firmware, recovery, write/apply, remote/network discovery, or unexpected identity prompts.", "status": "locked"},
+            ],
+            "blockedOperations": XCTU_BLOCKED_OPERATIONS,
+            "sourceIds": [
+                "SRC-DIGI-XCTU-FEATURES-2026-05-29",
+                "SRC-DIGI-XCTU-LOCAL-DISCOVERY-2026-05-29",
+                "SRC-DIGI-XBEE-900HP-AP",
+                "SRC-DIGI-XBEE-900HP-AO",
+                "SRC-DIGI-XBEE-900HP-BD-2026-05-29",
+                "SRC-DIGI-XBEE-900HP-NP",
+            ],
+            "notes": [
+                "This command emits a planning checklist only. It does not launch XCTU or touch serial ports.",
+                "XCTU all-port discovery, broad parameter scans, network discovery, remote devices, writes, firmware tools, range tests, and throughput tests remain blocked.",
+            ],
+        }
+    )
+    return record
 
 
 def looks_like_setting_value_command(command: str) -> bool:
@@ -490,8 +723,13 @@ def command_write_plan(args: argparse.Namespace) -> dict[str, Any]:
     return record
 
 
-def add_json_arg(parser: argparse.ArgumentParser) -> None:
+def add_json_output_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--json", action="store_true", help="Emit JSON. JSON is the only output format.")
+    parser.add_argument(
+        "--out",
+        type=Path,
+        help="Optional JSON record path under research/bench-records/xbee-readonly/.",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -504,8 +742,17 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show local-only PnP identifiers. Default output hashes them.",
     )
-    add_json_arg(inventory)
+    add_json_output_args(inventory)
     inventory.set_defaults(func=command_inventory)
+
+    identity_delta = subparsers.add_parser(
+        "identity-delta",
+        help="Compare two inventory snapshots without opening serial ports.",
+    )
+    identity_delta.add_argument("--before", required=True, type=Path)
+    identity_delta.add_argument("--after", required=True, type=Path)
+    add_json_output_args(identity_delta)
+    identity_delta.set_defaults(func=command_identity_delta)
 
     readonly = subparsers.add_parser("readonly", help="Delegate to the fixed AT read-query probe.")
     readonly.add_argument("--port", required=True)
@@ -516,7 +763,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show SH/SL address values for local-only evidence; default output redacts them.",
     )
-    add_json_arg(readonly)
+    add_json_output_args(readonly)
     readonly.set_defaults(func=command_readonly)
 
     profile_diff = subparsers.add_parser("profile-diff", help="Compare readback JSON to target JSON without writing.")
@@ -527,13 +774,21 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show local-only sensitive values. Default output redacts SH/SL/KY values.",
     )
-    add_json_arg(profile_diff)
+    add_json_output_args(profile_diff)
     profile_diff.set_defaults(func=command_profile_diff)
 
     write_plan = subparsers.add_parser("write-plan", help="Emit a blocked review packet from a diff JSON file.")
     write_plan.add_argument("--diff", required=True, type=Path)
-    add_json_arg(write_plan)
+    add_json_output_args(write_plan)
     write_plan.set_defaults(func=command_write_plan)
+
+    xctu_plan = subparsers.add_parser(
+        "xctu-discovery-plan",
+        help="Emit a locked XCTU local-discovery checklist without launching XCTU.",
+    )
+    xctu_plan.add_argument("--ports", nargs="+", required=True, help="Confirmed Windows COMx ports only.")
+    add_json_output_args(xctu_plan)
+    xctu_plan.set_defaults(func=command_xctu_discovery_plan)
 
     return parser
 
@@ -542,7 +797,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        return emit(args.func(args))
+        return emit(args.func(args), args)
     except StudyError as exc:
         return emit(error_record(args.command, exc.code, exc.message, exc.details))
     except probe.ProbeError as exc:

@@ -10,6 +10,7 @@ fixed AT read-query probe and keeps that probe's explicit confirmation gate.
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
 import importlib.metadata
 import importlib.util
@@ -112,7 +113,9 @@ def local_tool_presence(name: str, extra_paths: list[str] | None = None) -> dict
     path = shutil.which(name)
     found_paths = [path] if path else []
     for candidate in extra_paths or []:
-        if Path(candidate).exists():
+        if any(marker in candidate for marker in "*?[]"):
+            found_paths.extend(match for match in sorted(glob.glob(candidate)) if Path(match).exists())
+        elif Path(candidate).exists():
             found_paths.append(candidate)
     return {"name": name, "onPath": bool(path), "path": path, "knownInstallPathsFound": found_paths}
 
@@ -192,6 +195,10 @@ def command_inventory(args: argparse.Namespace) -> dict[str, Any]:
     xctu_paths = [
         "/mnt/c/Program Files (x86)/Digi/XCTU/XCTU.exe",
         "/mnt/c/Program Files/Digi/XCTU/XCTU.exe",
+        "/mnt/c/Program Files (x86)/Digi/XCTU-NG/XCTU.exe",
+        "/mnt/c/Program Files/Digi/XCTU-NG/XCTU.exe",
+        "/mnt/c/Users/*/AppData/Local/Digi/XCTU-NG/XCTU.exe",
+        "/mnt/c/Users/*/AppData/Local/Digi/XCTU/XCTU.exe",
     ]
     xbee_studio_paths = [
         "/mnt/c/Program Files/Digi/XBee Studio/XBee Studio.exe",

@@ -215,7 +215,7 @@
 | Heltec WiFi LoRa 32(V2) | Physical revision record with board photos/markings and radio-chip/source confirmation. |
 | Waveshare XBee USB Adapter | Adapter/carrier record with serial port, UART voltage, DIN/DOUT routing, and PC-dock versus ESP32-mounted-carrier decision. |
 | XBee read-only bench proof | Tier A passive record and optional Tier B `VR`, `HV`, `SH`, `SL`, `AP`, `AO`, `BD`, `NP` read record with `--confirm-sends-read-commands`. |
-| XBee radio programming study | Offline `inventory`, `profile-diff`, and blocked `write-plan` evidence may be used for planning; live serial reads, writes, XCTU install proof, API transmit frames, and radio setting changes remain separate gates. |
+| XBee radio programming study | Offline `inventory`, `profile-diff`, and blocked `write-plan` evidence may be used for planning; XCTU host install proof is recorded. Live serial reads, writes, API transmit frames, firmware operations, range tests, and radio setting changes remain separate gates. |
 | MicroSD reader and card policy | Reader identity and card-prep record with 3.3 V path, pullups, card-detect/write-protect behavior, shield continuity, capacity, FAT preparation, low-space handling, rotation, and fallback behavior. |
 | Bench instruments and fixtures | Instrument inventory record covering DMM, current-limited supply, logic analyzer or LED proof fixture, USB serial tools, labeled harnesses, low-voltage dummy loads, and calibration/identity notes. |
 | Qualified mains package | Qualified-review package for load type, enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, separation, labels/disconnect, and test record. |

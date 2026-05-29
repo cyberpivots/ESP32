@@ -33,8 +33,8 @@ package. The new CLI is offline-first:
 
 ## Still Blocked
 
-XCTU install proof, installer SHA-256, first-run version, update prompt status,
-live adapter identity, current XBee settings, settings backup, writes, `WR`,
-`AC`, API transmit frames, firmware recovery/update, range tests, ESP32
-carrier wiring, relay/load/mains work, and live RF evidence all remain blocked
-until a later explicit gate.
+XCTU host install proof, installer SHA-256, and first-run change-log evidence
+are now recorded by Task 0087. Live adapter identity, current XBee settings,
+settings backup, writes, `WR`, `AC`, API transmit frames, firmware
+recovery/update, range tests, ESP32 carrier wiring, relay/load/mains work, and
+live RF evidence all remain blocked until a later explicit gate.

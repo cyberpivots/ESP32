@@ -38,6 +38,13 @@ still requires `--confirm-sends-read-commands`.
   XCTU install path, no XBee Studio command or known install path, and no
   installed/importable `digi-xbee` package. Source ID:
   `SRC-LOCAL-XBEE-RADIO-STUDY-2026-05-29`.
+- Same-session host-tooling evidence downloaded Digi's Windows XCTU installer
+  from the official support path, recorded SHA-256
+  `9b6acd16927ee17d4f3a728768cd1c559e09ab6b12470fd6da08e7106fb308e1`, installed
+  XCTU 6.5.13.2 to the Windows per-user Digi `XCTU-NG` path, completed the
+  bundled Digi USB RF driver installer, and launched XCTU only to capture the
+  6.5.13 change-log first-run screen. Source ID:
+  `SRC-LOCAL-XCTU-INSTALL-PROOF-2026-05-29`.
 
 ## Assumptions
 
@@ -53,21 +60,20 @@ still requires `--confirm-sends-read-commands`.
 
 ## Unknowns
 
-- Whether XCTU or XBee Studio is installed after this pass; host software state
-  can change independently of the repo.
 - Whether any visible Windows COM port maps to the physical XBee adapter.
 - Current radio firmware, hardware, baud, API mode, API options, payload limit,
   address, security, channel/network, antenna, and carrier state.
 - Whether a future write procedure will use XCTU, XBee Studio, scripted AT
   command mode, API local AT frames, or the Digi Python library.
-- Exact installer SHA-256 and first-run GUI version. Those require an explicit
-  host-software install record and were not produced by this repo-only pass.
+- Whether future XCTU application or firmware-library update prompts appear
+  after the first-run change-log prompt. No application update prompt was
+  observed during the install proof.
 
 ## CLI surface
 
 | Command | Behavior | Serial boundary |
 | --- | --- | --- |
-| `inventory --json` | Reports host environment, WSL serial candidates, Windows COM/PnP hints, XCTU/XBee Studio presence, and `digi-xbee` import status. | Does not open serial ports. |
+| `inventory --json` | Reports host environment, WSL serial candidates, Windows COM/PnP hints, XCTU/XBee Studio presence, including per-user Windows `XCTU-NG` installs, and `digi-xbee` import status. | Does not open serial ports. |
 | `readonly --port <port> --baud <baud> --confirm-sends-read-commands --json` | Delegates to `scripts/xbee_read_only_probe.py at-query` for the fixed read allowlist. | Sends non-persistent serial read-query bytes only after explicit confirmation. |
 | `profile-diff --readback FILE --target FILE --json` | Compares readback JSON to target JSON offline and redacts `SH`, `SL`, and `KY` by default. | Does not open serial ports or write bytes. |
 | `write-plan --diff FILE --json` | Emits a blocked review packet with ordered prerequisites and no apply path. | Does not open serial ports or write bytes. |
@@ -86,7 +92,7 @@ The CLI has no `apply` command in v1.
 | Firmware explorer | Reference only. | No CLI firmware operation. |
 | Firmware update/recovery | Blocked. | No CLI firmware operation. |
 | Range test/throughput test | Blocked because it creates live RF behavior. | No CLI range or throughput command. |
-| Application update prompts | Host-tool maintenance only after a host install record. | No repo action. |
+| Application update prompts | Host-tool maintenance only after a host install record. First-run evidence showed the 6.5.13 change-log screen and no separate application update prompt. | No repo write/apply action. |
 
 ## Future write gate
 

@@ -56,6 +56,13 @@
 - No relay/load/mains action.
 - No Windows GUI installer launch.
 
+## Continuation
+
+- Task 0087 records the later Tier 2 host-tooling gate that downloaded and
+  installed XCTU as a reference GUI tool. That continuation did not open serial
+  ports, add/discover XBee devices, or authorize any radio write/transmit
+  operation.
+
 ## Validation
 
 Validation commands and results are recorded in the final task response for

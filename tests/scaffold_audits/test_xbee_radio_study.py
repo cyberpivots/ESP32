@@ -35,6 +35,20 @@ class XBeeRadioStudyTests(unittest.TestCase):
         self.assertFalse(record["serial"]["serialOpenAttempted"])
         self.assertFalse(record["v1Boundary"]["inventoryOpensSerialPorts"])
 
+    def test_local_tool_presence_expands_known_path_globs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            tool_path = tmp_path / "Users" / "cyber" / "AppData" / "Local" / "Digi" / "XCTU-NG" / "XCTU.exe"
+            tool_path.parent.mkdir(parents=True)
+            tool_path.write_text("stub", encoding="utf-8")
+
+            record = study.local_tool_presence(
+                "xctu",
+                [str(tmp_path / "Users" / "*" / "AppData" / "Local" / "Digi" / "XCTU-NG" / "XCTU.exe")],
+            )
+
+        self.assertIn(str(tool_path), record["knownInstallPathsFound"])
+
     def test_windows_pnp_default_output_redacts_raw_device_ids(self) -> None:
         raw_line = (
             '[{"Name":"Silicon Labs CP210x USB to UART Bridge (COM13)",'

@@ -8,7 +8,9 @@ skill routing, and private XBee submodule notes.
 
 No live serial probe, XBee setting write, `WR`, `AC`, API transmit frame,
 firmware update/recovery, range test, ESP32 DIN/DOUT wiring, relay/load/mains
-action, or host GUI installation was performed by this task.
+action, or host GUI installation was performed by the original study task.
+The later XCTU host install proof is recorded separately by
+`SRC-LOCAL-XCTU-INSTALL-PROOF-2026-05-29`.
 
 ## Verified facts
 
@@ -47,6 +49,9 @@ action, or host GUI installation was performed by this task.
   all proposed actions are blocked pending a future Tier 3 gate.
 - `.codex/skills/xbee-radio-integration/SKILL.md` routes future XBee/XCTU/900HP
   work to the existing source-backed boundaries.
+- A later Tier 2 host-tooling continuation installed XCTU as a reference GUI
+  and updated inventory detection for the per-user Windows `XCTU-NG` path.
+  Source ID: `SRC-LOCAL-XCTU-INSTALL-PROOF-2026-05-29`.
 
 ## Reviewer quorum
 
@@ -58,9 +63,9 @@ serial-write operations.
 
 ## Blocked items
 
-- XCTU installer download hash, install path, first-run version, and update
-  prompts remain unresolved because this task did not launch or install the
-  Windows GUI.
+- Future XCTU application or firmware-library update prompts remain unresolved
+  beyond the first-run 6.5.13 change-log screen captured by the later
+  host-tooling continuation.
 - COM13/COM14 or any other host ports remain candidate ports only until
   disconnect/delta evidence or read-only identification proves the adapter.
 - Future radio programming remains blocked until a Tier 3 gate records

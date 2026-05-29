@@ -10,7 +10,8 @@ subagents are unavailable or unsafe.
 ## Agent Operations
 
 Maintains prompt governance, project-local Codex profiles, hook guidance, task
-records, and handoffs for multi-agent workflows.
+records, yolo-compatible and admin-strict Codex requirements templates,
+managed hook policy, and handoffs for multi-agent workflows.
 
 ## Architect
 
@@ -36,6 +37,12 @@ Maintains wired, wireless, and custom protocol contracts and test scenarios.
 Maintains verification scripts, test plans, reviewer quorum records, acceptance
 gates, hook-trust follow-up, continuation-decision evidence, and reproducible
 evidence artifacts.
+
+## Tooling
+
+Maintains managed-profile installer/validator behavior, stable permissions,
+backup and rollback checks, installed hash records, operator-sovereignty
+audits, and direct managed-hook fixture validation.
 
 ## Release
 

@@ -35,6 +35,24 @@
   packet.
 - Project-local Codex hooks and custom agents are advisory enforcement aids
   unless reviewed and trusted by the active Codex runtime.
+- Agent instruction files are the default enforcement surface:
+  `AGENTS.md` is canonical, `.codex/agents/*.toml` must inherit it, and audits
+  must fail if agent profiles omit the operator-sovereignty rule. Do not use
+  `/etc/codex/requirements.toml` as the default enforcement path for this repo.
+- Codex managed-hook profiles for this machine are sourced from
+  `.codex/admin/`. The default yolo-compatible profile must not set
+  `allowed_sandbox_modes`, `allowed_approval_policies`, or restrictive prefix
+  rules, so a user-launched `codex --yolo` session keeps
+  `danger-full-access`, `approval_policy=never`, and the intended permission
+  mode. The optional `admin-strict` profile may constrain those launch choices;
+  it is explicit opt-in only.
+- Weighted veto is the default gate model. Coordinator or architecture-risk
+  roles have weight 5, high-reasoning specialists weight 3, medium specialists
+  weight 2, and low-risk helpers weight 1. A gate passes only when required
+  roles are present, weighted approval is at least 70 percent, and no P1/P2
+  blockers remain. Tier 3 still requires explicit live-gate authority,
+  same-session evidence, recovery path, reviewer quorum, and closed-surface
+  review.
 - If read-only subagents are unavailable or unsafe, run the same role
   perspectives locally and record that no subagents were spawned.
 
@@ -51,6 +69,11 @@
 - Agent-process gate: project-local `.codex` hooks, agent profiles, and prompt
   process records must pass `scripts/scaffold_audit_agent_process.py` before
   the scaffold is considered valid.
+- Codex profile gate: `.codex/admin/requirements.toml`,
+  `.codex/admin/profiles/`, managed hook scripts, installer/validator, source
+  records, and hook tests must pass before any managed profile is considered
+  installable. The default and yolo-compatible profiles must pass the
+  operator-sovereignty audit.
 
 ## Current status
 
@@ -60,4 +83,6 @@
 - Hardware status: photographed `four-relay-xbee-wifi` target profiles added;
   physical bench verification pending.
 - Agent-process status: tiered multi-agent triage is the default workspace
-  process; project-local Codex hooks remain trust-gated runtime aids.
+  process; project-local Codex hooks remain trust-gated runtime aids, while
+  optional managed-hook profiles are available for supported Codex hook events.
+  The default profile is yolo-compatible; admin-strict is not the default.

@@ -27,6 +27,10 @@ Project-local read-only subagents are default-authorized for safe Tier 2 and
 Tier 3 reviewer quorum, while mutating workers still require explicit disjoint
 write scopes. Every non-trivial prompt is classified by tier, owner, evidence
 need, mutation boundary, and validation plan before mutation.
+Managed-hook profiles from `.codex/admin/` can cover supported Codex hook
+events on this machine, while the project-local hooks remain advisory aids.
+The default managed profile is yolo-compatible and must not override a
+user-launched `codex --yolo` session; admin-strict is explicit opt-in only.
 
 ## Verified facts
 
@@ -48,6 +52,9 @@ need, mutation boundary, and validation plan before mutation.
 - Current Codex hooks guidance documents project-local hooks, `UserPromptSubmit`,
   `SubagentStart`, and `PreToolUse`, but also states that non-managed command
   hooks require review/trust and that `PreToolUse` interception is incomplete.
+- Current Codex managed-configuration guidance documents
+  `/etc/codex/requirements.toml`, managed hooks, `allow_managed_hooks_only`,
+  and restrictive command prefix rules for admin-enforced requirements.
 - Current OpenAI Agents SDK guidance separates handoffs from manager-style
   agents-as-tools workflows and recommends adding specialists only when the
   contract materially changes.
@@ -80,6 +87,9 @@ need, mutation boundary, and validation plan before mutation.
 - Tier 3: explicit gate authority, same-session evidence, recovery path, and
   reviewer quorum before mutation; no-P1/P2 quorum cannot waive live-gate
   prerequisites.
+- Weighted veto: required roles must be present, approval weight must be at
+  least 70 percent, and no P1/P2 blockers may remain. Tier 3 prerequisites
+  cannot be waived by weights.
 
 ## Prompt pattern
 

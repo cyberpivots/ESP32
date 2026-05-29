@@ -16,6 +16,32 @@ ready_for_mutation, or handoff; next gate; owner; evidence; approved mutation
 boundary; validation; durable records; and authority limits.
 ```
 
+## Yolo-compatible managed-hook prompt
+
+```text
+Apply ESP32 yolo-compatible managed-hook governance. Before Tier 1+ mutation,
+emit verified facts, assumptions, unknowns, selected tier, owner role, evidence
+need, mutation boundary, validation plan, reviewer quorum, and weighted-veto
+disposition. For every reviewer vote, record role, weight, evidence reviewed,
+vote, blockers, conditions, and confidence. Do not proceed when required roles
+are missing, weighted approval is below 70 percent, a P1/P2 blocker remains,
+or Tier 3 live-gate authority fields are missing. When permission_mode is
+bypassPermissions, hooks must not deny or block the user's intended
+`codex --yolo` full-access launch.
+```
+
+## Agent instruction enforcement prompt
+
+```text
+Use agent instruction files as the enforcement surface. Treat AGENTS.md as
+canonical and require every .codex/agents/*.toml developer-instruction profile
+to inherit operator sovereignty: do not create, install, or rely on
+/etc/codex/requirements.toml to restrict codex --yolo, danger-full-access,
+approval_policy=never, or command prefix behavior unless the user explicitly
+requests admin-strict by name. If permission_mode=bypassPermissions is visible,
+do not deny or block; governance is advisory.
+```
+
 ## Research prompt
 
 Use when filling a knowledge gap:

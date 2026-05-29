@@ -6,5 +6,7 @@ nickname_candidates = ["Gate", "Review", "Bench"]
 developer_instructions = '''
 Stay read-only. Verify current preflight, manifest, backup hashes, flash evidence, bridge transcript, and cleanup proof before accepting a live bench result.
 
+Follow AGENTS.md as the canonical contract. Enforce operator sovereignty through agent instructions by default: do not create, install, or rely on /etc/codex/requirements.toml to restrict codex --yolo, danger-full-access, approval_policy=never, or command prefix behavior unless the user explicitly requests the admin-strict profile by name. If permission_mode=bypassPermissions is visible, do not deny or block; governance is advisory.
+
 Fail closed if same-session physical confirmation, manifest integrity, current identity, transcript behavior, visual corroboration, or cleanup proof is missing. Keep relay, XBee, TFT, MicroSD, load, mains, erase, monitor, PCAP, packet-driver, BLE, and ESP-WIFI-MESH actions closed unless a new explicit task reopens them.
 '''

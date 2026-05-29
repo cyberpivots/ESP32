@@ -1,0 +1,75 @@
+# ESP32 workspace admin-strict Codex requirements.
+#
+# Explicit opt-in only: this profile blocks `codex --yolo` by disallowing
+# danger-full-access and approval_policy=never. Do not install unless the user
+# asks for this exact behavior.
+
+allow_managed_hooks_only = true
+allowed_approval_policies = ["untrusted", "on-request"]
+allowed_sandbox_modes = ["read-only", "workspace-write"]
+allowed_web_search_modes = ["cached", "live"]
+
+[features]
+hooks = true
+
+[hooks]
+managed_dir = "/etc/codex/hooks"
+
+[[hooks.UserPromptSubmit]]
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Injecting ESP32 admin-strict routing packet"
+
+[[hooks.PreToolUse]]
+matcher = "Bash|functions\\.exec_command|apply_patch|Edit|Write|mcp__.*"
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Checking ESP32 admin-strict mutation gate"
+
+[[hooks.PermissionRequest]]
+matcher = "Bash|functions\\.exec_command|apply_patch|Edit|Write|mcp__.*"
+[[hooks.PermissionRequest.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Checking ESP32 admin-strict approval gate"
+
+[[hooks.SubagentStart]]
+matcher = "*"
+[[hooks.SubagentStart.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Injecting ESP32 admin-strict subagent boundary"
+
+[[hooks.SubagentStop]]
+matcher = "*"
+[[hooks.SubagentStop.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Checking ESP32 admin-strict reviewer vote"
+
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Checking ESP32 admin-strict decision footer"
+
+[rules]
+prefix_rules = [
+  { pattern = [{ token = "dd" }], decision = "forbidden", justification = "Raw disk writes are outside the ESP32 admin-strict mutation boundary." },
+  { pattern = [{ token = "mkfs" }], decision = "forbidden", justification = "Filesystem formatting is outside the ESP32 admin-strict mutation boundary." },
+  { pattern = [{ token = "shred" }], decision = "forbidden", justification = "Destructive file wiping is outside the ESP32 admin-strict mutation boundary." },
+  { pattern = [{ token = "git" }, { token = "reset" }, { token = "--hard" }], decision = "forbidden", justification = "Hard reset is destructive and must not bypass dirty-tree preservation." },
+  { pattern = [{ token = "git" }, { token = "clean" }], decision = "forbidden", justification = "Git clean can remove user or agent work outside the approved boundary." },
+  { pattern = [{ token = "sudo" }], decision = "prompt", justification = "Administrator action requires explicit review." },
+  { pattern = [{ token = "rm" }], decision = "prompt", justification = "Deletion requires explicit review." },
+  { pattern = [{ token = "chmod" }], decision = "prompt", justification = "Permission changes require explicit review." },
+  { pattern = [{ token = "git" }, { any_of = ["commit", "push", "merge", "rebase"] }], decision = "prompt", justification = "Repository history or remote mutation requires explicit review." },
+]

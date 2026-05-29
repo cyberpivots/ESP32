@@ -54,6 +54,12 @@
 - [ESP-NOW BBS companion SoftAP live-gate tooling QA handoff](../.agents/handoffs/0065-espnow-bbs-companion-softap-live-gate-tooling-to-qa.md)
 - [Multi-agentic continuation decision task log](../.agents/TASK_LOG/0077-multi-agentic-continuation-decision.md)
 - [Multi-agentic continuation decision QA handoff](../.agents/handoffs/0066-multi-agentic-continuation-decision-to-qa.md)
+- [Codex managed-hook profiles task log](../.agents/TASK_LOG/0084-admin-strict-codex-enforcement.md)
+- [Codex managed-hook profiles QA handoff](../.agents/handoffs/0073-admin-strict-codex-enforcement-to-qa.md)
+- [Agent instruction yolo enforcement task log](../.agents/TASK_LOG/0085-agent-instruction-yolo-enforcement.md)
+- [Agent instruction yolo enforcement QA handoff](../.agents/handoffs/0074-agent-instruction-yolo-enforcement-to-qa.md)
+- [XBee radio programming study task log](../.agents/TASK_LOG/0086-xbee-radio-programming-study.md)
+- [XBee radio programming study QA handoff](../.agents/handoffs/0075-xbee-radio-programming-study-to-qa.md)
 - [Development plan consolidation task log](../.agents/TASK_LOG/0078-development-plan-consolidation.md)
 - [Development plan consolidation QA handoff](../.agents/handoffs/0067-development-plan-consolidation-to-qa.md)
 - [Full-service mesh discovery Gate M2-A DOS-C task log](../.agents/TASK_LOG/0079-full-service-mesh-discovery-gate-m2a-dosc.md)
@@ -105,6 +111,7 @@
 - [Four relay bench bring-up runbook](projects/four-relay-xbee-wifi/bench-bring-up-runbook.md)
 - [Four relay XBee public boundary](projects/four-relay-xbee-wifi/xbee-public-boundary.md)
 - [Four relay XBee read-only bench proof](projects/four-relay-xbee-wifi/xbee-read-only-bench-proof.md)
+- [Four relay XBee radio programming study](projects/four-relay-xbee-wifi/xbee-radio-programming-study.md)
 - [Four relay hardware and circuit improvement research](projects/four-relay-xbee-wifi/hardware-circuit-improvement-research.md)
 - [Four relay R&D loop](projects/four-relay-xbee-wifi/rd-loop.md)
 - [Four relay mains readiness gate](projects/four-relay-xbee-wifi/mains-readiness-gate.md)
@@ -139,6 +146,7 @@
 - [Pre-engineered prompts](prompt/preengineered-prompts.md)
 - [Autoencoded model selection](prompt/autoencoded-model-selection.md)
 - [Expert agent panels](prompt/expert-agent-panels.md)
+- [Codex managed-hook profiles](prompt/admin-strict-codex-enforcement.md)
 
 ## Knowledge base
 
@@ -207,6 +215,9 @@
 - [Win31 CBBS input, rename, icon, and UI source ledger](../knowledge-base/source-ledger/2026-05-27-win31-cbbs-input-rename-icon-ui.md)
 - [Multi-agentic default process source ledger](../knowledge-base/source-ledger/2026-05-27-multi-agentic-default-process.md)
 - [Multi-agentic continuation decision source ledger](../knowledge-base/source-ledger/2026-05-27-multi-agentic-continuation-decision.md)
+- [Codex managed-hook profiles source ledger](../knowledge-base/source-ledger/2026-05-28-admin-strict-codex-enforcement.md)
+- [Agent instruction yolo enforcement source ledger](../knowledge-base/source-ledger/2026-05-28-agent-instruction-yolo-enforcement.md)
+- [XBee radio programming study source ledger](../knowledge-base/source-ledger/2026-05-29-xbee-radio-programming-study.md)
 - [Client UI live gate source ledger](../knowledge-base/source-ledger/2026-05-24-client-ui-live-gate.md)
 - [Live bench toolchain source ledger](../knowledge-base/source-ledger/2026-05-21-live-bench-toolchain.md)
 - [Windows ICS Netgear WNR1000 source ledger](../knowledge-base/source-ledger/2026-05-23-windows-ics-netgear-wnr1000.md)

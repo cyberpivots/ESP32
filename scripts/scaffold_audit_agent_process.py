@@ -34,8 +34,13 @@ REQUIRED_SOURCE_IDS = [
     "SRC-ANTHROPIC-MULTI-AGENT-RESEARCH-2026-05-27",
     "SRC-LANGCHAIN-HANDOFFS-2026-05-27",
     "SRC-LANGCHAIN-CONTEXT-ENGINEERING-2026-05-27",
+    "SRC-CODEX-ADMIN-REQUIREMENTS-2026-05-28",
+    "SRC-CODEX-HOOKS-MANAGED-2026-05-28",
+    "SRC-OPENAI-LLM-ACCURACY-2026-05-28",
     "SRC-LOCAL-MULTI-AGENTIC-DEFAULT-PROCESS-2026-05-27",
     "SRC-LOCAL-MULTI-AGENTIC-CONTINUATION-DECISION-2026-05-27",
+    "SRC-LOCAL-ADMIN-STRICT-CODEX-ENFORCEMENT-2026-05-28",
+    "SRC-LOCAL-AGENT-INSTRUCTION-YOLO-ENFORCEMENT-2026-05-28",
 ]
 
 
@@ -89,6 +94,32 @@ def _run_hook(
     return failures
 
 
+def _run_admin_hook(
+    root: Path,
+    payload: dict[str, object] | str,
+    markers: list[str],
+) -> list[str]:
+    path = root / ".codex" / "admin" / "hooks" / "esp32_admin_policy.py"
+    stdin_text = payload if isinstance(payload, str) else json.dumps(payload)
+    result = subprocess.run(
+        [sys.executable, str(path)],
+        input=stdin_text,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    failures: list[str] = []
+    label = ".codex/admin/hooks/esp32_admin_policy.py"
+    if result.returncode != 0:
+        failures.append(f"{label} exited {result.returncode}: {result.stderr.strip()}")
+        return failures
+    if not markers and result.stdout.strip():
+        failures.append(f"{label} should not emit output for this fixture: {result.stdout.strip()}")
+        return failures
+    failures.extend(_require_markers(result.stdout + result.stderr, markers, label))
+    return failures
+
+
 def audit_agent_process(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
 
@@ -106,16 +137,24 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "validation plan",
         "default-authorized",
         "no-P1/P2",
+        "## Agent Instruction Enforcement Boundary",
+        ".codex/agents/*.toml",
+        "operator sovereignty",
+        "permission_mode = \"bypassPermissions\"",
     ], "AGENTS.md"))
 
     governance_text = _read(root / ".agents/GOVERNANCE.md")
     failures.extend(_require_markers(governance_text, [
         "## Multi-agent operating policy",
+        "yolo-compatible",
+        "Weighted veto",
         "reviewer quorum",
         "default-authorized",
         "no-P1/P2",
         "Agent-process gate",
         "project-local Codex hooks remain trust-gated runtime aids",
+        "Agent instruction files are the default enforcement surface",
+        "/etc/codex/requirements.toml",
     ], "governance"))
 
     ownership_text = _read(root / ".agents/OWNERSHIP.md")
@@ -124,6 +163,9 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "knowledge-base/prompt-registry.md",
         "scripts/scaffold_audit_agent_process.py",
         "Hook trust follow-up owner",
+        "Managed-profile opt-in owner",
+        "AGENTS.md",
+        ".codex/agents/*.toml",
     ], "ownership"))
 
     roles_text = _read(root / ".agents/ROLES.md")
@@ -136,12 +178,18 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
 
     docs_text = "\n".join(_read(root / rel) for rel in [
         "docs/agent-coordination.md",
+        "docs/prompt/admin-strict-codex-enforcement.md",
         "docs/prompt/prompt-triage.md",
         "docs/prompt/expert-agent-panels.md",
         "docs/prompt/preengineered-prompts.md",
         "knowledge-base/prompt-registry.md",
     ])
     failures.extend(_require_markers(docs_text, [
+        "yolo-compatible",
+        "bypassPermissions",
+        "Agent instruction files",
+        ".codex/agents/*.toml",
+        "Weighted veto",
         "default-multi-agentic-process",
         "reviewer quorum",
         "UserPromptSubmit",
@@ -182,6 +230,15 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         if data.get("name") != profile:
             failures.append(f"{path.relative_to(root)} name must be {profile}")
         text = _read(path)
+        failures.extend(_require_markers(text, [
+            "AGENTS.md as the canonical contract",
+            "operator sovereignty",
+            "/etc/codex/requirements.toml",
+            "codex --yolo",
+            "permission_mode=bypassPermissions",
+            "governance is advisory",
+            "admin-strict profile by name",
+        ], profile))
         if "worker" in profile:
             failures.extend(_require_markers(text, [
                 "explicit write scope",
@@ -211,6 +268,121 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
             failures.append(f"missing hook script: .codex/hooks/{script}")
         elif "hookSpecificOutput" not in _read(path):
             failures.append(f".codex/hooks/{script} missing hookSpecificOutput")
+
+    admin_requirements = root / ".codex" / "admin" / "requirements.toml"
+    yolo_requirements = root / ".codex" / "admin" / "profiles" / "yolo-compatible" / "requirements.toml"
+    strict_requirements = root / ".codex" / "admin" / "profiles" / "admin-strict" / "requirements.toml"
+    admin_hook = root / ".codex" / "admin" / "hooks" / "esp32_admin_policy.py"
+    admin_installer = root / ".codex" / "admin" / "install_admin_policy.py"
+    admin_readme = root / ".codex" / "admin" / "README.md"
+    for path in [admin_requirements, yolo_requirements, strict_requirements, admin_hook, admin_installer, admin_readme]:
+        if not path.exists():
+            failures.append(f"missing admin policy artifact: {path.relative_to(root)}")
+
+    def _audit_yolo_requirements(path: Path) -> None:
+        raw_text = _read(path)
+        for marker in ["allowed_sandbox_modes", "allowed_approval_policies", "rules.prefix_rules"]:
+            if marker in raw_text:
+                failures.append(f"{path.relative_to(root)} must not contain {marker}; yolo must remain full access")
+        try:
+            requirements = tomllib.loads(raw_text)
+        except tomllib.TOMLDecodeError as exc:
+            failures.append(f"{path.relative_to(root)} invalid TOML: {exc}")
+            return
+        if requirements.get("allow_managed_hooks_only") is not True:
+            failures.append(f"{path.relative_to(root)} must set allow_managed_hooks_only = true")
+        if requirements.get("features", {}).get("hooks") is not True:
+            failures.append(f"{path.relative_to(root)} must set [features].hooks = true")
+        if requirements.get("hooks", {}).get("managed_dir") != "/etc/codex/hooks":
+            failures.append(f"{path.relative_to(root)} hooks.managed_dir must be /etc/codex/hooks")
+        for key in ["allowed_sandbox_modes", "allowed_approval_policies"]:
+            if key in requirements:
+                failures.append(f"{path.relative_to(root)} must not set {key}; yolo must remain full access")
+        rules = requirements.get("rules")
+        if isinstance(rules, dict) and "prefix_rules" in rules:
+            failures.append(f"{path.relative_to(root)} must not set rules.prefix_rules")
+
+    for path in [admin_requirements, yolo_requirements]:
+        if path.exists():
+            _audit_yolo_requirements(path)
+    if strict_requirements.exists():
+        try:
+            requirements = tomllib.loads(_read(strict_requirements))
+        except tomllib.TOMLDecodeError as exc:
+            failures.append(f".codex/admin/profiles/admin-strict/requirements.toml invalid TOML: {exc}")
+            requirements = {}
+        if "danger-full-access" in requirements.get("allowed_sandbox_modes", []):
+            failures.append("admin-strict profile must block danger-full-access by omission")
+        if "never" in requirements.get("allowed_approval_policies", []):
+            failures.append("admin-strict profile must block approval_policy never by omission")
+        strict_text = _read(strict_requirements)
+        failures.extend(_require_markers(strict_text, [
+            "Explicit opt-in only",
+            "blocks `codex --yolo`",
+        ], "admin-strict requirements"))
+    for path in [admin_hook, admin_installer, admin_readme]:
+        if path.exists():
+            failures.extend(_require_markers(_read(path), [
+                "yolo",
+                "Tier 3",
+            ], str(path.relative_to(root))))
+
+    failures.extend(_run_admin_hook(
+        root,
+        "{",
+        ["hookSpecificOutput", "Hook input shape was unknown"],
+    ))
+    failures.extend(_run_admin_hook(
+        root,
+        {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "touch should-deny"},
+            "prompt": "",
+        },
+        ["permissionDecision", "deny", "missing routing packet fields"],
+    ))
+    failures.extend(_run_admin_hook(
+        root,
+        {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "idf.py flash"},
+            "prompt": (
+                "Verified facts: none. Assumptions: none. Unknowns: none. "
+                "Selected tier: Tier 2. Owner role: QA. Evidence need: local. "
+                "Mutation boundary: docs. Validation plan: tests."
+            ),
+        },
+        ["permissionDecision", "deny", "Tier 3 command denied"],
+    ))
+    failures.extend(_run_admin_hook(
+        root,
+        {
+            "hook_event_name": "SubagentStop",
+            "last_assistant_message": "Looks fine.",
+        },
+        ["block", "reviewer output missing"],
+    ))
+    failures.extend(_run_admin_hook(
+        root,
+        {
+            "hook_event_name": "Stop",
+            "last_assistant_message": "Implemented the admin policy.",
+        },
+        ["block", "decision footer"],
+    ))
+    failures.extend(_run_admin_hook(
+        root,
+        {
+            "hook_event_name": "PreToolUse",
+            "permission_mode": "bypassPermissions",
+            "tool_name": "Bash",
+            "tool_input": {"command": "git reset --hard HEAD"},
+            "prompt": "",
+        },
+        [],
+    ))
 
     failures.extend(_run_hook(
         root,
@@ -258,6 +430,13 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "../.agents/TASK_LOG/0077-multi-agentic-continuation-decision.md",
         "../.agents/handoffs/0066-multi-agentic-continuation-decision-to-qa.md",
         "../knowledge-base/source-ledger/2026-05-27-multi-agentic-continuation-decision.md",
+        "../.agents/TASK_LOG/0084-admin-strict-codex-enforcement.md",
+        "../.agents/handoffs/0073-admin-strict-codex-enforcement-to-qa.md",
+        "../knowledge-base/source-ledger/2026-05-28-admin-strict-codex-enforcement.md",
+        "../.agents/TASK_LOG/0085-agent-instruction-yolo-enforcement.md",
+        "../.agents/handoffs/0074-agent-instruction-yolo-enforcement-to-qa.md",
+        "../knowledge-base/source-ledger/2026-05-28-agent-instruction-yolo-enforcement.md",
+        "prompt/admin-strict-codex-enforcement.md",
     ]:
         if link not in docs_index:
             failures.append(f"docs index missing multi-agent link: {link}")
@@ -274,6 +453,12 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0077-multi-agentic-continuation-decision.md",
         ".agents/handoffs/0066-multi-agentic-continuation-decision-to-qa.md",
         "knowledge-base/source-ledger/2026-05-27-multi-agentic-continuation-decision.md",
+        ".agents/TASK_LOG/0084-admin-strict-codex-enforcement.md",
+        ".agents/handoffs/0073-admin-strict-codex-enforcement-to-qa.md",
+        "knowledge-base/source-ledger/2026-05-28-admin-strict-codex-enforcement.md",
+        ".agents/TASK_LOG/0085-agent-instruction-yolo-enforcement.md",
+        ".agents/handoffs/0074-agent-instruction-yolo-enforcement-to-qa.md",
+        "knowledge-base/source-ledger/2026-05-28-agent-instruction-yolo-enforcement.md",
     ]:
         path = root / rel
         if not path.exists():

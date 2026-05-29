@@ -5,7 +5,8 @@
 - Architecture owner: `docs/architecture/`, `firmware/interfaces/`
 - Hardware owner: `hardware-profiles/`, `knowledge-base/hardware/`
 - Communications owner: `comm-protocols/`, `knowledge-base/comms/`
-- Agent operations owner: `.agents/`, `.codex/`, `docs/prompt/`,
+- Agent operations owner: `.agents/`, `.codex/`, `.codex/admin/`,
+  `docs/prompt/`,
   `knowledge-base/model-profiles.md`, `knowledge-base/prompt-registry.md`
 - Tooling owner: `scripts/`, `tools/`, `.github/workflows/`,
   project-local hook scripts
@@ -20,6 +21,9 @@
 - Worker-agent scope owner: the area owner whose files are in the explicit write
   boundary.
 - Hook trust follow-up owner: QA and Tooling.
+- Managed-profile opt-in owner: Agent operations with Tooling and QA review.
+  The default enforcement surface remains `AGENTS.md` plus
+  `.codex/agents/*.toml`.
 
 ## Escalation
 

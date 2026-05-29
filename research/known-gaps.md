@@ -41,6 +41,9 @@
 - Run the XBee read-only bench proof Tier A, then optionally Tier B with
   `--confirm-sends-read-commands`, to capture `VR`, `HV`, `SH`, `SL`, `AP`,
   `AO`, `BD`, and `NP` without setting writes.
+- Complete XCTU/XBee Studio host evidence before relying on GUI behavior:
+  official support URL, installer SHA-256 if downloaded, install path,
+  first-run version, and update prompt state.
 - Identify the SPI MicroSD reader module, 3.3 V power path, pull-ups,
   card-detect/write-protect behavior, and shield continuity for candidate
   `GPIO18`, `GPIO19`, `GPIO23`, and `GPIO32` before any storage wiring.
@@ -212,6 +215,7 @@
 | Heltec WiFi LoRa 32(V2) | Physical revision record with board photos/markings and radio-chip/source confirmation. |
 | Waveshare XBee USB Adapter | Adapter/carrier record with serial port, UART voltage, DIN/DOUT routing, and PC-dock versus ESP32-mounted-carrier decision. |
 | XBee read-only bench proof | Tier A passive record and optional Tier B `VR`, `HV`, `SH`, `SL`, `AP`, `AO`, `BD`, `NP` read record with `--confirm-sends-read-commands`. |
+| XBee radio programming study | Offline `inventory`, `profile-diff`, and blocked `write-plan` evidence may be used for planning; live serial reads, writes, XCTU install proof, API transmit frames, and radio setting changes remain separate gates. |
 | MicroSD reader and card policy | Reader identity and card-prep record with 3.3 V path, pullups, card-detect/write-protect behavior, shield continuity, capacity, FAT preparation, low-space handling, rotation, and fallback behavior. |
 | Bench instruments and fixtures | Instrument inventory record covering DMM, current-limited supply, logic analyzer or LED proof fixture, USB serial tools, labeled harnesses, low-voltage dummy loads, and calibration/identity notes. |
 | Qualified mains package | Qualified-review package for load type, enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, separation, labels/disconnect, and test record. |

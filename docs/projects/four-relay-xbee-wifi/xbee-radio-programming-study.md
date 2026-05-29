@@ -1,0 +1,115 @@
+# XBee Radio Programming Study
+
+## Scope
+
+This study turns the existing XBee read-only proof into a staged programming
+study path. It does not authorize radio setting writes, `WR`, `AC`, firmware
+updates, API transmit frames, range tests, relay actions, ESP32 DIN/DOUT
+wiring, or load/mains work.
+
+The v1 implementation adds host/tool inventory, offline profile comparison,
+and a blocked write-plan packet. The only command that can touch a serial port
+is `readonly`, which delegates to the existing fixed AT read-query probe and
+still requires `--confirm-sends-read-commands`.
+
+## Verified facts
+
+- Digi identifies `XBP9B-DPUT-001` as an XBee-PRO 900HP S3B
+  Point2Multipoint model. Source ID: `SRC-DIGI-XBP9B-DPUT-001`.
+- Existing repo evidence keeps the XBee bench path read-only and limits Tier B
+  AT reads to `VR`, `HV`, `SH`, `SL`, `AP`, `AO`, `BD`, and `NP`. Source ID:
+  `SRC-LOCAL-XBEE-READONLY-PROBE-2026-05-18`.
+- Digi documents XCTU as a free Windows, macOS, and Linux GUI for managing,
+  configuring, and testing XBee modules, with API frame builder/interpreter,
+  AT/API consoles, firmware explorer, recovery, range test, and update
+  features. Source ID: `SRC-DIGI-XCTU-FEATURES-2026-05-29`.
+- Digi's support page currently lists XCTU 6.5.13 assets for Windows, macOS,
+  and Linux; the Windows detail page lists `40003026_AL.exe`, 230.5 MB, version
+  date 2023-07-17. Source ID: `SRC-DIGI-XCTU-SUPPORT-2026-05-29`.
+- Digi documents XBee Studio as a multi-platform GUI that can discover,
+  configure, communicate with, and recover XBee devices. Source ID:
+  `SRC-DIGI-XBEE-STUDIO-2026-05-29`.
+- Digi's `xbee-python` GitHub release API reports latest release `1.5.0`,
+  published 2024-08-27, and PyPI reports `digi-xbee` version `1.5.0`. Source
+  ID: `SRC-DIGI-XBEE-PYTHON-2026-05-29`.
+- The v1 CLI is implemented as `scripts/xbee_radio_study.py`. Source ID:
+  `SRC-LOCAL-XBEE-RADIO-STUDY-2026-05-29`.
+- Same-session `inventory --json` validation found no `xctu` command or known
+  XCTU install path, no XBee Studio command or known install path, and no
+  installed/importable `digi-xbee` package. Source ID:
+  `SRC-LOCAL-XBEE-RADIO-STUDY-2026-05-29`.
+
+## Assumptions
+
+- XCTU and XBee Studio are reference tools only until a later gate names a live
+  operation and captures same-session evidence.
+- Public documents may describe part identity, safety boundaries, source IDs,
+  and redacted workflow shape, but not serial identifiers, raw passive bytes,
+  AES keys, address plans, private COM mappings, or full setting snapshots.
+- A target profile is review evidence. A target profile is not an apply
+  procedure.
+- `digi-xbee` is a candidate future dependency. It is not required by the v1
+  CLI and is not installed by this task.
+
+## Unknowns
+
+- Whether XCTU or XBee Studio is installed after this pass; host software state
+  can change independently of the repo.
+- Whether any visible Windows COM port maps to the physical XBee adapter.
+- Current radio firmware, hardware, baud, API mode, API options, payload limit,
+  address, security, channel/network, antenna, and carrier state.
+- Whether a future write procedure will use XCTU, XBee Studio, scripted AT
+  command mode, API local AT frames, or the Digi Python library.
+- Exact installer SHA-256 and first-run GUI version. Those require an explicit
+  host-software install record and were not produced by this repo-only pass.
+
+## CLI surface
+
+| Command | Behavior | Serial boundary |
+| --- | --- | --- |
+| `inventory --json` | Reports host environment, WSL serial candidates, Windows COM/PnP hints, XCTU/XBee Studio presence, and `digi-xbee` import status. | Does not open serial ports. |
+| `readonly --port <port> --baud <baud> --confirm-sends-read-commands --json` | Delegates to `scripts/xbee_read_only_probe.py at-query` for the fixed read allowlist. | Sends non-persistent serial read-query bytes only after explicit confirmation. |
+| `profile-diff --readback FILE --target FILE --json` | Compares readback JSON to target JSON offline and redacts `SH`, `SL`, and `KY` by default. | Does not open serial ports or write bytes. |
+| `write-plan --diff FILE --json` | Emits a blocked review packet with ordered prerequisites and no apply path. | Does not open serial ports or write bytes. |
+
+The CLI has no `apply` command in v1.
+
+## XCTU and CLI mapping
+
+| XCTU or XBee Studio operation | V1 status | CLI mapping or gap |
+| --- | --- | --- |
+| Discover/add local devices | Reference only. Do not use to prove a radio without a bench gate. | `inventory` can report host candidates without opening serial ports; physical identity remains unresolved. |
+| AT console reads | Allowed only as the existing Tier B fixed read-query gate with explicit confirmation. | `readonly` delegates to the fixed `VR/HV/SH/SL/AP/AO/BD/NP` allowlist. |
+| AT setting writes | Blocked. | `profile-diff` and `write-plan` identify review items but cannot apply them. |
+| API frame builder/interpreter | Offline reference only. | CLI gap: no API-frame builder in v1; no transmit frame generation. |
+| API console/transmit | Blocked. | No CLI transmit command. |
+| Firmware explorer | Reference only. | No CLI firmware operation. |
+| Firmware update/recovery | Blocked. | No CLI firmware operation. |
+| Range test/throughput test | Blocked because it creates live RF behavior. | No CLI range or throughput command. |
+| Application update prompts | Host-tool maintenance only after a host install record. | No repo action. |
+
+## Future write gate
+
+A later write gate must be Tier 3 and must name the exact mutation boundary.
+Minimum prerequisites are same-session adapter identity, readback backup,
+installer/tool version record, address plan, AES key handling process, antenna
+and regulatory review, carrier voltage/DIN/DOUT proof, rollback procedure,
+reviewer quorum, and explicit operator authority.
+
+Until that gate exists, `WR`, `AC`, setting-value AT commands, API transmit
+frames, firmware recovery/update, range tests, and RF transmit exercises remain
+blocked.
+
+## Validation
+
+The v1 validation target is:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/xbee_read_only_probe.py self-test --json
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/xbee_read_only_probe.py list --json
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests.scaffold_audits.test_xbee_radio_study
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/scaffold_audits -p 'test_*.py'
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/verify_scaffold.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/scaffold_audit_docs.py
+git diff --check
+```

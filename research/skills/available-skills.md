@@ -3,6 +3,12 @@
 Verified on 2026-05-28 from
 `SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-05-28`.
 
+## Relevant for XBee radio work
+
+| Skill | Path | Current use |
+| --- | --- | --- |
+| xbee-radio-integration | `/mnt/h/esp32/.codex/skills/xbee-radio-integration` | Use for Digi XBee, XCTU, XBee Studio, XBee-PRO 900HP/S3B, XBP9B-DPUT-001, radio profile, and repo-local XBee CLI study work. Added by `SRC-LOCAL-XBEE-RADIO-STUDY-2026-05-29`. |
+
 ## Relevant for BBS UI system operation work
 
 | Skill | Path | Current use |
@@ -47,6 +53,8 @@ Verified on 2026-05-28 from
 - The prior checked-in `004da724`, `36878fcb`, and `eed16198` plugin cache
   hashes are stale.
 - ESP32-local skills are present under `/mnt/h/esp32/.codex/skills`.
+- `xbee-radio-integration` is newly added by this task and was not part of the
+  older 2026-05-28 skill inventory source.
 - Future sessions must re-inventory skills before relying on path claims
   because skills and plugin cache paths can change independently of the ESP32
   repo.

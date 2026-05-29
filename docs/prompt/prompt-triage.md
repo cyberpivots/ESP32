@@ -15,6 +15,8 @@ task while preserving evidence and validation requirements.
 - required owner role,
 - reviewer quorum: none, local lenses, or read-only subagents,
 - gate authority: named gate and mutation boundary only.
+- weighted veto: required roles, reviewer weights, P1/P2 blockers, conditions,
+  and final disposition.
 
 ## Default tier rules
 
@@ -41,6 +43,18 @@ For Tier 2 and Tier 3 gates, a no-P1/P2 reviewer quorum may approve only the
 named gate and mutation boundary. Tier 3 approval also requires explicit
 gate authority, same-session evidence, recovery path, validation, and cleanup
 or rollback criteria.
+
+Under the yolo-compatible managed-hook profile, supported mutating tool paths
+may enforce the routing packet only when the active permission mode is not
+`bypassPermissions`. In `codex --yolo` bypass mode, hooks must not deny or
+block and may provide advisory context only. Weighted veto passes only when
+required roles are present, approval weight is at least 70 percent, and no
+P1/P2 blockers remain.
+
+Instruction-file enforcement is the default: `AGENTS.md` is canonical, and
+`.codex/agents/*.toml` profiles must not ask agents to create, install, or rely
+on `/etc/codex/requirements.toml` to override `codex --yolo` unless the user
+explicitly requests `admin-strict`.
 
 ## Decision Footer
 

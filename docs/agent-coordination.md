@@ -32,6 +32,16 @@ A no-P1/P2 reviewer quorum may accept only the named gate and mutation
 boundary. Tier 3 acceptance also requires same-session evidence, explicit
 live-gate authority, recovery path, and closed-surface review.
 
+## Weighted veto
+
+Weighted veto is the default quorum rollup. Coordinator or architecture-risk
+roles have weight 5, high-reasoning specialists weight 3, medium specialists
+weight 2, and low-risk helpers weight 1. A gate passes only when required roles
+are present, weighted approval reaches at least 70 percent, and no P1/P2
+blockers remain. A Tier 3 gate also needs explicit live-gate authority,
+same-session evidence, recovery path, and closed-surface review; weights cannot
+waive those prerequisites.
+
 ## Continuation decision
 
 End non-trivial work with a decision footer: `continue`, `ask_user`,
@@ -64,5 +74,17 @@ No feature or factual document should be considered accepted unless it has:
 - continuation decision and authority limits.
 
 Project-local Codex hooks under `.codex/hooks.json` add model-visible reminders
-for triage, subagent boundaries, and mutating tool calls. They are advisory
-runtime aids until the active Codex runtime reviews and trusts them.
+for triage, subagent boundaries, and mutating tool calls. They remain advisory
+runtime aids.
+
+Agent instruction files are the default enforcement surface. `AGENTS.md` is
+canonical, and every `.codex/agents/*.toml` developer-instruction profile must
+inherit the operator-sovereignty rule: do not create, install, or rely on
+`/etc/codex/requirements.toml` to restrict `codex --yolo`,
+`danger-full-access`, `approval_policy=never`, or command prefix behavior
+unless the user explicitly asks for the `admin-strict` profile by name.
+
+Managed-hook profiles under `.codex/admin/` are optional machine-local profiles
+for supported Codex hook events. The default yolo-compatible profile must not
+constrain `codex --yolo`, while the admin-strict profile is explicit opt-in
+only and may block yolo semantics.

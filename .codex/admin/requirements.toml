@@ -1,0 +1,61 @@
+# ESP32 workspace yolo-compatible Codex managed hooks.
+# Source template: /mnt/h/esp32/.codex/admin/requirements.toml
+#
+# Operator sovereignty rule: this default template must not constrain
+# sandbox_mode, approval_policy, or command prefix rules. A user-launched
+# `codex --yolo` session must keep full access as intended.
+
+allow_managed_hooks_only = true
+allowed_web_search_modes = ["cached", "live"]
+
+[features]
+hooks = true
+
+[hooks]
+managed_dir = "/etc/codex/hooks"
+
+[[hooks.UserPromptSubmit]]
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Injecting ESP32 yolo-compatible routing packet"
+
+[[hooks.PreToolUse]]
+matcher = "Bash|functions\\.exec_command|apply_patch|Edit|Write|mcp__.*"
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Checking ESP32 yolo-compatible mutation advisory"
+
+[[hooks.PermissionRequest]]
+matcher = "Bash|functions\\.exec_command|apply_patch|Edit|Write|mcp__.*"
+[[hooks.PermissionRequest.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Checking ESP32 yolo-compatible approval advisory"
+
+[[hooks.SubagentStart]]
+matcher = "*"
+[[hooks.SubagentStart.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Injecting ESP32 yolo-compatible subagent boundary"
+
+[[hooks.SubagentStop]]
+matcher = "*"
+[[hooks.SubagentStop.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Checking ESP32 yolo-compatible reviewer vote"
+
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = "/usr/bin/python3 /etc/codex/hooks/esp32_admin_policy.py"
+timeout = 30
+statusMessage = "Checking ESP32 yolo-compatible decision footer"

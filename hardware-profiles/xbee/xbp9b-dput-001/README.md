@@ -29,6 +29,7 @@
 - `SRC-DIGI-XBEE-900HP-USER-GUIDE`
 - `SRC-DIGI-XCTU`
 - `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`
+- `SRC-LOCAL-XBEE-SELECTED-PORT-PROGRAMMING-2026-05-29`
 - `SRC-WAVESHARE-XBEE-USB-ADAPTER`
 
 ## Project design settings
@@ -50,14 +51,21 @@ Tier A is passive discovery. Tier B may send only fixed non-persistent AT read
 queries for `VR`, `HV`, `SH`, `SL`, `AP`, `AO`, `BD`, and `NP` after
 `--confirm-sends-read-commands`.
 
-XBee setting writes, `WR`, `AC`, firmware updates, API transmit frames, relay
-commands, and ESP32 DIN/DOUT carrier wiring are blocked until a
-backup/readback plan, address plan, AES key process, carrier review, and
-rollback procedure are documented.
+Task 0091 records one completed selected-port programming gate for user-named
+`COM15` and `COM6`: local readback, redacted key provisioning, `AO=0`,
+`EE=1`, `AP=2`, `WR`, and escaped API post-write readback. This does not prove
+over-the-air communication, ESP32 carrier wiring, relay command acceptance,
+range, throughput, adapter voltage, DIN/DOUT routing, or load/mains readiness.
+
+Additional XBee setting writes, firmware updates, API transmit frames, relay
+commands, and ESP32 DIN/DOUT carrier wiring remain blocked until a new gate
+names the exact mutation boundary and evidence.
 
 Source IDs: `SRC-DIGI-XBP9B-DPUT-001`, `SRC-DIGI-XBEE-PRO-900HP`,
 `SRC-DIGI-XBEE-900HP-AP`, `SRC-DIGI-XBEE-900HP-AO`,
-`SRC-DIGI-XBEE-900HP-USER-GUIDE`, `SRC-WAVESHARE-XBEE-USB-ADAPTER`.
+`SRC-DIGI-XBEE-900HP-USER-GUIDE`,
+`SRC-LOCAL-XBEE-SELECTED-PORT-PROGRAMMING-2026-05-29`,
+`SRC-WAVESHARE-XBEE-USB-ADAPTER`.
 
 ## Assumptions
 
@@ -76,8 +84,9 @@ Source IDs: `SRC-DIGI-XBP9B-DPUT-001`, `SRC-DIGI-XBEE-PRO-900HP`,
 - DIN/DOUT wiring and signal naming from adapter, XBee, and ESP32 perspectives.
 - Reset, sleep, associate, and optional flow-control pins.
 - Antenna and regulatory constraints for intended deployment.
-- Exact serial baud rate and command-mode workflow.
+- Exact serial baud rate and command-mode workflow for any port other than the
+  selected `COM15`/`COM6` task record.
 - Exact 64-bit addresses for source allowlisting.
-- Secure handling process for AES key provisioning.
-- Whether the PC dock can complete identity discovery without any setting
+- Secure handling process for future AES key provisioning.
+- Whether the PC dock can complete future identity discovery without setting
   writes.

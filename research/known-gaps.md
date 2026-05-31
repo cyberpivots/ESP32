@@ -41,6 +41,135 @@
 - Run the XBee read-only bench proof Tier A, then optionally Tier B with
   `--confirm-sends-read-commands`, to capture `VR`, `HV`, `SH`, `SL`, `AP`,
   `AO`, `BD`, and `NP` without setting writes.
+- Fresh two-device XBee/XCTU Stage A1/A2 no-serial evidence is recorded under
+  `SRC-LOCAL-XBEE-TWO-DEVICE-READONLY-STUDY-2026-05-29`, including one
+  local-only candidate removal delta after the first physical disconnect. Exact
+  two-adapter identity remains open until the second adapter delta, adapter
+  markings, antenna state, and isolation notes are recorded.
+- Corrected ESP32/XBee evidence is recorded under
+  `SRC-LOCAL-CORRECTED-ESP32-COM6-PEER-COM15-LIVE-TEST-2026-05-30`: `COM6` is
+  the ESP32 serial target and `COM15` is the healthy XBee peer, but `COM6` did
+  not expose XBee API frames before the bridge firmware. The bridge
+  implementation is recorded under
+  `SRC-LOCAL-ESP32-XBEE-UART-BRIDGE-FLASH-RETEST-2026-05-30`; the named COM6
+  bridge flash/retest gate now has same-session wiring/no-load confirmation,
+  rollback backups, artifact hashes, COM6-only flash output, redacted bridge
+  local-AT readback, and corrected bidirectional benign `link_probe` proof.
+- Four-relay LCD I2C test firmware and COM6-only write/verify evidence are
+  recorded under `SRC-LOCAL-FOUR-RELAY-LCD-I2C-TEST-FIRMWARE-2026-05-30`. The
+  mutation preserves the COM6 bridge and assumes one 20x4
+  HD44780/PCF8574-class LCD on GPIO21/GPIO22, but exact LCD identity, pullup
+  voltage, logic voltage, exact detected address value, contrast, backlight
+  current, and rail-current margin remain open. User visual proof passed for
+  page cycling, detected-address line display, and clean four-row rendering. No
+  monitor, XBee/RF, relay/load/mains, encoder, or future flash authority is
+  opened by that record.
+- The four-relay rotary encoder LCD menu plan is recorded under
+  `SRC-LOCAL-FOUR-RELAY-ROTARY-ENCODER-MENU-PLAN-2026-05-30`. It keeps
+  GPIO21/GPIO22 reserved for the LCD, GPIO17/GPIO16 reserved for the XBee
+  bridge, and GPIO25/GPIO26/GPIO27/GPIO33 reserved as relay candidates. Exact
+  encoder/module identity, pinout, PPR/detents, switch option, pullups,
+  voltage, debounce/noise behavior, header continuity, rail-current impact,
+  and boot behavior remain open. No final pin assignment, wiring, firmware,
+  flash, serial/RF action, relay/load/mains work, or live encoder proof is
+  authorized.
+- The four-relay encoder LCD menu firmware is prepared under
+  `SRC-LOCAL-FOUR-RELAY-ENCODER-MENU-FIRMWARE-2026-05-30`. It assigns
+  GPIO34/GPIO35/GPIO36 as input-only encoder lines for the user-selected COM6
+  menu gate and keeps relay pages as locked UI text only. The named COM6
+  write/verify gate recorded same-session facts, rollback backup hashes, COM6
+  artifact write-flash, and separate verify-flash. Exact encoder/module
+  identity, pullup values, rail-current impact, rotation direction, boot
+  behavior, and user-observed live LCD/encoder proof remain open. No further
+  flash, monitor, XBee/RF action, relay/load/mains work, or hardware acceptance
+  is authorized by this record.
+- The four-relay encoder raw diagnostics firmware preparation is recorded
+  under `SRC-LOCAL-FOUR-RELAY-ENCODER-RAW-DIAGNOSTICS-2026-05-30`. It changes
+  LCD page 0 to show raw GPIO34/GPIO35/GPIO13 `A/B/SW` levels plus raw A/B and
+  SW transition counters after the user reported GPIO36 is not exposed,
+  preserving the COM6 bridge, LCD path, locked relay UI text, and no
+  XBee/RF/relay/load/mains behavior. The named COM6-only GPIO13
+  backup/write/verify gate is recorded; user LCD raw observation, monitor,
+  hardware acceptance, and future flash gates remain closed.
+- The four-relay KY-040 diagnostic refactor is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-DIAGNOSTIC-REFACTOR-2026-05-30`. It records the
+  user-identified ASIN `B06XQTHDRR` as a Cylewet KY-040 branch using an
+  independent Manuals+ mirror, keeps GPIO34/GPIO35 internal pulls disabled,
+  enables only the GPIO13 internal pullup for active-low `SW`, and records the
+  user-observed raw LCD no-change symptom as hardware/electrical/pinout-first.
+  The later same-session COM6 user-test flash recorded safe-state authority,
+  refreshed validation, COM6 identity, rollback backups, artifact hashes,
+  recovery command, write-flash, and separate verify-flash. LCD raw proof,
+  serial monitor, XBee/RF, relay/load/mains, hardware acceptance, decoder
+  changes, and future live gates remain closed.
+- The four-relay KY-040 pin-finder diagnostic is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-PIN-FINDER-DIAGNOSTIC-2026-05-30`. It adds
+  firmware ID `PF0530A`, keeps the raw page, and adds input-only level/count
+  probes for GPIO34/GPIO35/GPIO13/GPIO14/GPIO32/GPIO33. The image has been
+  written/verified to COM6; the user reported only pin 34 was displayed, so
+  lower-row pin-finder evidence was not usable without encoder navigation.
+- The four-relay KY-040 row-0 diagnostic is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-ROW0-DIAGNOSTIC-2026-05-30`. It adds firmware
+  ID `PF0530B` and cycles raw levels, transition counts, and each candidate
+  GPIO level/count on LCD row 0 after the user reported only pin 34 was
+  displayed on `PF0530A`. The image was later written/verified to COM6 and
+  the user reported no displayed pins changed.
+- The four-relay KY-040 GPIO sweep contact tracer is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-GPIO-SWEEP-CONTACT-TRACER-2026-05-30`. It adds
+  firmware ID `PF0530C`, locks the LCD to page 0, shows row-0 `HIT` on any
+  watched GPIO change, sweeps GPIO34/GPIO35/GPIO36/GPIO39/GPIO13/GPIO14/
+  GPIO18/GPIO19/GPIO23/GPIO32, enables internal pullups only on GPIO13/GPIO14,
+  excludes flash/LCD/UART0/XBee/strapping-risk/relay-candidate pins, and
+  closes the diagnostic XBee bridge loop. A later same-session COM6 gate
+  recorded safe-state authority, refreshed validation, identity, rollback,
+  hashes, recovery command, write-flash, and separate verify-flash. User LCD
+  observation remains pending.
+- The four-relay KY-040 DevKitC 13/14/32 diagnostic is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-DEVKITC-13-14-32-DIAGNOSTIC-2026-05-30`. It adds
+  firmware ID `PF0530D` for the user-confirmed GPIO13/GPIO14/GPIO32 wiring,
+  enables internal pullups on all three pins, locks LCD page 0, shows raw
+  levels, transition/position/button counts, and per-pin `HIT` changes, and
+  keeps the diagnostic XBee bridge loop closed. It has been written and
+  separately verify-flashed to COM6. User LCD observation and hardware
+  acceptance remain pending.
+- The four-relay KY-040 serial pintrace diagnostic is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-SERIAL-PINTRACE-PF0530E-2026-05-30`. It adds
+  firmware ID `PF0530E`, watches a DevKitC candidate GPIO set as input-only,
+  enables internal pullups only on GPIO13/GPIO14/GPIO32, prints COM6/UART0
+  stable change events and periodic summaries, warns that DevKitC physical
+  `J2-13` is `IO12` and `J2-14` is `GND`, and closes the diagnostic XBee
+  bridge loop. The r4 COM6 write/verify and 10-minute read-only monitor
+  completed without watchdog/backtrace lines and without encoder-pin `EV`
+  events. The later r5 read-only monitor recorded user-confirmed actuation with
+  GPIO13/GPIO14/GPIO32 count increases, `writes_sent=false`, and no watchdog,
+  panic, or backtrace scan hits. Hardware acceptance remains pending.
+- The four-relay KY-040 encoder menu PF0530F repo update is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30`. It changes the
+  current diagnostic image to LCD menu proof on GPIO13/GPIO14/GPIO32 with
+  input-only pullups, XBee bridge forwarding closed, A/B debounce, switch
+  debounce and guard suppression, invalid-transition counting, and serial
+  `MENU_*` proof lines. A later user-authorized live attempt under
+  `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-LIVE-2026-05-30` flashed
+  and separately verify-flashed PF0530F on COM6, captured `PF0530F MENU_READY`,
+  then captured `PF0530F LCD_INIT_FAILED` with no `MENU_HB`, `MENU_STEP`, or
+  `MENU_SELECT` proof. Live menu acceptance, relay/load/mains, XBee/RF,
+  hardware acceptance, final pin reassignment, and any further flash or monitor
+  action remain closed.
+- The PF0530G LCD init diagnostic is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-LCD-INIT-DIAG-PF0530G-2026-05-30`. It keeps the
+  XBee bridge closed, uses GPIO21/GPIO22 I2C only, and emits stage-specific
+  `LCD_*` serial proof lines. The COM6 live gate passed serial LCD init
+  diagnosis with one ACK at `0x27`, all HD44780 steps ok, and
+  `LCD_INIT_OK addr=0x27`; physical LCD visual confirmation and another
+  encoder menu proof remain separate.
+- PF0530H source is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530H-2026-05-31`. It combines
+  the PF0530G LCD init path with PF0530F GPIO13/GPIO14/GPIO32 input-only menu
+  handling and static/simulated BBS pages.
+- PF0530H live flash/verify/read-only monitor is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530H-LIVE-2026-05-31`. Physical
+  LCD visual confirmation, encoder direction, `BBS_MENU_STEP`, and
+  `BBS_MENU_SELECT` remain user-test evidence items.
 - XCTU host install evidence is recorded, but live XCTU behavior remains
   blocked. Complete XBee Studio host evidence separately if it becomes the
   selected GUI, and do not rely on GUI discovery until exact ports, physical
@@ -220,8 +349,10 @@
 | Relay driver stage | Driver selection record tied to measured relay input polarity, input current, voltage compatibility, and isolation behavior. |
 | Heltec WiFi LoRa 32(V2) | Physical revision record with board photos/markings and radio-chip/source confirmation. |
 | Waveshare XBee USB Adapter | Adapter/carrier record with serial port, UART voltage, DIN/DOUT routing, and PC-dock versus ESP32-mounted-carrier decision. |
-| XBee read-only bench proof | Tier A passive record and optional Tier B `VR`, `HV`, `SH`, `SL`, `AP`, `AO`, `BD`, `NP` read record with `--confirm-sends-read-commands`. |
-| XBee radio programming study | Offline `inventory`, `profile-diff`, and blocked `write-plan` evidence may be used for planning; XCTU host install proof is recorded. Live serial reads, writes, API transmit frames, firmware operations, range tests, and radio setting changes remain separate gates. |
+| XBee read-only bench proof | Superseded for user-selected `COM15`/`COM6` identity by `SRC-LOCAL-XBEE-SELECTED-PORT-PROGRAMMING-2026-05-29`; adapter markings, physical isolation, voltage/carrier, antenna, recovery/cleanup evidence, and full one-at-a-time mapping remain useful before any carrier/wiring work. |
+| XBee radio programming study | Selected-port programming is complete for `COM15` and `COM6` under `SRC-LOCAL-XBEE-SELECTED-PORT-PROGRAMMING-2026-05-29`, and bidirectional benign OTA `link_probe` proof is complete under `SRC-LOCAL-XBEE-OTA-LINK-PROOF-2026-05-29`. Corrected evidence later identified `COM6` as the ESP32 target and `COM15` as the peer under `SRC-LOCAL-CORRECTED-ESP32-COM6-PEER-COM15-LIVE-TEST-2026-05-30`; the permanent bridge implementation and accepted COM6 bridge flash/retest are recorded under `SRC-LOCAL-ESP32-XBEE-UART-BRIDGE-FLASH-RETEST-2026-05-30`. Firmware update/recovery beyond the named bridge gate, reset/restore beyond normal flash hard reset, range tests, throughput tests, relay/load/mains work, future XBee setting changes, relay command payloads, and public key/identifier exposure remain separate closed gates. |
+| ESP32 XBee UART bridge flash/retest | Named COM6 bridge gate accepted under `SRC-LOCAL-ESP32-XBEE-UART-BRIDGE-FLASH-RETEST-2026-05-30`: physical wiring/no-load confirmation, backups, artifact hashes, COM6-only flash proof, boot-settle/flush, redacted COM6 local-AT readback, COM15 peer readback, and bidirectional benign `link_probe` proof are recorded. Remaining gaps are measured rail-current margin for broader hardware expansion, deployment range/throughput, source address allowlisting integration, antenna/regulatory deployment review, relay command acceptance, load/mains readiness, future XBee setting writes, and public raw identifier exposure. |
+| Four-relay rotary encoder menu input | PF0530E r5 under `SRC-LOCAL-FOUR-RELAY-KY040-SERIAL-PINTRACE-PF0530E-2026-05-30` proved GPIO-level changes on GPIO13 `CLK`, GPIO14 `DT`, and GPIO32 `SW` during user-confirmed actuation. PF0530F under `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30` is the LCD menu-proof image; the later COM6 live attempt under `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-LIVE-2026-05-30` passed write-flash and verify-flash and captured `PF0530F MENU_READY`, but live menu acceptance is blocked by `PF0530F LCD_INIT_FAILED`. PF0530G under `SRC-LOCAL-FOUR-RELAY-KY040-LCD-INIT-DIAG-PF0530G-2026-05-30` passed serial LCD init diagnosis with `LCD_INIT_OK addr=0x27`. PF0530H source under `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530H-2026-05-31` prepares the combined BBS LCD menu image, and PF0530H live under `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530H-LIVE-2026-05-31` passed COM6 flash/verify/read-only monitor with BBS ready/render/heartbeat proof. Before acceptance, collect `BBS_MENU_STEP` in both directions, `BBS_MENU_SELECT` events, LCD page changes, suppressed button-window A/B noise, physical LCD visual confirmation, power-off silkscreen/continuity from KY-040 `CLK`/`DT`/`SW`, A/B idle high and toggle-low evidence while rotating, SW idle high and pulls-low evidence when pressed, rail-current margin, rotation direction, and boot behavior. |
 | MicroSD reader and card policy | Reader identity and card-prep record with 3.3 V path, pullups, card-detect/write-protect behavior, shield continuity, capacity, FAT preparation, low-space handling, rotation, and fallback behavior. |
 | Bench instruments and fixtures | Instrument inventory record covering DMM, current-limited supply, logic analyzer or LED proof fixture, USB serial tools, labeled harnesses, low-voltage dummy loads, and calibration/identity notes. |
 | Qualified mains package | Qualified-review package for load type, enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, separation, labels/disconnect, and test record. |

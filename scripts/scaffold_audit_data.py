@@ -193,6 +193,7 @@ FORBIDDEN_FIRMWARE_MARKERS = [
     "gpio_config",
     "uart_write_bytes",
     "i2c_master_write",
+    "i2c_master_transmit",
     "esp_wifi_start",
     "httpd_start",
     "esp_vfs_fat",

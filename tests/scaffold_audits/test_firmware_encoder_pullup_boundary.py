@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Regression tests for the four-relay encoder GPIO pullup boundary."""
+
+from __future__ import annotations
+
+import sys
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_DIR = ROOT / "scripts"
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from scaffold_audit_firmware import audit_encoder_menu_boundary  # noqa: E402
+
+
+MAIN_C = ROOT / "firmware/projects/four-relay-xbee-wifi/main/main.c"
+
+
+class FirmwareEncoderPullupBoundaryTests(unittest.TestCase):
+    def test_pf0530f_devkitc_gpio_pull_policy_is_source_visible(self) -> None:
+        source = MAIN_C.read_text(encoding="utf-8")
+
+        self.assertIn("FR_ENCODER_CLK_GPIO GPIO_NUM_13", source)
+        self.assertIn("FR_ENCODER_DT_GPIO GPIO_NUM_14", source)
+        self.assertIn("FR_ENCODER_SW_GPIO GPIO_NUM_32", source)
+        self.assertIn("{FR_ENCODER_CLK_GPIO, \"CLK\", true}", source)
+        self.assertIn("{FR_ENCODER_DT_GPIO, \"DT\", true}", source)
+        self.assertIn("{FR_ENCODER_SW_GPIO, \"SW\", true}", source)
+        self.assertIn("fr_gpio_sweep_pins[index].enable_pullup", source)
+        self.assertIn("gpio_config(&config)", source)
+        self.assertIn(".mode = GPIO_MODE_INPUT", source)
+        self.assertIn(".pull_up_en = enable_pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE", source)
+        self.assertIn(".pull_down_en = GPIO_PULLDOWN_DISABLE", source)
+        self.assertNotIn("gpio_pullup_en(pins[index])", source)
+        self.assertNotIn("FR_ENCODER_CLK_GPIO GPIO_NUM_34", source)
+        self.assertNotIn("FR_ENCODER_DT_GPIO GPIO_NUM_35", source)
+        self.assertNotIn("FR_ENCODER_SW_GPIO GPIO_NUM_13", source)
+        self.assertNotIn("{FR_GPIO_SWEEP_GPIO32, \"32\", false}", source)
+
+    def test_pf0530k_bbs_menu_uses_lcd_init_diag_path(self) -> None:
+        source = MAIN_C.read_text(encoding="utf-8")
+
+        self.assertIn("FR_DIAG_FIRMWARE_ID \"PF0530K\"", source)
+        self.assertIn("LCD_DIAG_READY gpio=21/22 speed=%d pullups=external", source)
+        self.assertIn("LCD_BUS result=ok", source)
+        self.assertIn("LCD_PROBE addr=0x%02x result=ack", source)
+        self.assertIn("LCD_PROBE_SUMMARY count=%u selected=0x%02x", source)
+        self.assertIn("LCD_DEVICE result=ok addr=0x%02x", source)
+        self.assertIn("LCD_HD44780 step=%s result=%s err=%s", source)
+        self.assertIn("LCD_INIT_OK addr=0x%02x", source)
+        self.assertIn("LCD_INIT_FAIL stage=", source)
+        self.assertIn("LCD_DIAG_HB status=%s count=%lu addr=0x%02x stage=%s devices=%u", source)
+        self.assertIn("fr_lcd_bbs_menu_task", source)
+        self.assertIn("xTaskCreate(\n        fr_lcd_bbs_menu_task", source)
+        self.assertNotIn("xTaskCreate(\n        fr_lcd_diag_task", source)
+        self.assertIn("FR_MENU_PAGE_COUNT 9", source)
+        self.assertIn("FR_MENU_POLL_MS 10", source)
+        self.assertIn("FR_MENU_RENDER_POLL_MS 20", source)
+        self.assertIn("FR_MENU_IDLE_REFRESH_MS 60000", source)
+        self.assertIn("FR_ENCODER_AB_STABLE_SAMPLES 3", source)
+        self.assertIn("FR_ENCODER_SW_GUARD_MS 150", source)
+        self.assertIn("FR_MENU_HEARTBEAT_MS 2000", source)
+        self.assertIn("FR_MENU_INPUT_TASK_PRIORITY (tskIDLE_PRIORITY + 1)", source)
+        self.assertIn("fr_delay_ticks_at_least_one", source)
+        self.assertIn("#include \"freertos/queue.h\"", source)
+        self.assertIn("FR_ENCODER_EVENT_QUEUE_DEPTH 64", source)
+        self.assertIn("FR_ENCODER_IRQ_DRAIN_LIMIT 32", source)
+        self.assertIn("fr_encoder_irq_event_t", source)
+        self.assertIn("fr_encoder_event_queue", source)
+        self.assertIn("fr_encoder_isr_handler", source)
+        self.assertIn("xQueueCreate(", source)
+        self.assertIn("xQueueSendFromISR(", source)
+        self.assertIn("xQueueReceive(fr_encoder_event_queue", source)
+        self.assertIn("gpio_install_isr_service(0)", source)
+        self.assertIn("gpio_isr_handler_add(", source)
+        self.assertIn(".intr_type = GPIO_INTR_ANYEDGE", source)
+        self.assertIn("FR_GPIO_SWEEP_COUNT 3", source)
+        self.assertIn("cw_step_count", source)
+        self.assertIn("ccw_step_count", source)
+        self.assertIn("invalid_transition_count", source)
+        self.assertIn("suppressed_transition_count", source)
+        self.assertIn("signal_change_count", source)
+        self.assertIn("switch_guard_until_ms", source)
+        self.assertIn("last_heartbeat_ms", source)
+        self.assertIn("fr_menu_sample_ab_channel", source)
+        self.assertIn("fr_menu_raw_ab", source)
+        self.assertIn("fr_menu_process_levels", source)
+        self.assertIn("fr_menu_handle_switch_stable", source)
+        self.assertIn("fr_menu_sample_inputs", source)
+        self.assertIn("fr_menu_input_task", source)
+        self.assertIn("fr_lcd_render_cache_t", source)
+        self.assertIn("render_cache.valid", source)
+        self.assertIn("runtime.lcd_dirty", source)
+        self.assertIn("fr_diag_short_display_count", source)
+        self.assertIn("fr_diag_short_position_magnitude", source)
+        self.assertIn("fr_bbs_page_name", source)
+        self.assertIn("BBS FIELD LINK:OK", source)
+        self.assertIn("MSG N:1 IN:12", source)
+        self.assertIn("PEERS 2/3", source)
+        self.assertIn("QUEUE P:2 F:0", source)
+        self.assertIn("FILES Q:1 D:3", source)
+        self.assertIn("MESH sim", source)
+        self.assertIn("XBEE CLOSED", source)
+        self.assertIn("DIAG FIELD", source)
+        self.assertIn("Flash:LOCK Ser:LOCK", source)
+        self.assertIn("fr_menu_level_char", source)
+        self.assertIn("BBS_LCD_READY gpio=13/14/32 pullups=on lcd=21/22 addr=0x%02x", source)
+        self.assertIn("BBS_INPUT_READY task=split poll_ms=%u render=dirty idle_ms=%u ", source)
+        self.assertIn("irq=anyedge queue=%u", source)
+        self.assertIn("BBS_LCD_RENDER page=%s index=%u row0=\\\"%s\\\" row1=\\\"%s\\\"", source)
+        self.assertIn("rows=%u seq=%lu dur_ms=%lu reason=%s", source)
+        self.assertIn("ENC_RAW kind=%s levels=C%uD%uS%u raw_ab=%lu raw_sw=%lu t=%lu", source)
+        self.assertIn("ENC_EV pin=%d label=%s level=%u count=%lu t=%lu", source)
+        self.assertIn("BBS_MENU_STEP dir=%c page=%s index=%u pos=%ld cw=%lu ccw=%lu t=%lu", source)
+        self.assertIn("BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=short t=%lu", source)
+        self.assertIn("AB_SUPPRESS raw=%u levels=C%uD%uS%u suppressed=%lu t=%lu", source)
+        self.assertIn("AB_INVALID prev=%u curr=%u invalid=%lu t=%lu", source)
+        self.assertIn("BBS_MENU_HB page=%s index=%u pos=%ld levels=C%uD%uS%u steps=%lu/%lu", source)
+        self.assertIn("irq_drop=%lu", source)
+        self.assertNotIn("FR_MENU_REFRESH_MS 250", source)
+        self.assertNotIn("FR_DIAG_SERIAL_PINTRACE 1", source)
+        self.assertNotIn("SERIAL_PINTRACE READY", source)
+        self.assertNotIn("fr_serial_pintrace_start_task", source)
+        self.assertNotIn("fr_serial_pintrace_run();", source)
+        self.assertNotIn("    menu->page = 0;\n    if (menu->ack", source)
+
+    def test_pf0530f_closes_xbee_bridge_and_keeps_inputs_only(self) -> None:
+        source = MAIN_C.read_text(encoding="utf-8")
+
+        self.assertIn("FR_DIAG_XBEE_BRIDGE_CLOSED 1", source)
+        self.assertIn("#if !FR_DIAG_XBEE_BRIDGE_CLOSED", source)
+        self.assertNotIn("FR_GPIO_SWEEP_GPIO16", source)
+        self.assertNotIn("FR_GPIO_SWEEP_GPIO17", source)
+        self.assertNotIn("FR_GPIO_SWEEP_GPIO21", source)
+        self.assertNotIn("FR_GPIO_SWEEP_GPIO22", source)
+        self.assertNotIn("FR_GPIO_SWEEP_GPIO25", source)
+        self.assertNotIn("FR_GPIO_SWEEP_GPIO26", source)
+        self.assertNotIn("FR_GPIO_SWEEP_GPIO27", source)
+        self.assertNotIn("FR_GPIO_SWEEP_GPIO33", source)
+        self.assertNotIn("gpio_set_level", source)
+
+    def test_firmware_audit_accepts_current_encoder_pullup_boundary(self) -> None:
+        self.assertEqual([], audit_encoder_menu_boundary(ROOT))
+
+
+if __name__ == "__main__":
+    unittest.main()

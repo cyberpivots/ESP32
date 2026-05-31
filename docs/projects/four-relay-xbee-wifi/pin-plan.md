@@ -17,6 +17,52 @@
   available GPIO pins. Source ID: `SRC-ESP-IDF-GPIO`.
 - ESP32 UART documentation identifies three UART controllers. Source ID:
   `SRC-ESP-IDF-UART`.
+- ESP-IDF stable v6.0.1 documents the I2C master driver API and the
+  `esp_driver_i2c` component used by the LCD-only display-status test. Source
+  ID: `SRC-ESP-IDF-I2C`.
+- The encoder-menu firmware configures GPIO34, GPIO35, and GPIO13 as
+  input-only rotary encoder lines for LCD menu navigation. The KY-040
+  diagnostic refactor keeps GPIO34/GPIO35 internal pulls disabled and enables
+  only the GPIO13 internal pullup for the active-low switch while relay pages
+  stay locked as UI text only. Source IDs:
+  `SRC-LOCAL-FOUR-RELAY-ENCODER-MENU-FIRMWARE-2026-05-30`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-DIAGNOSTIC-REFACTOR-2026-05-30`.
+- The user-identified ASIN `B06XQTHDRR` is indexed by an independent Manuals+
+  mirror as a Cylewet KY-040 module with `CLK`, `DT`, `SW`, `+`, and `GND`
+  pins. Source ID: `SRC-MANUALSPLUS-CYLEWET-KY040-B06XQTHDRR`.
+- The KY-040 pin-finder diagnostic adds input-only probes on GPIO14, GPIO32,
+  and GPIO33 beside the intended GPIO34/GPIO35/GPIO13 encoder pins. It does
+  not accept those probes as wiring assignments or relay/storage reassignments.
+  Source ID: `SRC-LOCAL-FOUR-RELAY-KY040-PIN-FINDER-DIAGNOSTIC-2026-05-30`.
+- The KY-040 row-0 diagnostic refactor keeps the same input-only probe set and
+  firmware ID `PF0530B`, with raw levels, transition counts, and each probe's
+  live level/change count cycling on LCD row 0. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-ROW0-DIAGNOSTIC-2026-05-30`.
+- The KY-040 GPIO sweep contact tracer adds firmware ID `PF0530C` after the
+  user reported no displayed `PF0530B` pins changed. It sweeps GPIO34,
+  GPIO35, GPIO36, GPIO39, GPIO13, GPIO14, GPIO18, GPIO19, GPIO23, and GPIO32
+  as input-only diagnostic probes, enables internal pullups only on GPIO13 and
+  GPIO14, excludes flash, LCD, UART0, XBee UART, strapping-risk, and
+  relay-candidate pins, and closes the diagnostic XBee bridge loop. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-GPIO-SWEEP-CONTACT-TRACER-2026-05-30`. The same
+  source record now includes the COM6 `PF0530C` write/verify gate for user LCD
+  testing.
+- The KY-040 DevKitC 13/14/32 diagnostic adds firmware ID `PF0530D` for the
+  user-confirmed wiring: `CLK` GPIO13, `DT` GPIO14, `SW` GPIO32, module `+` on
+  ESP32 3V3, and a 100 nF capacitor across `+` and `GND`. It keeps the pins
+  input-only, enables internal pullups on all three, locks LCD page 0, and
+  closes the diagnostic XBee bridge loop. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-DEVKITC-13-14-32-DIAGNOSTIC-2026-05-30`.
+- The KY-040 serial pintrace diagnostic adds firmware ID `PF0530E` and watches
+  GPIO0/GPIO2/GPIO4/GPIO5/GPIO12/GPIO13/GPIO14/GPIO15/GPIO16/GPIO17/GPIO18/
+  GPIO19/GPIO21/GPIO22/GPIO23/GPIO25/GPIO26/GPIO27/GPIO32/GPIO33/GPIO34/
+  GPIO35/GPIO36/GPIO39 as input-only live probes on COM6. Internal pullups are
+  enabled only on GPIO13/GPIO14/GPIO32. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-SERIAL-PINTRACE-PF0530E-2026-05-30`.
+- The PF0530F menu-proof refactor keeps GPIO13 `CLK`, GPIO14 `DT`, and GPIO32
+  `SW` input-only with internal pullups, boots the LCD menu path instead of the
+  PF0530E serial pintrace path, and keeps XBee bridge forwarding closed. Source
+  ID: `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30`.
 - ESP-IDF SDSPI documentation records that SD-over-SPI has lower throughput
   than SDMMC access but allows flexible pin routing through the GPIO matrix.
   Source ID: `SRC-ESP-IDF-SDSPI`.
@@ -90,14 +136,55 @@ pressure is active.
 | SPI MicroSD CS | GPIO32 | Output | Reader identity, 3.3 V power, pull-ups, shield continuity, boot-pin review, and relay/XBee conflict review verified |
 | XBee UART TX from ESP32 to DIN | Unassigned | Output | Final carrier, DIN/DOUT routing, and level compatibility verified |
 | XBee UART RX from DOUT to ESP32 | Unassigned | Input | Final carrier, DIN/DOUT routing, and level compatibility verified |
+| LCD-only test SDA | GPIO21 | Bidirectional | Same-session LCD level-shifter/common-ground/pullup confirmation; display-status output only |
+| LCD-only test SCL | GPIO22 | Output | Same-session LCD level-shifter/common-ground/pullup confirmation; display-status output only |
+| Encoder diagnostic CLK/A | GPIO13 | Input | KY-040 `CLK`; internal pullup enabled for PF0530F; requires live `MENU_STEP` proof and boot behavior before acceptance |
+| Encoder diagnostic DT/B | GPIO14 | Input | KY-040 `DT`; internal pullup enabled for PF0530F; requires live `MENU_STEP` proof and boot behavior before acceptance |
+| Encoder diagnostic switch | GPIO32 | Input | KY-040 `SW`; internal pullup enabled for PF0530F; conflicts with the provisional MicroSD CS investigation until one path is retired |
 
 Source IDs: `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`,
 `SRC-ESP32-WROOM-32-DATASHEET`, `SRC-ESP-IDF-GPIO`, `SRC-ESP-IDF-UART`,
-`SRC-ESP-IDF-SDSPI`, `SRC-ESP-IDF-SD-PULLUP`,
+`SRC-ESP-IDF-I2C`, `SRC-ESP-IDF-SDSPI`, `SRC-ESP-IDF-SD-PULLUP`,
 `SRC-DIGI-XBEE-PRO-900HP`, `SRC-WAVESHARE-XBEE-USB-ADAPTER`,
 `SRC-ESP32-HARDWARE-DESIGN-GUIDELINES`, `SRC-TI-CD74HC4067`,
 `SRC-TI-TCA9555`, `SRC-ESPRESSIF-MCP23017-COMPONENT`,
-`SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`, `SRC-LCDWIKI-R61509V-MRB2802`.
+`SRC-NOPNOP2002-ESP-IDF-PARALLEL-TFT`, `SRC-LCDWIKI-R61509V-MRB2802`,
+`SRC-BOURNS-PEC11R`,
+`SRC-MANUALSPLUS-CYLEWET-KY040-B06XQTHDRR`,
+`SRC-LOCAL-FOUR-RELAY-ROTARY-ENCODER-MENU-PLAN-2026-05-30`,
+`SRC-LOCAL-FOUR-RELAY-ENCODER-MENU-FIRMWARE-2026-05-30`,
+`SRC-LOCAL-FOUR-RELAY-KY040-DIAGNOSTIC-REFACTOR-2026-05-30`,
+`SRC-LOCAL-FOUR-RELAY-KY040-PIN-FINDER-DIAGNOSTIC-2026-05-30`,
+`SRC-LOCAL-FOUR-RELAY-KY040-ROW0-DIAGNOSTIC-2026-05-30`,
+`SRC-LOCAL-FOUR-RELAY-KY040-GPIO-SWEEP-CONTACT-TRACER-2026-05-30`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-DEVKITC-13-14-32-DIAGNOSTIC-2026-05-30`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-SERIAL-PINTRACE-PF0530E-2026-05-30`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30`.
+
+## Future rotary encoder menu input
+
+The rotary encoder menu implementation keeps the accepted LCD path on
+GPIO21/GPIO22, the accepted XBee bridge on GPIO17/GPIO16, and the relay
+candidates GPIO25/GPIO26/GPIO27/GPIO33 reserved. The current PF0530F
+menu-proof branch maps module `CLK` to GPIO13, `DT` to GPIO14, `SW` to GPIO32,
+`+` to ESP32 3V3 only, and `GND` to ESP32 GND. GPIO13/GPIO14/GPIO32 use
+internal pullups in this diagnostic. GPIO32 remains a provisional MicroSD CS
+investigation pin outside this encoder proof and cannot be accepted for both
+uses.
+Encoder events are UI intents only: rotation changes pages, short press shows
+`SELECT BLOCKED` on relay UI pages or `SELECT ACK` elsewhere, and long press
+returns to the status page. Encoder events must not directly trigger relay,
+radio, flash/erase, XBee setting-write, or persistent configuration paths.
+
+The pin-finder and `PF0530B` row-0 diagnostics also sampled GPIO14, GPIO32,
+and GPIO33 as input-only probes with internal pulls disabled. The `PF0530C`
+contact tracer dropped relay-candidate GPIO33, added GPIO36/GPIO39 and passive
+GPIO18/GPIO19/GPIO23 beside GPIO32, and enabled internal pullups only on
+GPIO13/GPIO14. PF0530D then focused on GPIO13/GPIO14/GPIO32. PF0530E
+superseded it for serial-first troubleshooting and proved GPIO-level changes
+on GPIO13/GPIO14/GPIO32 during r5 user-confirmed actuation. PF0530F uses that
+same three-pin mapping for the next LCD menu-proof image, but final wiring
+acceptance still requires a separate live gate.
 
 ## Direct GPIO drive gate
 
@@ -138,7 +225,7 @@ project needs to free direct ESP32 GPIOs for the TFT branch.
 | GPIO0, GPIO2, GPIO5, GPIO12, GPIO15 | ESP32 strapping pins need boot-state review before use. | `SRC-ESP-IDF-GPIO` |
 | GPIO6 through GPIO11 | Used internally for SPI flash on ESP32-WROOM-32 and not recommended for other uses. | `SRC-ESP32-WROOM-32-DATASHEET`, `SRC-ESP-IDF-GPIO` |
 | GPIO1/GPIO3 | UART0 is commonly associated with USB serial flashing/debugging paths; reserve until the photographed board USB-UART circuit is verified. | `SRC-ESP32-WROOM-32-DATASHEET`, `SRC-ESP-IDF-UART` |
-| GPIO25, GPIO26, GPIO27, GPIO33 | Current relay candidates; avoid reusing them for MicroSD until relay routing is closed or reassigned. | `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`, `SRC-ESP-IDF-GPIO` |
+| GPIO25, GPIO26, GPIO27, GPIO33 | Current relay candidates; avoid reusing them for MicroSD or encoder inputs until relay routing is closed or reassigned. | `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`, `SRC-ESP-IDF-GPIO` |
 | GPIO34 through GPIO39 | Input-only pins; not candidates for relay outputs. | `SRC-ESP-IDF-GPIO` |
 
 ## Assumptions
@@ -149,9 +236,15 @@ project needs to free direct ESP32 GPIOs for the TFT branch.
 - GPIO18, GPIO19, GPIO23, and GPIO32 are only the preferred SPI MicroSD
   investigation set. They are not approved wiring until the exact MicroSD
   reader, shield continuity, 3.3 V power, pull-ups, and boot-pin risks are
-  verified.
+  verified. PF0530F temporarily consumes GPIO32 as the encoder switch
+  diagnostic input, so MicroSD CS on GPIO32 is blocked until one path is
+  retired.
 - A later firmware pin map can choose XBee UART pins through the GPIO matrix
   after a final carrier and DIN/DOUT path are verified.
+- The LCD-only test temporarily uses GPIO21/GPIO22 for one display-status LCD
+  and does not convert those pins into the relay-expander path.
+- The rotary encoder is a menu input only and does not consume LCD pins, XBee
+  bridge pins, or relay candidates.
 - A later firmware pin map can choose relay expander I2C pins only after TFT,
   MicroSD, XBee, boot, UART0, and shield-routing conflicts are reviewed.
 - CD74HC4067 mux channels are input observations only; any touch-derived relay
@@ -170,6 +263,12 @@ project needs to free direct ESP32 GPIOs for the TFT branch.
 - Whether the XBee carrier needs CTS/RTS, reset, sleep, or associate pins wired.
 - Whether the Waveshare XBee USB Adapter header labels are safe for direct
   ESP32 connection.
+- Exact LCD module, backpack IC, detected address, pullup voltage, logic
+  voltage, contrast, backlight current, level-shifter direction behavior, and
+  bus conflict evidence for the LCD-only test.
+- Exact bench KY-040 module markings, onboard pullup values and voltage,
+  debounce/noise behavior, exposed header continuity, rail-current impact,
+  PF0530F live LCD menu behavior, rotation direction, and boot behavior.
 - Exact MicroSD reader identity, 3.3 V power path, logic-level behavior,
   pull-up population, card-detect/write-protect behavior, and shield continuity
   for the preferred investigation pins.

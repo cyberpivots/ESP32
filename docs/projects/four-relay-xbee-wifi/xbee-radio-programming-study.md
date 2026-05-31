@@ -3,9 +3,12 @@
 ## Scope
 
 This study turns the existing XBee read-only proof into a staged programming
-study path. It does not authorize radio setting writes, `WR`, `AC`, firmware
-updates, API transmit frames, range tests, relay actions, ESP32 DIN/DOUT
-wiring, or load/mains work.
+study path. The study document itself does not authorize radio writes. Task
+0091 records one completed selected-port programming gate for user-named
+`COM15` and `COM6`; later named gates accepted bounded benign `link_probe` API
+transmit proof and the permanent ESP32 bridge retest. All other setting writes,
+`AC`, firmware updates, range tests, relay actions, and load/mains work remain
+closed.
 
 The current implementation includes host/tool inventory, inventory-delta
 comparison, offline profile comparison, a locked XCTU discovery checklist, and
@@ -50,6 +53,25 @@ requires `--confirm-sends-read-commands`.
   `xctu-discovery-plan`, captured host-only WSL/Windows inventories, and
   stopped before opening any serial port. Source ID:
   `SRC-LOCAL-XBEE-READONLY-LIVE-GATE-2026-05-29`.
+- The two-device read-only Stage A1 packet captured fresh no-serial WSL and
+  Windows inventories, local physical-fact placeholders, recovery/cleanup
+  rules, a manifest, and a weighted `ask_user` decision. Source ID:
+  `SRC-LOCAL-XBEE-TWO-DEVICE-READONLY-STUDY-2026-05-29`.
+- Task 0091 selected-port programming wrote only `AO=0`, `KY=<redacted>`,
+  `EE=1`, `AP=2`, and `WR` to user-named `COM15` and `COM6`, then validated
+  both ports with escaped API local-AT readback showing `AP=02`, `AO=00`, and
+  `EE=01`. Source ID:
+  `SRC-LOCAL-XBEE-SELECTED-PORT-PROGRAMMING-2026-05-29`.
+- Task 0095 corrected the ESP32/XBee mapping to `COM6` as ESP32 and `COM15`
+  as the peer XBee, and showed the ESP32 did not expose XBee API frames before
+  bridge firmware. Source ID:
+  `SRC-LOCAL-CORRECTED-ESP32-COM6-PEER-COM15-LIVE-TEST-2026-05-30`.
+- Task 0096 implements and flashes the permanent ESP32 UART bridge: UART0 host
+  `115200`, UART2 XBee `9600`, TX GPIO17, RX GPIO16, no hardware flow control,
+  and no app logging in the bridge loop. The named retest accepted redacted
+  COM6 bridge local-AT readback, COM15 peer readback, and corrected
+  bidirectional benign `link_probe` RF proof. Source ID:
+  `SRC-LOCAL-ESP32-XBEE-UART-BRIDGE-FLASH-RETEST-2026-05-30`.
 
 ## Assumptions
 
@@ -73,6 +95,8 @@ requires `--confirm-sends-read-commands`.
 - Whether future XCTU application or firmware-library update prompts appear
   after the first-run change-log prompt. No application update prompt was
   observed during the install proof.
+- Whether the programmed radios can communicate over the air with the selected
+  security settings.
 
 ## CLI surface
 
@@ -104,15 +128,30 @@ The CLI has no `apply` command.
 
 ## Future write gate
 
-A later write gate must be Tier 3 and must name the exact mutation boundary.
-Minimum prerequisites are same-session adapter identity, readback backup,
-installer/tool version record, address plan, AES key handling process, antenna
-and regulatory review, carrier voltage/DIN/DOUT proof, rollback procedure,
-reviewer quorum, and explicit operator authority.
+A later write gate beyond Task 0091 must be Tier 3 and must name the exact
+mutation boundary. Minimum prerequisites are same-session adapter identity,
+readback backup, installer/tool version record, address plan, AES key handling
+process, antenna and regulatory review, carrier voltage/DIN/DOUT proof,
+rollback procedure, reviewer quorum, and explicit operator authority.
 
-Until that gate exists, `WR`, `AC`, setting-value AT commands, API transmit
-frames, firmware recovery/update, range tests, and RF transmit exercises remain
-blocked.
+Outside the Task 0091 selected-port boundary, `WR`, `AC`, setting-value AT
+commands, API transmit frames, firmware recovery/update, range tests, and RF
+transmit exercises remain blocked.
+
+## Selected-port programming gate
+
+Task 0091 accepted only a local selected-port configuration result. The key
+material was not stored in repo records. The accepted post-write state is:
+
+| Port | Accepted local state |
+| --- | --- |
+| `COM15` | `AP=02`, `AO=00`, `EE=01`, `BD=00000003`, `NP=0100` |
+| `COM6` | `AP=02`, `AO=00`, `EE=01`, `BD=00000003`, `NP=0100` |
+
+This gate does not prove over-the-air communication, address allowlisting,
+relay command acceptance, ESP32 carrier wiring, adapter voltage, DIN/DOUT
+routing, antenna/regulatory deployment state, range, throughput, or
+load/mains readiness.
 
 ## Continued read-only gate
 
@@ -127,6 +166,63 @@ carrier evidence, antenna state, and recovery/cleanup notes before Tier B reads
 or XCTU discovery could proceed. No XBee adapter port is confirmed by this
 continuation, and the local example XCTU checklist remains locked pending those
 prerequisites.
+
+Task 0090 adds a two-device Stage A1/A2 packet. The current accepted result is
+still no-serial evidence only: the first disconnect produced one local-only
+candidate removal delta, but exact two-adapter identity is not accepted. The
+next action is to reconnect the first disconnected adapter, disconnect exactly
+the other adapter, and then run another no-serial inventory delta. Tier B reads
+and XCTU selected-port discovery remain blocked until both exact ports and
+same-session physical evidence are recorded.
+
+Task 0091 supersedes that stop condition only for the user-selected `COM15`
+and `COM6` programming gate. It does not close physical adapter marking,
+voltage, carrier, antenna/regulatory, ESP32 wiring, or RF communication gaps.
+
+## OTA link proof gate
+
+Task 0092 accepted a minimal bidirectional RF proof for the selected `COM15`
+and `COM6` radios. The proof sent one benign `link_probe` payload in each
+direction and observed both a source transmit-status frame and a destination
+`0x90` receive packet with the matching payload.
+
+This gate does not prove deployment range, throughput, relay command
+acceptance, source address allowlisting integration, ESP32 carrier wiring,
+adapter voltage, DIN/DOUT routing, antenna/regulatory deployment readiness, or
+load/mains readiness.
+
+## ESP32 UART bridge gate
+
+Task 0095 superseded the earlier ambiguous ESP32-connected test by identifying
+`COM6` as the ESP32 serial device and `COM15` as the healthy peer XBee. That
+test did not prove the ESP32 bridge because `COM6` returned ESP32 serial output
+but did not return XBee API local-AT responses or a complete `link_probe`
+receive proof.
+
+Task 0096 implements and flashed the permanent raw bridge in firmware after
+same-session physical confirmation and rollback backups were recorded. The live
+acceptance criteria were:
+
+- `COM6` is flashed only after physical rail/wiring/no-load confirmation and a
+  backup or explicit no-backup acceptance.
+- After boot-settle and host buffer flush, `COM6` at `115200` returns XBee API
+  local-AT readback for `AP=2`, `AO=0`, `BD=3`, and `NP=0x0100`, with
+  `SH`/`SL` redacted.
+- Peer `COM15` at `9600` returns the expected XBee API local-AT readback.
+- Both directions of benign `link_probe` proof show source transmit status
+  delivery OK and matching destination `0x90` receive payload.
+
+The accepted evidence directory is
+`research/bench-records/xbee-readonly/local-bridge-flash-20260530T012800Z/`.
+The first two RF proof helpers failed to observe the `COM15 -> COM6`
+destination receive frame; the corrected helper drained the serial ports after
+open and then passed both directions with source delivery OK and matching
+destination `0x90` payloads.
+
+The bridge gate does not authorize XBee setting writes, `WR`, `AC`, `KY`,
+firmware update/recovery beyond the named bridge flash, range/throughput loops,
+relay command payloads, relay/load/mains work, broad COM-port scans, or public
+raw identifier exposure.
 
 ## Validation
 

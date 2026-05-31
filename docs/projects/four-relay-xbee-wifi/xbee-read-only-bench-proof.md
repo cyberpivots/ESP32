@@ -49,6 +49,11 @@ This proof has two tiers:
 - The workspace now records missing evidence as a continuation condition when
   safe no-serial evidence collection remains. Source ID:
   `SRC-LOCAL-MULTI-AGENTIC-CONTINUOUS-ENFORCEMENT-2026-05-29`.
+- The two-device Stage A1 packet records fresh no-serial WSL and Windows
+  inventories, local physical-fact placeholders, recovery/cleanup rules, a
+  manifest, and a weighted `ask_user` decision because same-session physical
+  evidence is missing. Source ID:
+  `SRC-LOCAL-XBEE-TWO-DEVICE-READONLY-STUDY-2026-05-29`.
 
 ## Assumptions
 
@@ -98,6 +103,27 @@ specific `ask_user` item, such as adapter markings, antenna state, isolation,
 or voltage evidence. Use `blocked` only when the next action would cross into
 serial open, XCTU launch, write/apply/transmit/recovery, ESP32 wiring, or
 relay/load/mains work without the named Tier 3 prerequisites.
+
+The 2026-05-29 two-device Stage A1/A2 decision is `ask_user`: after the first
+physical disconnect, no-serial deltas recorded one removed CP210x-style
+candidate as local-only evidence. Reconnect the first disconnected XBee USB
+adapter, disconnect exactly the other XBee USB adapter, leave all
+ESP32/relay/load/mains surfaces untouched, and provide both adapters' markings
+plus antenna and isolation notes. Do not infer exact adapter identity from the
+host inventory alone.
+
+## Two-Device Stage A1 Status
+
+Fresh no-serial inventories and the first one-at-a-time disconnect delta are
+available as local ignored evidence. They prove host-visible candidate state
+only. They do not prove both XBee adapter ports, physical isolation,
+voltage/header/carrier state, antenna state, current radio settings, or XCTU
+readiness.
+
+Tier B AT reads and XCTU selected-port local discovery remain blocked until
+both adapters are mapped by one-at-a-time physical disconnect/reconnect deltas
+and the task record includes same-session physical isolation, antenna,
+voltage/carrier, recovery, and cleanup evidence.
 
 ## Tier A - Passive Discovery
 
@@ -209,6 +235,10 @@ devices only, and capture redacted evidence. Do not use all-port discovery,
 broad parameter scans, network discovery, remote devices, AT/API console
 transmit actions, write/apply controls, firmware tools, recovery, range test,
 or throughput test.
+
+The Stage A1 packet does not approve XCTU launch or discovery. It only records
+the stop condition and the first physical identity action needed before the
+next inventory delta.
 
 ## Evidence Storage
 

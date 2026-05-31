@@ -36,6 +36,10 @@ config_file = "agents/prompt-token-triage.toml"
 description = "Read-only reviewer for validation plans, test coverage, scaffold gates, and release/handoff evidence."
 config_file = "agents/qa-validation-reviewer.toml"
 
+[agents.lcd-menu-ux-reviewer]
+description = "Read-only reviewer for LCD menu UX, glyph-bank constraints, encoder intents, and browser-mirror artifacts."
+config_file = "agents/lcd-menu-ux-reviewer.toml"
+
 [agents.governance-doc-worker]
 description = "Worker for bounded governance documentation edits after coordinator triage and reviewer quorum."
 config_file = "agents/governance-doc-worker.toml"
@@ -54,4 +58,8 @@ enabled = true
 
 [[skills.config]]
 path = "skills/win31-dashboard-vision-gate"
+enabled = true
+
+[[skills.config]]
+path = "skills/lcd-menu-operations"
 enabled = true

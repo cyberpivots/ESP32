@@ -98,6 +98,18 @@ remain outside the ESP32 firmware image.
   as the Android client-node interface model, but no firmware migration is
   accepted. The paired DOS-C bridge/operator source now has simulator-only
   network metadata and a read-only Win31 Network view.
+- A host-only LCD/encoder field-console plan now defines `bbs_lcd_state.v1`
+  as a local 20x4 renderer snapshot for custody, peers, queue, files, mesh,
+  XBee closed-surface status, locks, and diagnostics. It does not change the
+  bridge ABI, firmware ABI, coordinator serial ABI, Win31 transport, or live
+  hardware authority. Source ID:
+  `SRC-LOCAL-ESPNOW-BBS-LCD-ENCODER-FIELD-CONSOLE-2026-05-30`.
+- The LCD menu graphics/browser continuation now defines `bbs_lcd_render.v1`,
+  software cursor metadata, named glyph banks, host-rendered widgets, an inert
+  browser mirror, and a recallable LCD menu skill/agent. It remains host-only
+  and does not open live browser proof, firmware HTTP/SoftAP, XBee/RF, relay,
+  serial-write, flash, or ESP-NOW runtime authority. Source ID:
+  `SRC-LOCAL-ESPNOW-BBS-LCD-MENU-GRAPHICS-BROWSER-AGENT-2026-05-31`.
 
 ## Firmware Roles
 

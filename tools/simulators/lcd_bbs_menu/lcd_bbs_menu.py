@@ -33,6 +33,7 @@ NAVIGATION_MODES = frozenset({"page_browse", "row_browse", "detail", "edit_lab"}
 INPUT_EVENTS = frozenset({"rotate_left", "rotate_right", "short_press", "long_press"})
 API_STATE_PATH = "/api/lcd/state"
 API_INTENT_PATH = "/api/lcd/intent"
+API_INTENT_FIELDS = frozenset({"intent"})
 ALLOWED_TOP_LEVEL_FIELDS = frozenset(
     {
         "schema",
@@ -232,6 +233,7 @@ class CursorTracker:
 class RenderedLcdMenu:
     schema: str
     page: str
+    glyph_bank_name: str
     lines: tuple[str, ...]
     glyph_bank: tuple[Glyph, ...]
     view: MenuViewState
@@ -242,6 +244,7 @@ class RenderedLcdMenu:
         return {
             "schema": self.schema,
             "page": self.page,
+            "glyph_bank_name": self.glyph_bank_name,
             "lines": list(self.lines),
             "glyph_bank": [
                 {"slot": glyph.slot, "name": glyph.name, "rows": list(glyph.rows)}
@@ -466,6 +469,7 @@ def render(
     return RenderedLcdMenu(
         schema=RENDER_SCHEMA,
         page=page,
+        glyph_bank_name=glyph_bank_name,
         lines=lines,
         glyph_bank=GLYPH_BANKS[glyph_bank_name].glyphs,
         view=view,
@@ -686,6 +690,13 @@ def custody_indicator(status: str, acked: int, failed: int) -> str:
     return f"C= {label} A{acked}"
 
 
+def validate_intent_payload(payload: Mapping[str, Any]) -> None:
+    assert_no_secret_fields(payload)
+    unknown = sorted(set(payload) - API_INTENT_FIELDS)
+    if unknown:
+        raise LcdMenuError("intent_field_unknown", ",".join(unknown))
+
+
 def spinner_frame(tick: int) -> str:
     return SPINNER_FRAMES[tick % len(SPINNER_FRAMES)]
 
@@ -750,6 +761,7 @@ class LcdBrowserMirror:
                 return self._state_response()
             if method == "POST" and path == API_INTENT_PATH:
                 payload = _parse_body(body)
+                validate_intent_payload(payload)
                 intent = str(payload.get("intent", ""))
                 if intent not in INPUT_EVENTS:
                     raise LcdMenuError("unsupported_input", intent)
@@ -772,8 +784,14 @@ class LcdBrowserMirror:
 
 
 def build_browser_document(rendered: RenderedLcdMenu) -> str:
+    cursor_ddram = f"0x{rendered.cursor.ddram_address:02X}"
     lines = "\n".join(
-        f'      <div class="lcd-row" data-row="{index}">{html.escape(line)}</div>'
+        (
+            f'      <div class="lcd-row{" lcd-row-cursor" if index == rendered.cursor.row else ""}" '
+            f'data-row="{index}" '
+            f'data-cursor="{str(index == rendered.cursor.row).lower()}">'
+            f"{html.escape(line)}</div>"
+        )
         for index, line in enumerate(rendered.lines)
     )
     glyphs = "\n".join(
@@ -795,20 +813,23 @@ def build_browser_document(rendered: RenderedLcdMenu) -> str:
       body {{ background: #111; color: #d7ffd7; font-family: monospace; }}
       .lcd {{ display: inline-block; border: 2px solid #6a8; padding: 12px; }}
       .lcd-row {{ white-space: pre; letter-spacing: 0; }}
+      .lcd-row-cursor {{ outline: 1px solid #d7ffd7; }}
+      .lcd-status {{ margin-top: 8px; }}
       button {{ font: inherit; }}
     </style>
   </head>
-  <body data-schema="{html.escape(rendered.schema)}" data-page="{html.escape(rendered.page)}">
-    <main class="lcd" aria-label="20 by 4 LCD mirror">
+  <body data-schema="{html.escape(rendered.schema)}" data-page="{html.escape(rendered.page)}" data-glyph-bank="{html.escape(rendered.glyph_bank_name)}">
+    <main class="lcd" aria-label="20 by 4 LCD mirror" data-cursor-row="{rendered.cursor.row}" data-cursor-column="{rendered.cursor.column}" data-cursor-ddram="{cursor_ddram}" data-cursor-focus="{html.escape(rendered.cursor.focus)}">
 {lines}
     </main>
+    <div class="lcd-status" aria-label="Cursor" data-row="{rendered.cursor.row}" data-column="{rendered.cursor.column}" data-ddram="{cursor_ddram}" data-focus="{html.escape(rendered.cursor.focus)}">CUR R{rendered.cursor.row} C{rendered.cursor.column} DDRAM {cursor_ddram} {html.escape(rendered.cursor.focus)}</div>
     <nav aria-label="Local LCD intents">
       <button type="button" data-intent="rotate_left">Left</button>
       <button type="button" data-intent="rotate_right">Right</button>
       <button type="button" data-intent="short_press">Select</button>
       <button type="button" data-intent="long_press">Back</button>
     </nav>
-    <section aria-label="Glyph bank">
+    <section aria-label="Glyph bank" data-glyph-bank="{html.escape(rendered.glyph_bank_name)}">
       <ol>
 {glyphs}
       </ol>

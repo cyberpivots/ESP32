@@ -16,6 +16,7 @@ from lcd_bbs_menu import (  # noqa: E402
     API_STATE_PATH,
     GLYPH_BANK,
     GLYPH_BANKS,
+    INPUT_EVENTS,
     LCD_COLUMNS,
     LCD_DDRAM_ROW_BASES,
     LCD_ROWS,
@@ -85,7 +86,9 @@ class LcdBbsMenuTests(unittest.TestCase):
 
     def test_glyph_bank_bounds(self) -> None:
         rendered = render(sample_state())
+        self.assertEqual(rendered.glyph_bank_name, "core_status")
         self.assertEqual(rendered.glyph_bank, GLYPH_BANK)
+        self.assertEqual(rendered.to_dict()["glyph_bank_name"], "core_status")
         self.assertEqual(len(rendered.glyph_bank), 8)
         for expected_slot, glyph in enumerate(rendered.glyph_bank):
             self.assertEqual(glyph.slot, expected_slot)
@@ -219,6 +222,7 @@ class LcdBbsMenuTests(unittest.TestCase):
         state_response = mirror.handle_request("GET", API_STATE_PATH)
         self.assertEqual(state_response.status, 200)
         self.assertEqual(state_response.body["schema"], RENDER_SCHEMA)
+        self.assertEqual(state_response.body["glyph_bank_name"], "core_status")
         self.assertEqual(len(state_response.body["lines"]), LCD_ROWS)
         self.assertEqual(state_response.body["cursor"]["focus"], "page")
 
@@ -236,6 +240,12 @@ class LcdBbsMenuTests(unittest.TestCase):
 
         html = build_browser_document(render(sample_state()))
         self.assertIn('class="lcd-row"', html)
+        self.assertIn('class="lcd-row lcd-row-cursor"', html)
+        self.assertIn('data-cursor-row="0"', html)
+        self.assertIn('data-cursor-column="0"', html)
+        self.assertIn('data-cursor-ddram="0x00"', html)
+        self.assertIn('data-cursor-focus="page"', html)
+        self.assertIn('data-glyph-bank="core_status"', html)
         self.assertIn('data-intent="rotate_right"', html)
         for forbidden in (
             "fetch(",
@@ -249,6 +259,55 @@ class LcdBbsMenuTests(unittest.TestCase):
             "uart_write",
         ):
             self.assertNotIn(forbidden, html)
+
+    def test_browser_mirror_accepts_only_v1_intents(self) -> None:
+        for intent in sorted(INPUT_EVENTS):
+            mirror = LcdBrowserMirror(sample_state())
+            response = mirror.handle_request("POST", API_INTENT_PATH, {"intent": intent})
+            self.assertEqual(response.status, 200, intent)
+            self.assertEqual(response.body["schema"], RENDER_SCHEMA)
+            self.assertIn(response.body["view"]["last_intent"], {
+                "back",
+                "home",
+                "local_ack",
+                "page_next",
+                "page_previous",
+            })
+
+    def test_browser_mirror_rejects_closed_methods_and_bad_payloads(self) -> None:
+        mirror = LcdBrowserMirror(sample_state())
+
+        method_closed = mirror.handle_request("POST", API_STATE_PATH)
+        self.assertEqual(method_closed.status, 405)
+        self.assertEqual(method_closed.body["error"], "method_closed")
+
+        intent_get = mirror.handle_request("GET", API_INTENT_PATH)
+        self.assertEqual(intent_get.status, 405)
+        self.assertEqual(intent_get.body["error"], "method_closed")
+
+        bad_json = mirror.handle_request("POST", API_INTENT_PATH, "{")
+        self.assertEqual(bad_json.status, 400)
+        self.assertEqual(bad_json.body["error"], "json_invalid")
+
+        non_object = mirror.handle_request("POST", API_INTENT_PATH, "[]")
+        self.assertEqual(non_object.status, 400)
+        self.assertEqual(non_object.body["error"], "json_object_required")
+
+        unknown = mirror.handle_request(
+            "POST",
+            API_INTENT_PATH,
+            {"intent": "rotate_right", "command": "relay_toggle"},
+        )
+        self.assertEqual(unknown.status, 400)
+        self.assertEqual(unknown.body["error"], "intent_field_unknown")
+
+        secret = mirror.handle_request(
+            "POST",
+            API_INTENT_PATH,
+            {"intent": "rotate_right", "pairing_token": "closed"},
+        )
+        self.assertEqual(secret.status, 400)
+        self.assertEqual(secret.body["error"], "secret_field_rejected")
 
     def test_browser_mirror_rejects_secret_snapshot(self) -> None:
         state = sample_state()

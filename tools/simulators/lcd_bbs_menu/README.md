@@ -5,8 +5,8 @@ four fixed 20-character LCD lines plus an eight-slot HD44780 custom-glyph bank.
 It is for ESP-NOW BBS field-console planning only.
 
 The renderer output schema is `bbs_lcd_render.v1`. It adds software cursor
-tracking, HD44780 DDRAM row/column metadata, dirty-row/cell metadata, named
-glyph banks, and host-rendered widget previews.
+tracking, HD44780 DDRAM row/column metadata, dirty-row/cell metadata, a named
+glyph bank, and host-rendered widget previews.
 
 ## Boundaries
 
@@ -18,6 +18,10 @@ glyph banks, and host-rendered widget previews.
   local notification acknowledgement, or home.
 - The browser mirror is an inert host request shim/static HTML generator. It
   opens no socket and does not add firmware, Wi-Fi, or persistent endpoints.
+- `POST /api/lcd/intent` accepts only an `intent` field and rejects unknown or
+  secret-bearing payload fields before applying local UI state.
+- The static HTML mirrors cursor row/column/DDRAM/focus and the active glyph
+  bank through inert markup/data attributes only.
 
 ## Snapshot Fields
 

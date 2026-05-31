@@ -130,10 +130,33 @@ socket and starts no server.
 - `GET /api/lcd/state` returns `bbs_lcd_render.v1`.
 - `POST /api/lcd/intent` accepts only `rotate_left`, `rotate_right`,
   `short_press`, and `long_press`.
+- The intent payload accepts only an `intent` field. Unknown or secret-bearing
+  payload fields are rejected before local UI state changes.
 - Unknown routes and methods return closed errors.
 - Secret-bearing fields are rejected before rendering.
+- The static HTML mirrors the active glyph-bank name plus cursor row, column,
+  DDRAM address, and focus through inert markup/data attributes.
 - The static HTML includes no `fetch`, WebSocket, EventSource, serial,
   Bluetooth, relay, XBee, flash, erase, or GPIO behavior.
+
+## Browser QA Hardening Continuation
+
+Task 0117 continues this host-only plan by tightening the inert browser mirror
+contract:
+
+- `bbs_lcd_render.v1` now includes `glyph_bank_name` alongside the eight-slot
+  `glyph_bank` list.
+- Static HTML exposes cursor and glyph-bank mirror metadata without opening
+  network, browser device, GPIO, serial, RF, flash, relay, or persistent
+  surfaces.
+- Focused tests now cover all four allowed UI intents, method closure,
+  malformed JSON, non-object JSON, unknown intent payload fields,
+  secret-bearing intent payload fields, cursor HTML metadata, and glyph-bank
+  HTML metadata.
+
+This continuation remains Tier 2 host-only. It does not open the future ESP32
+browser path, live browser proof, firmware HTTP server, SoftAP, WebSocket,
+serial-write, RF, relay, flash, monitor, or wiring gates.
 
 ## Future ESP32 Browser Path
 

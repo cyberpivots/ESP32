@@ -70,6 +70,16 @@ UI intents only.
   monitor captured ready/render/heartbeat proof and no watchdog/backtrace/
   panic/LCD-init-failure markers, but no encoder/button input proof. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530K-LIVE-2026-05-31`.
+- PF0530L is the current flashed image for renewed live LCD menu UX testing. It
+  keeps the PF0530K interrupt input path and adds local page/row/detail/edit
+  modes, software cursor/DDRAM tracking, dirty-cell metadata, five named
+  eight-slot glyph banks, custom bar/chart/digit/gauge demo pages, and an
+  auto-demo cycle. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-2026-05-31`.
+- PF0530L live write-flash and separate verify-flash passed on COM6; the
+  read-only monitor captured auto-demo coverage for all 13 page names and all
+  five glyph banks, but no physical encoder/button input proof. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`.
   Source IDs:
   `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30`,
   `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-LIVE-2026-05-30`.
@@ -90,10 +100,10 @@ UI intents only.
 - `bbs_lcd_state.v1` is a local renderer snapshot schema, not a bridge ABI,
   radio ABI, coordinator serial ABI, firmware ABI, or Win31 transport change.
 - Missing values render as `?`; closed surfaces render as `CLOSED`.
-- The next renewed firmware proof image name is `PF0530K`, combining PF0530G
-  LCD init diagnostics, PF0530F/PF0530H BBS menu content, split input polling,
-  a minimum one-tick input task delay, and interrupt-queued KY-040 input
-  capture.
+- The next renewed firmware proof image name is `PF0530L`, combining PF0530G
+  LCD init diagnostics, PF0530F/PF0530H BBS menu content, PF0530K
+  interrupt-queued KY-040 input capture, and the host-planned cursor/glyph/
+  widget menu UX surface.
 
 ## Unknowns
 
@@ -255,6 +265,40 @@ proof gap. Required proof strings are:
 PF0530K must keep the closed-surface boundaries from PF0530J, keep
 `FR_MENU_POLL_MS 10`, keep `fr_delay_ticks_at_least_one()`, and report no
 watchdog/backtrace/panic/crash markers during live COM6 proof.
+
+## PF0530L LCD Menu UX Gate
+
+PF0530L source work supersedes PF0530K for the renewed user-test image. Required
+proof strings are:
+
+- `PF0530L BBS_LCD_READY`
+- `BBS_INPUT_READY`
+- `BBS_GLYPH_BANK`
+- `BBS_CURSOR`
+- `BBS_LCD_RENDER`
+- `BBS_MENU_AUTO`
+- `BBS_MENU_HB`
+- `ENC_RAW`
+- `ENC_EV`
+- `BBS_MENU_STEP`
+- `BBS_MENU_SELECT`
+
+PF0530L must keep the closed-surface boundaries from PF0530K, keep
+`FR_MENU_POLL_MS 10`, keep `fr_delay_ticks_at_least_one()`, keep
+`irq=anyedge queue=64`, enforce five named eight-slot glyph banks, and report
+no watchdog/backtrace/panic/crash markers during live COM6 proof. A live flash
+may make PF0530L available for user testing; interactive acceptance still
+requires physical actuation proof.
+
+PF0530L COM6 write-flash and separate verify-flash passed on May 31, 2026. The
+read-only monitor captured `LCD_INIT_OK`, `PF0530L BBS_LCD_READY`,
+`BBS_INPUT_READY`, all 13 page names, all five glyph banks, 77
+`BBS_LCD_RENDER`, 21 `BBS_MENU_AUTO`, and 74 `BBS_MENU_HB` lines with no
+watchdog/backtrace/panic/LCD-init-failure or unsafe-open markers. It captured
+zero `ENC_RAW`, zero `ENC_EV`, zero `BBS_MENU_STEP`, and zero
+`BBS_MENU_SELECT`, so PF0530L is flashed for user visual testing but not
+accepted as proven physically interactive. Source ID:
+`SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`.
 
 ## Validation Plan
 

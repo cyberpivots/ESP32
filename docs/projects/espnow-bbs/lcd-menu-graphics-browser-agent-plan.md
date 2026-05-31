@@ -27,6 +27,15 @@ configuration endpoints, release gating, commit, or push.
   `ENC_RAW`, `ENC_EV`, `BBS_MENU_STEP`, and `BBS_MENU_SELECT`; it is not
   accepted as proven interactive. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530K-LIVE-2026-05-31`.
+- PF0530L is the current flashed image that ports the host-planned LCD menu UX
+  ideas into the four-relay firmware lane while keeping relay, XBee/RF,
+  ESP-NOW runtime, SoftAP/browser runtime, persistent configuration, wiring,
+  load, mains, and erase lanes closed. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-2026-05-31`.
+- PF0530L was written and separately verify-flashed to COM6. The read-only
+  monitor captured all 13 auto-demo page names and all five glyph banks, but no
+  physical encoder/button events. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`.
 - HD44780 CGRAM planning is limited to eight 5x8 custom-character types.
   Source ID: `SRC-HITACHI-HD44780U-DDRAM-CGRAM-2026-05-31`.
 - The local 20x4 cursor tracker uses row bases `0x00`, `0x40`, `0x14`, and
@@ -49,8 +58,8 @@ configuration endpoints, release gating, commit, or push.
 ## Assumptions
 
 - Browser mirror work is an inert host-only simulator surface.
-- Custom glyph bank changes are host-rendered planning aids until a later live
-  LCD gate proves visual behavior on hardware.
+- Custom glyph bank changes now have firmware monitor coverage, but physical
+  glyph appearance on the LCD remains unproven until visual user testing.
 - Rotary input remains local UI intent only and cannot directly trigger relay,
   XBee, radio, serial-write, flash/erase, persistent configuration, or bridge
   commands.
@@ -60,7 +69,9 @@ configuration endpoints, release gating, commit, or push.
 ## Unknowns
 
 - Physical LCD visual behavior with custom glyph bank swaps.
-- Encoder direction/select proof after PF0530K.
+- Encoder direction/select proof after PF0530L.
+- Physical LCD readability of PF0530L custom glyph banks, cursor placement,
+  widget pages, and auto-demo page cycling.
 - Target firmware memory budget for any future browser mirror.
 - Whether a future live device should expose SoftAP before a separate network
   and security gate.

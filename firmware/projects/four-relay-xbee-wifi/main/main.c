@@ -40,12 +40,14 @@
 #define FR_LCD_TASK_PRIORITY tskIDLE_PRIORITY
 #define FR_LCD_COLUMNS 20
 #define FR_LCD_ROWS 4
-#define FR_MENU_PAGE_COUNT 9
+#define FR_MENU_PAGE_COUNT 13
 #define FR_MENU_POLL_MS 10
 #define FR_MENU_RENDER_POLL_MS 20
 #define FR_MENU_IDLE_REFRESH_MS 60000
+#define FR_MENU_AUTO_DEMO_MS 7000
+#define FR_MENU_ANIMATION_MS 2000
 #define FR_MENU_ACK_MS 1500
-#define FR_DIAG_FIRMWARE_ID "PF0530K"
+#define FR_DIAG_FIRMWARE_ID "PF0530L"
 #define FR_ENCODER_AB_STABLE_SAMPLES 3
 #define FR_ENCODER_SW_GUARD_MS 150
 #define FR_MENU_HEARTBEAT_MS 2000
@@ -53,6 +55,11 @@
 #define FR_LCD_DIAG_HEARTBEAT_MS 2000
 #define FR_MENU_INPUT_TASK_STACK_BYTES 4096
 #define FR_MENU_INPUT_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
+#define FR_MENU_EDIT_VALUE_MAX 100
+#define FR_GLYPH_BANK_COUNT 5
+#define FR_GLYPH_SLOTS 8
+#define FR_GLYPH_ROWS 8
+#define FR_GLYPH_BANK_SWAP_MIN_MS 250
 
 #define FR_LCD_PCF_RS 0x01
 #define FR_LCD_PCF_RW 0x02
@@ -77,7 +84,10 @@ typedef struct {
 
 typedef struct {
     bool valid;
-    char lines[FR_LCD_ROWS][FR_LCD_COLUMNS + 1];
+    uint8_t cells[FR_LCD_ROWS][FR_LCD_COLUMNS];
+    bool glyph_valid;
+    uint8_t glyph_bank_index;
+    uint32_t last_glyph_swap_ms;
 } fr_lcd_render_cache_t;
 
 typedef struct {
@@ -120,8 +130,21 @@ typedef enum {
     FR_MENU_ACK_SELECT,
 } fr_menu_ack_t;
 
+typedef enum {
+    FR_MENU_MODE_PAGE_BROWSE = 0,
+    FR_MENU_MODE_ROW_BROWSE,
+    FR_MENU_MODE_DETAIL,
+    FR_MENU_MODE_EDIT_LAB,
+} fr_menu_mode_t;
+
 typedef struct {
     uint8_t page;
+    fr_menu_mode_t mode;
+    uint8_t selected_row;
+    uint8_t edit_value;
+    uint8_t cursor_row;
+    uint8_t cursor_col;
+    uint8_t spinner_frame;
     int32_t position;
     int8_t transition_accumulator;
     uint8_t previous_ab;
@@ -144,9 +167,12 @@ typedef struct {
     uint32_t suppressed_transition_count;
     bool switch_stable_pressed;
     bool long_press_handled;
+    bool auto_demo_enabled;
     uint32_t switch_changed_ms;
     uint32_t switch_pressed_ms;
     uint32_t switch_guard_until_ms;
+    uint32_t last_auto_demo_ms;
+    uint32_t last_animation_ms;
     uint32_t button_press_count;
     fr_menu_ack_t ack;
     uint32_t ack_until_ms;
@@ -154,6 +180,21 @@ typedef struct {
     bool display_dirty;
     char last_event[FR_MENU_LAST_EVENT_BYTES];
 } fr_menu_state_t;
+
+typedef struct {
+    uint8_t cells[FR_LCD_ROWS][FR_LCD_COLUMNS];
+    char log_lines[FR_LCD_ROWS][FR_LCD_COLUMNS + 1];
+    uint8_t glyph_bank_index;
+    uint8_t cursor_row;
+    uint8_t cursor_col;
+    uint8_t cursor_ddram;
+    const char *focus;
+} fr_lcd_frame_t;
+
+typedef struct {
+    const char *name;
+    uint8_t rows[FR_GLYPH_SLOTS][FR_GLYPH_ROWS];
+} fr_lcd_glyph_bank_t;
 
 typedef struct {
     SemaphoreHandle_t lock;
@@ -359,6 +400,22 @@ static uint8_t fr_menu_raw_ab(const fr_menu_state_t *menu)
     return (uint8_t)((menu->raw_a << 1) | menu->raw_b);
 }
 
+static const char *fr_menu_mode_name(fr_menu_mode_t mode)
+{
+    switch (mode) {
+    case FR_MENU_MODE_PAGE_BROWSE:
+        return "page_browse";
+    case FR_MENU_MODE_ROW_BROWSE:
+        return "row_browse";
+    case FR_MENU_MODE_DETAIL:
+        return "detail";
+    case FR_MENU_MODE_EDIT_LAB:
+        return "edit_lab";
+    default:
+        return "page_browse";
+    }
+}
+
 static void fr_menu_set_last_event(fr_menu_state_t *menu, const char *event)
 {
     snprintf(menu->last_event, sizeof(menu->last_event), "%s", event);
@@ -410,7 +467,8 @@ static void fr_menu_print_heartbeat(const fr_menu_state_t *menu, uint32_t now_ms
 {
     printf(
         "BBS_MENU_HB page=%s index=%u pos=%ld levels=C%uD%uS%u steps=%lu/%lu "
-        "buttons=%lu invalid=%lu suppressed=%lu irq_drop=%lu t=%lu\r\n",
+        "buttons=%lu invalid=%lu suppressed=%lu irq_drop=%lu t=%lu "
+        "mode=%s row=%u value=%u auto_demo=%u\r\n",
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
         (long)menu->position,
@@ -423,35 +481,74 @@ static void fr_menu_print_heartbeat(const fr_menu_state_t *menu, uint32_t now_ms
         (unsigned long)menu->invalid_transition_count,
         (unsigned long)menu->suppressed_transition_count,
         (unsigned long)fr_encoder_irq_drop_count,
-        (unsigned long)now_ms
+        (unsigned long)now_ms,
+        fr_menu_mode_name(menu->mode),
+        (unsigned int)menu->selected_row,
+        (unsigned int)menu->edit_value,
+        menu->auto_demo_enabled ? 1U : 0U
     );
 }
 
 static void fr_menu_step(fr_menu_state_t *menu, int8_t direction, uint32_t now_ms)
 {
+    menu->auto_demo_enabled = false;
     if (direction > 0) {
-        menu->page = (uint8_t)((menu->page + 1U) % FR_MENU_PAGE_COUNT);
         menu->position += 1;
         menu->cw_step_count += 1U;
-        fr_menu_set_last_event(menu, "STEP CW");
     } else {
-        menu->page = (uint8_t)(
-            (menu->page + FR_MENU_PAGE_COUNT - 1U) % FR_MENU_PAGE_COUNT
-        );
         menu->position -= 1;
         menu->ccw_step_count += 1U;
-        fr_menu_set_last_event(menu, "STEP CCW");
+    }
+
+    switch (menu->mode) {
+    case FR_MENU_MODE_ROW_BROWSE:
+    case FR_MENU_MODE_DETAIL:
+        menu->selected_row = (uint8_t)(
+            (menu->selected_row + FR_LCD_ROWS + (direction > 0 ? 1 : -1)) %
+            FR_LCD_ROWS
+        );
+        fr_menu_set_last_event(menu, direction > 0 ? "ROW NEXT" : "ROW PREV");
+        break;
+    case FR_MENU_MODE_EDIT_LAB:
+        if (direction > 0) {
+            menu->edit_value = (uint8_t)(
+                menu->edit_value >= FR_MENU_EDIT_VALUE_MAX ? 0U : menu->edit_value + 5U
+            );
+        } else {
+            menu->edit_value = (uint8_t)(
+                menu->edit_value < 5U ? FR_MENU_EDIT_VALUE_MAX : menu->edit_value - 5U
+            );
+        }
+        fr_menu_set_last_event(menu, "EDIT VALUE");
+        break;
+    case FR_MENU_MODE_PAGE_BROWSE:
+    default:
+        if (direction > 0) {
+            menu->page = (uint8_t)((menu->page + 1U) % FR_MENU_PAGE_COUNT);
+            fr_menu_set_last_event(menu, "STEP CW");
+        } else {
+            menu->page = (uint8_t)(
+                (menu->page + FR_MENU_PAGE_COUNT - 1U) % FR_MENU_PAGE_COUNT
+            );
+            fr_menu_set_last_event(menu, "STEP CCW");
+        }
+        menu->selected_row = 0;
+        break;
     }
     fr_menu_mark_display_dirty(menu);
     printf(
-        "BBS_MENU_STEP dir=%c page=%s index=%u pos=%ld cw=%lu ccw=%lu t=%lu\r\n",
+        "BBS_MENU_STEP dir=%c page=%s index=%u pos=%ld cw=%lu ccw=%lu t=%lu "
+        "mode=%s row=%u value=%u\r\n",
         direction > 0 ? '+' : '-',
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
         (long)menu->position,
         (unsigned long)menu->cw_step_count,
         (unsigned long)menu->ccw_step_count,
-        (unsigned long)now_ms
+        (unsigned long)now_ms,
+        fr_menu_mode_name(menu->mode),
+        (unsigned int)menu->selected_row,
+        (unsigned int)menu->edit_value
     );
 }
 
@@ -536,6 +633,7 @@ static bool fr_menu_sample_ab_channel(
 static void fr_menu_handle_switch_stable(fr_menu_state_t *menu, uint32_t now_ms)
 {
     bool pressed = menu->stable_sw == 0U;
+    menu->auto_demo_enabled = false;
     menu->switch_guard_until_ms = now_ms + FR_ENCODER_SW_GUARD_MS;
     menu->switch_stable_pressed = pressed;
     menu->transition_accumulator = 0;
@@ -550,17 +648,43 @@ static void fr_menu_handle_switch_stable(fr_menu_state_t *menu, uint32_t now_ms)
     }
 
     if (!menu->long_press_handled) {
+        switch (menu->mode) {
+        case FR_MENU_MODE_PAGE_BROWSE:
+            menu->mode = FR_MENU_MODE_ROW_BROWSE;
+            menu->selected_row = 0;
+            fr_menu_set_last_event(menu, "ROW BROWSE");
+            break;
+        case FR_MENU_MODE_ROW_BROWSE:
+            menu->mode = FR_MENU_MODE_DETAIL;
+            fr_menu_set_last_event(menu, "DETAIL");
+            break;
+        case FR_MENU_MODE_DETAIL:
+            menu->mode = FR_MENU_MODE_EDIT_LAB;
+            fr_menu_set_last_event(menu, "EDIT LAB");
+            break;
+        case FR_MENU_MODE_EDIT_LAB:
+            menu->mode = FR_MENU_MODE_DETAIL;
+            fr_menu_set_last_event(menu, "EDIT SAVE");
+            break;
+        default:
+            menu->mode = FR_MENU_MODE_PAGE_BROWSE;
+            fr_menu_set_last_event(menu, "PAGE BROWSE");
+            break;
+        }
         menu->button_press_count += 1U;
         menu->ack = FR_MENU_ACK_SELECT;
         menu->ack_until_ms = now_ms + FR_MENU_ACK_MS;
-        fr_menu_set_last_event(menu, "SELECT ACK");
         fr_menu_mark_display_dirty(menu);
         printf(
-            "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=short t=%lu\r\n",
+            "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=short t=%lu "
+            "mode=%s row=%u value=%u\r\n",
             (unsigned long)menu->button_press_count,
             fr_bbs_page_name(menu->page),
             (unsigned int)menu->page,
-            (unsigned long)now_ms
+            (unsigned long)now_ms,
+            fr_menu_mode_name(menu->mode),
+            (unsigned int)menu->selected_row,
+            (unsigned int)menu->edit_value
         );
     }
 }
@@ -573,19 +697,36 @@ static void fr_menu_handle_long_press(fr_menu_state_t *menu, uint32_t now_ms)
     if ((now_ms - menu->switch_pressed_ms) < FR_ENCODER_LONG_PRESS_MS) {
         return;
     }
-    menu->page = 0;
+    menu->auto_demo_enabled = false;
+    if (menu->mode == FR_MENU_MODE_EDIT_LAB) {
+        menu->mode = FR_MENU_MODE_DETAIL;
+        fr_menu_set_last_event(menu, "BACK DETAIL");
+    } else if (menu->mode == FR_MENU_MODE_DETAIL) {
+        menu->mode = FR_MENU_MODE_ROW_BROWSE;
+        fr_menu_set_last_event(menu, "BACK ROW");
+    } else if (menu->mode == FR_MENU_MODE_ROW_BROWSE) {
+        menu->mode = FR_MENU_MODE_PAGE_BROWSE;
+        fr_menu_set_last_event(menu, "BACK PAGE");
+    } else {
+        menu->page = 0;
+        menu->selected_row = 0;
+        fr_menu_set_last_event(menu, "LONG HOME");
+    }
     menu->button_press_count += 1U;
     menu->ack = FR_MENU_ACK_SELECT;
     menu->ack_until_ms = now_ms + FR_MENU_ACK_MS;
     menu->long_press_handled = true;
-    fr_menu_set_last_event(menu, "LONG HOME");
     fr_menu_mark_display_dirty(menu);
     printf(
-        "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=long t=%lu\r\n",
+        "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=long t=%lu "
+        "mode=%s row=%u value=%u\r\n",
         (unsigned long)menu->button_press_count,
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
-        (unsigned long)now_ms
+        (unsigned long)now_ms,
+        fr_menu_mode_name(menu->mode),
+        (unsigned int)menu->selected_row,
+        (unsigned int)menu->edit_value
     );
 }
 
@@ -703,6 +844,28 @@ static bool fr_menu_poll(fr_menu_state_t *menu)
     menu->display_dirty = false;
     fr_menu_sample_inputs(menu, now_ms);
     fr_menu_handle_long_press(menu, now_ms);
+    if (menu->auto_demo_enabled &&
+        (now_ms - menu->last_auto_demo_ms) >= FR_MENU_AUTO_DEMO_MS) {
+        menu->page = (uint8_t)((menu->page + 1U) % FR_MENU_PAGE_COUNT);
+        menu->mode = FR_MENU_MODE_PAGE_BROWSE;
+        menu->selected_row = 0;
+        menu->position += 1;
+        menu->last_auto_demo_ms = now_ms;
+        fr_menu_set_last_event(menu, "AUTO DEMO");
+        fr_menu_mark_display_dirty(menu);
+        printf(
+            "BBS_MENU_AUTO page=%s index=%u interval_ms=%u t=%lu\r\n",
+            fr_bbs_page_name(menu->page),
+            (unsigned int)menu->page,
+            (unsigned int)FR_MENU_AUTO_DEMO_MS,
+            (unsigned long)now_ms
+        );
+    }
+    if ((now_ms - menu->last_animation_ms) >= FR_MENU_ANIMATION_MS) {
+        menu->spinner_frame = (uint8_t)((menu->spinner_frame + 1U) % 4U);
+        menu->last_animation_ms = now_ms;
+        fr_menu_mark_display_dirty(menu);
+    }
     if (menu->ack != FR_MENU_ACK_NONE && now_ms >= menu->ack_until_ms) {
         menu->ack = FR_MENU_ACK_NONE;
         fr_menu_set_last_event(menu, "ACK CLEAR");
@@ -1126,13 +1289,33 @@ static bool fr_lcd_init_hd44780_diag(fr_lcd_context_t *lcd, const char **failed_
            );
 }
 
-static bool fr_lcd_set_cursor(fr_lcd_context_t *lcd, uint8_t row)
+static const uint8_t fr_lcd_row_offsets[FR_LCD_ROWS] = {0x00, 0x40, 0x14, 0x54};
+
+static uint8_t fr_lcd_ddram_address(uint8_t row, uint8_t column)
 {
-    static const uint8_t row_offsets[FR_LCD_ROWS] = {0x00, 0x40, 0x14, 0x54};
+    if (row >= FR_LCD_ROWS || column >= FR_LCD_COLUMNS) {
+        return 0;
+    }
+    return (uint8_t)(fr_lcd_row_offsets[row] + column);
+}
+
+static bool fr_lcd_set_cursor_at(fr_lcd_context_t *lcd, uint8_t row, uint8_t column)
+{
     if (row >= FR_LCD_ROWS) {
         return false;
     }
-    return fr_lcd_command(lcd, (uint8_t)(0x80U | row_offsets[row]));
+    if (column >= FR_LCD_COLUMNS) {
+        column = FR_LCD_COLUMNS - 1U;
+    }
+    return fr_lcd_command(
+        lcd,
+        (uint8_t)(0x80U | fr_lcd_ddram_address(row, column))
+    );
+}
+
+static bool fr_lcd_set_cursor(fr_lcd_context_t *lcd, uint8_t row)
+{
+    return fr_lcd_set_cursor_at(lcd, row, 0);
 }
 
 static bool fr_lcd_write_line(fr_lcd_context_t *lcd, uint8_t row, const char *text)
@@ -1187,6 +1370,74 @@ static char fr_menu_level_char(uint8_t level)
     return level == 0U ? '0' : '1';
 }
 
+static const fr_lcd_glyph_bank_t fr_lcd_glyph_banks[FR_GLYPH_BANK_COUNT] = {
+    {
+        .name = "core_status",
+        .rows = {
+            {0x0e, 0x11, 0x11, 0x1f, 0x1b, 0x1b, 0x1f, 0x00},
+            {0x00, 0x1f, 0x11, 0x0a, 0x04, 0x0a, 0x11, 0x1f},
+            {0x1f, 0x11, 0x1f, 0x00, 0x1f, 0x11, 0x1f, 0x00},
+            {0x04, 0x0e, 0x04, 0x0e, 0x15, 0x04, 0x0a, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01},
+            {0x00, 0x00, 0x00, 0x00, 0x04, 0x05, 0x05, 0x05},
+            {0x00, 0x00, 0x10, 0x10, 0x14, 0x15, 0x15, 0x15},
+            {0x04, 0x0e, 0x15, 0x04, 0x15, 0x0e, 0x04, 0x00},
+        },
+    },
+    {
+        .name = "horizontal_bar",
+        .rows = {
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10},
+            {0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18},
+            {0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c},
+            {0x1e, 0x1e, 0x1e, 0x1e, 0x1e, 0x1e, 0x1e, 0x1e},
+            {0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f},
+            {0x1f, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1f},
+            {0x1f, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x1f},
+        },
+    },
+    {
+        .name = "vertical_chart",
+        .rows = {
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1f},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1f, 0x1f},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x1f, 0x1f, 0x1f},
+            {0x00, 0x00, 0x00, 0x00, 0x1f, 0x1f, 0x1f, 0x1f},
+            {0x00, 0x00, 0x00, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f},
+            {0x00, 0x00, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f},
+            {0x00, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f},
+        },
+    },
+    {
+        .name = "big_digits",
+        .rows = {
+            {0x0e, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0e, 0x00},
+            {0x04, 0x0c, 0x04, 0x04, 0x04, 0x04, 0x0e, 0x00},
+            {0x0e, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1f, 0x00},
+            {0x1f, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0e, 0x00},
+            {0x02, 0x06, 0x0a, 0x12, 0x1f, 0x02, 0x02, 0x00},
+            {0x1f, 0x10, 0x1e, 0x01, 0x01, 0x11, 0x0e, 0x00},
+            {0x0e, 0x10, 0x1e, 0x11, 0x11, 0x11, 0x0e, 0x00},
+            {0x1f, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08, 0x00},
+        },
+    },
+    {
+        .name = "gauge_demo",
+        .rows = {
+            {0x00, 0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x00},
+            {0x00, 0x04, 0x0e, 0x15, 0x04, 0x04, 0x04, 0x00},
+            {0x00, 0x00, 0x10, 0x18, 0x1c, 0x1e, 0x1f, 0x00},
+            {0x00, 0x0e, 0x11, 0x04, 0x04, 0x04, 0x04, 0x00},
+            {0x00, 0x0e, 0x11, 0x01, 0x02, 0x04, 0x04, 0x00},
+            {0x00, 0x0e, 0x11, 0x10, 0x08, 0x04, 0x04, 0x00},
+            {0x00, 0x04, 0x0e, 0x15, 0x1f, 0x0e, 0x04, 0x00},
+            {0x00, 0x04, 0x04, 0x0e, 0x0e, 0x1f, 0x1f, 0x00},
+        },
+    },
+};
+
 static const char *fr_bbs_page_name(uint8_t page)
 {
     static const char *const page_names[FR_MENU_PAGE_COUNT] = {
@@ -1199,6 +1450,10 @@ static const char *fr_bbs_page_name(uint8_t page)
         "XBEE",
         "DIAG",
         "LOCKS",
+        "BARS",
+        "CHART",
+        "DIGITS",
+        "GAUGE",
     };
 
     if (page >= FR_MENU_PAGE_COUNT) {
@@ -1207,9 +1462,46 @@ static const char *fr_bbs_page_name(uint8_t page)
     return page_names[page];
 }
 
-static void fr_lcd_fit_line(char *line, size_t line_size, const char *text)
+static uint8_t fr_bbs_page_glyph_bank_index(uint8_t page)
 {
-    if (line_size <= FR_LCD_COLUMNS) {
+    switch (page) {
+    case 9:
+        return 1;
+    case 10:
+        return 2;
+    case 11:
+        return 3;
+    case 12:
+        return 4;
+    default:
+        return 0;
+    }
+}
+
+static const char *fr_lcd_glyph_bank_name(uint8_t index)
+{
+    if (index >= FR_GLYPH_BANK_COUNT) {
+        index = 0;
+    }
+    return fr_lcd_glyph_banks[index].name;
+}
+
+static void fr_lcd_frame_clear(fr_lcd_frame_t *frame)
+{
+    memset(frame, 0, sizeof(*frame));
+    for (size_t row = 0; row < FR_LCD_ROWS; ++row) {
+        for (size_t column = 0; column < FR_LCD_COLUMNS; ++column) {
+            frame->cells[row][column] = ' ';
+            frame->log_lines[row][column] = ' ';
+        }
+        frame->log_lines[row][FR_LCD_COLUMNS] = '\0';
+    }
+    frame->focus = "page_browse";
+}
+
+static void fr_lcd_frame_set_line(fr_lcd_frame_t *frame, uint8_t row, const char *text)
+{
+    if (row >= FR_LCD_ROWS) {
         return;
     }
     size_t source_offset = 0;
@@ -1222,9 +1514,78 @@ static void fr_lcd_fit_line(char *line, size_t line_size, const char *text)
                 character = '?';
             }
         }
-        line[column] = character;
+        frame->cells[row][column] = (uint8_t)character;
+        frame->log_lines[row][column] = character;
     }
-    line[FR_LCD_COLUMNS] = '\0';
+    frame->log_lines[row][FR_LCD_COLUMNS] = '\0';
+}
+
+static void fr_lcd_frame_set_glyph(
+    fr_lcd_frame_t *frame,
+    uint8_t row,
+    uint8_t column,
+    uint8_t slot,
+    char fallback
+)
+{
+    if (row >= FR_LCD_ROWS || column >= FR_LCD_COLUMNS || slot >= FR_GLYPH_SLOTS) {
+        return;
+    }
+    frame->cells[row][column] = slot;
+    frame->log_lines[row][column] =
+        (fallback >= 32 && fallback <= 126) ? fallback : '?';
+}
+
+static void fr_lcd_frame_put_bar(
+    fr_lcd_frame_t *frame,
+    uint8_t row,
+    uint8_t column,
+    uint8_t width,
+    uint8_t percent
+)
+{
+    static const char fallback[6] = {' ', '.', ':', '-', '=', '#'};
+    if (percent > 100U) {
+        percent = 100U;
+    }
+    uint16_t total_segments = (uint16_t)((uint32_t)percent * width * 5U / 100U);
+    for (uint8_t index = 0; index < width; ++index) {
+        int16_t remaining = (int16_t)total_segments - (int16_t)(index * 5U);
+        uint8_t fill = 0;
+        if (remaining >= 5) {
+            fill = 5;
+        } else if (remaining > 0) {
+            fill = (uint8_t)remaining;
+        }
+        fr_lcd_frame_set_glyph(
+            frame,
+            row,
+            (uint8_t)(column + index),
+            fill,
+            fallback[fill]
+        );
+    }
+}
+
+static void fr_lcd_frame_put_chart(
+    fr_lcd_frame_t *frame,
+    uint8_t row,
+    uint8_t column,
+    const uint8_t *values,
+    uint8_t count
+)
+{
+    static const char fallback[8] = {' ', '.', ':', '-', '=', '+', '#', '@'};
+    for (uint8_t index = 0; index < count; ++index) {
+        uint8_t slot = values[index] > 7U ? 7U : values[index];
+        fr_lcd_frame_set_glyph(
+            frame,
+            row,
+            (uint8_t)(column + index),
+            slot,
+            fallback[slot]
+        );
+    }
 }
 
 static const char *fr_bbs_last_event(const fr_menu_state_t *menu, uint32_t now_ms)
@@ -1256,16 +1617,25 @@ static void fr_bbs_format_uptime(char *buffer, size_t buffer_size, uint32_t now_
     );
 }
 
-static void fr_bbs_render_lines(
+static void fr_bbs_render_frame(
     const fr_menu_state_t *menu,
     uint8_t lcd_address,
     uint32_t now_ms,
-    char lines[FR_LCD_ROWS][FR_LCD_COLUMNS + 1]
+    fr_lcd_frame_t *frame
 )
 {
     char raw[FR_LCD_ROWS][64];
     char uptime[16];
     const char *last_event = fr_bbs_last_event(menu, now_ms);
+    uint8_t glyph_bank_index = fr_bbs_page_glyph_bank_index(menu->page);
+    uint8_t bar_value = menu->edit_value;
+    uint8_t chart_values[8] = {1, 3, 2, 6, 4, 7, 5, 3};
+
+    fr_lcd_frame_clear(frame);
+    frame->glyph_bank_index = glyph_bank_index;
+    frame->cursor_row = menu->selected_row;
+    frame->cursor_col = 0;
+    frame->focus = fr_menu_mode_name(menu->mode);
 
     for (size_t row = 0; row < FR_LCD_ROWS; ++row) {
         raw[row][0] = '\0';
@@ -1273,13 +1643,13 @@ static void fr_bbs_render_lines(
 
     switch (menu->page) {
     case 0:
-        snprintf(raw[0], sizeof(raw[0]), "BBS FIELD LINK:OK");
+        snprintf(raw[0], sizeof(raw[0]), " BBS FIELD UX READY");
         snprintf(raw[1], sizeof(raw[1]), "Peers:3 Queue:2");
         snprintf(raw[2], sizeof(raw[2]), "Cust:OPCON");
         snprintf(raw[3], sizeof(raw[3]), "Last:%s", last_event);
         break;
     case 1:
-        snprintf(raw[0], sizeof(raw[0]), "MSG N:1 IN:12");
+        snprintf(raw[0], sizeof(raw[0]), " MSG N:1 IN:12");
         snprintf(raw[1], sizeof(raw[1]), "OUT:4 ACK:12");
         snprintf(raw[2], sizeof(raw[2]), "Custody:ACKED");
         snprintf(raw[3], sizeof(raw[3]), "Last:%s", last_event);
@@ -1326,21 +1696,182 @@ static void fr_bbs_render_lines(
         );
         snprintf(raw[3], sizeof(raw[3]), "Event:%s", last_event);
         break;
-    default:
+    case 8:
         snprintf(raw[0], sizeof(raw[0]), "LOCKS");
         snprintf(raw[1], sizeof(raw[1]), "Relay:LOCK");
         snprintf(raw[2], sizeof(raw[2]), "XBee:LOCK");
         snprintf(raw[3], sizeof(raw[3]), "Flash:LOCK Ser:LOCK");
         break;
+    case 9:
+        snprintf(raw[0], sizeof(raw[0]), "BARS LINK QUEUE");
+        snprintf(raw[1], sizeof(raw[1]), "LNK");
+        snprintf(raw[2], sizeof(raw[2]), "QUE");
+        snprintf(raw[3], sizeof(raw[3]), "EDIT %3u%%", (unsigned int)bar_value);
+        break;
+    case 10:
+        chart_values[0] = (uint8_t)(1U + (menu->spinner_frame % 3U));
+        chart_values[4] = (uint8_t)(4U + (menu->spinner_frame % 4U));
+        snprintf(raw[0], sizeof(raw[0]), "VERT CHART HISTORY");
+        snprintf(raw[1], sizeof(raw[1]), "RSSI");
+        snprintf(raw[2], sizeof(raw[2]), "ACK ");
+        snprintf(raw[3], sizeof(raw[3]), "SPARK local only");
+        break;
+    case 11:
+        snprintf(raw[0], sizeof(raw[0]), "BIG DIGITS 12:34");
+        snprintf(raw[1], sizeof(raw[1]), "      NET TIME");
+        snprintf(raw[2], sizeof(raw[2]), "      Q%02u ACK%02u",
+            (unsigned int)(2U + menu->spinner_frame),
+            (unsigned int)12U
+        );
+        snprintf(raw[3], sizeof(raw[3]), "No clock writes");
+        break;
+    default:
+        snprintf(raw[0], sizeof(raw[0]), "GAUGE DEMO");
+        snprintf(raw[1], sizeof(raw[1]), "Signal local %3u%%", (unsigned int)bar_value);
+        snprintf(raw[2], sizeof(raw[2]), "    SAFE LOAD OFF");
+        snprintf(raw[3], sizeof(raw[3]), "Relay/RF CLOSED");
+        break;
     }
 
     for (size_t row = 0; row < FR_LCD_ROWS; ++row) {
-        fr_lcd_fit_line(lines[row], FR_LCD_COLUMNS + 1, raw[row]);
+        fr_lcd_frame_set_line(frame, (uint8_t)row, raw[row]);
+    }
+
+    switch (menu->page) {
+    case 0:
+        fr_lcd_frame_set_glyph(frame, 0, 0, 6, '^');
+        fr_lcd_frame_set_glyph(frame, 1, 8, 3, 'P');
+        fr_lcd_frame_set_glyph(frame, 1, 16, 2, 'Q');
+        break;
+    case 1:
+        fr_lcd_frame_set_glyph(frame, 0, 0, 1, 'M');
+        fr_lcd_frame_set_glyph(frame, 2, 0, 2, 'C');
+        break;
+    case 2:
+        fr_lcd_frame_set_glyph(frame, 0, 0, 3, 'P');
+        fr_lcd_frame_set_glyph(frame, 1, 8, 5, '|');
+        fr_lcd_frame_set_glyph(frame, 1, 9, 6, '|');
+        break;
+    case 6:
+    case 8:
+        fr_lcd_frame_set_glyph(frame, 0, 0, 0, 'L');
+        break;
+    case 9:
+        fr_lcd_frame_put_bar(frame, 1, 4, 12, 72);
+        fr_lcd_frame_put_bar(frame, 2, 4, 12, 45);
+        fr_lcd_frame_put_bar(frame, 3, 8, 10, bar_value);
+        break;
+    case 10:
+        fr_lcd_frame_put_chart(frame, 1, 6, chart_values, 8);
+        fr_lcd_frame_put_chart(frame, 2, 6, &chart_values[0], 8);
+        break;
+    case 11:
+        fr_lcd_frame_set_glyph(frame, 1, 0, 1, '1');
+        fr_lcd_frame_set_glyph(frame, 1, 1, 2, '2');
+        fr_lcd_frame_set_glyph(frame, 1, 3, 3, '3');
+        fr_lcd_frame_set_glyph(frame, 1, 4, 4, '4');
+        fr_lcd_frame_set_glyph(frame, 2, 0, 5, '5');
+        fr_lcd_frame_set_glyph(frame, 2, 1, 6, '6');
+        break;
+    case 12:
+        fr_lcd_frame_set_glyph(frame, 2, 0, 0, '[');
+        fr_lcd_frame_set_glyph(frame, 2, 1, 1, '|');
+        fr_lcd_frame_set_glyph(frame, 2, 2, 2, ']');
+        fr_lcd_frame_set_glyph(frame, 2, 9, (uint8_t)(3U + menu->spinner_frame), '^');
+        break;
+    default:
+        break;
     }
 
     if (menu->ack == FR_MENU_ACK_SELECT && now_ms < menu->ack_until_ms) {
-        fr_lcd_fit_line(lines[FR_LCD_ROWS - 1], FR_LCD_COLUMNS + 1, "ACK local");
+        fr_lcd_frame_set_line(frame, FR_LCD_ROWS - 1, "ACK local");
     }
+
+    if (menu->mode != FR_MENU_MODE_PAGE_BROWSE) {
+        fr_lcd_frame_set_glyph(
+            frame,
+            menu->selected_row,
+            0,
+            glyph_bank_index == 0U ? 7U : 5U,
+            '>'
+        );
+    }
+    if (menu->mode == FR_MENU_MODE_EDIT_LAB) {
+        frame->cursor_col = 18;
+    } else if (menu->mode == FR_MENU_MODE_DETAIL) {
+        frame->cursor_col = 1;
+    } else {
+        frame->cursor_col = 0;
+    }
+    frame->cursor_row = menu->mode == FR_MENU_MODE_PAGE_BROWSE ?
+        0U : menu->selected_row;
+    frame->cursor_ddram = fr_lcd_ddram_address(frame->cursor_row, frame->cursor_col);
+}
+
+static bool fr_lcd_load_glyph_bank(
+    fr_lcd_context_t *lcd,
+    fr_lcd_render_cache_t *cache,
+    uint8_t bank_index,
+    uint32_t now_ms
+)
+{
+    if (bank_index >= FR_GLYPH_BANK_COUNT) {
+        bank_index = 0;
+    }
+    if (cache->glyph_valid && cache->glyph_bank_index == bank_index) {
+        return true;
+    }
+    if (cache->glyph_valid &&
+        (now_ms - cache->last_glyph_swap_ms) < FR_GLYPH_BANK_SWAP_MIN_MS) {
+        uint32_t wait_ms =
+            FR_GLYPH_BANK_SWAP_MIN_MS - (now_ms - cache->last_glyph_swap_ms);
+        vTaskDelay(fr_delay_ticks_at_least_one(wait_ms));
+        now_ms = fr_menu_now_ms();
+    }
+
+    const fr_lcd_glyph_bank_t *bank = &fr_lcd_glyph_banks[bank_index];
+    for (uint8_t slot = 0; slot < FR_GLYPH_SLOTS; ++slot) {
+        if (!fr_lcd_command(lcd, (uint8_t)(0x40U | (slot << 3)))) {
+            return false;
+        }
+        for (uint8_t row = 0; row < FR_GLYPH_ROWS; ++row) {
+            if (!fr_lcd_write_byte(lcd, bank->rows[slot][row], true)) {
+                return false;
+            }
+        }
+    }
+
+    cache->glyph_valid = true;
+    cache->glyph_bank_index = bank_index;
+    cache->last_glyph_swap_ms = now_ms;
+    cache->valid = false;
+    printf(
+        "BBS_GLYPH_BANK name=%s index=%u slots=%u rows=%u min_swap_ms=%u t=%lu\r\n",
+        bank->name,
+        (unsigned int)bank_index,
+        (unsigned int)FR_GLYPH_SLOTS,
+        (unsigned int)FR_GLYPH_ROWS,
+        (unsigned int)FR_GLYPH_BANK_SWAP_MIN_MS,
+        (unsigned long)now_ms
+    );
+    return true;
+}
+
+static bool fr_lcd_write_cell_line(
+    fr_lcd_context_t *lcd,
+    uint8_t row,
+    const uint8_t cells[FR_LCD_COLUMNS]
+)
+{
+    if (!fr_lcd_set_cursor(lcd, row)) {
+        return false;
+    }
+    for (size_t column = 0; column < FR_LCD_COLUMNS; ++column) {
+        if (!fr_lcd_write_byte(lcd, cells[column], true)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static bool fr_lcd_render_bbs_page(
@@ -1351,43 +1882,76 @@ static bool fr_lcd_render_bbs_page(
     const char *reason
 )
 {
-    char lines[FR_LCD_ROWS][FR_LCD_COLUMNS + 1];
     uint32_t start_ms = fr_menu_now_ms();
-    fr_bbs_render_lines(menu, lcd->address, start_ms, lines);
+    fr_lcd_frame_t frame;
+    fr_bbs_render_frame(menu, lcd->address, start_ms, &frame);
     uint8_t rows_written = 0;
+    uint8_t dirty_row_mask = 0;
+    uint16_t dirty_cells = 0;
+
+    if (!fr_lcd_load_glyph_bank(lcd, cache, frame.glyph_bank_index, start_ms)) {
+        return false;
+    }
 
     for (size_t row = 0; row < FR_LCD_ROWS; ++row) {
-        if (cache->valid &&
-            strcmp(cache->lines[row], lines[row]) == 0) {
+        bool row_dirty = !cache->valid;
+        if (cache->valid) {
+            for (size_t column = 0; column < FR_LCD_COLUMNS; ++column) {
+                if (cache->cells[row][column] != frame.cells[row][column]) {
+                    dirty_cells += 1U;
+                    row_dirty = true;
+                }
+            }
+        } else {
+            dirty_cells += FR_LCD_COLUMNS;
+        }
+        if (!row_dirty) {
             continue;
         }
-        if (!fr_lcd_write_line(lcd, (uint8_t)row, lines[row])) {
+        if (!fr_lcd_write_cell_line(lcd, (uint8_t)row, frame.cells[row])) {
             return false;
         }
-        snprintf(
-            cache->lines[row],
-            sizeof(cache->lines[row]),
-            "%s",
-            lines[row]
-        );
+        memcpy(cache->cells[row], frame.cells[row], FR_LCD_COLUMNS);
         rows_written += 1U;
+        dirty_row_mask |= (uint8_t)(1U << row);
     }
     cache->valid = true;
+    if (!fr_lcd_set_cursor_at(lcd, frame.cursor_row, frame.cursor_col)) {
+        return false;
+    }
     uint32_t end_ms = fr_menu_now_ms();
 
     printf(
+        "BBS_CURSOR row=%u col=%u ddram=0x%02x focus=%s mode=%s\r\n",
+        (unsigned int)frame.cursor_row,
+        (unsigned int)frame.cursor_col,
+        (unsigned int)frame.cursor_ddram,
+        frame.focus,
+        fr_menu_mode_name(menu->mode)
+    );
+    printf(
         "BBS_LCD_RENDER page=%s index=%u row0=\"%s\" row1=\"%s\" "
-        "row2=\"%s\" row3=\"%s\" rows=%u seq=%lu dur_ms=%lu reason=%s\r\n",
+        "row2=\"%s\" row3=\"%s\" rows=%u seq=%lu dur_ms=%lu reason=%s "
+        "mode=%s focus=%s bank=%s cursor=%u,%u ddram=0x%02x "
+        "dirty_rows=0x%02x dirty_cells=%u\r\n",
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
-        lines[0],
-        lines[1],
-        lines[2],
-        lines[3],
+        frame.log_lines[0],
+        frame.log_lines[1],
+        frame.log_lines[2],
+        frame.log_lines[3],
         (unsigned int)rows_written,
         (unsigned long)sequence,
         (unsigned long)(end_ms - start_ms),
-        reason
+        reason,
+        fr_menu_mode_name(menu->mode),
+        frame.focus,
+        fr_lcd_glyph_bank_name(frame.glyph_bank_index),
+        (unsigned int)frame.cursor_row,
+        (unsigned int)frame.cursor_col,
+        (unsigned int)frame.cursor_ddram,
+        (unsigned int)dirty_row_mask,
+        (unsigned int)dirty_cells
     );
     return true;
 }
@@ -1408,6 +1972,14 @@ static void fr_menu_init_state(fr_menu_state_t *menu)
     menu->switch_stable_pressed = menu->stable_sw == 0U;
     menu->switch_changed_ms = fr_menu_now_ms();
     menu->last_heartbeat_ms = menu->switch_changed_ms;
+    menu->last_auto_demo_ms = menu->switch_changed_ms;
+    menu->last_animation_ms = menu->switch_changed_ms;
+    menu->auto_demo_enabled = true;
+    menu->mode = FR_MENU_MODE_PAGE_BROWSE;
+    menu->selected_row = 0;
+    menu->edit_value = 50;
+    menu->cursor_row = 0;
+    menu->cursor_col = 0;
     menu->display_dirty = true;
     fr_menu_set_last_event(menu, "BOOT");
     if (menu->switch_stable_pressed) {
@@ -1527,14 +2099,17 @@ static void fr_lcd_bbs_menu_task(void *context)
     printf("LCD_INIT_OK addr=0x%02x\r\n", lcd.address);
     printf(
         "%s BBS_LCD_READY gpio=13/14/32 pullups=on lcd=21/22 addr=0x%02x "
-        "pages=%u xbee=closed relay=closed input=split render=dirty\r\n",
+        "pages=%u xbee=closed relay=closed input=split render=dirty "
+        "glyph_banks=%u cursor=software auto_demo_ms=%u\r\n",
         FR_DIAG_FIRMWARE_ID,
         lcd.address,
-        (unsigned int)FR_MENU_PAGE_COUNT
+        (unsigned int)FR_MENU_PAGE_COUNT,
+        (unsigned int)FR_GLYPH_BANK_COUNT,
+        (unsigned int)FR_MENU_AUTO_DEMO_MS
     );
     printf(
         "%s BBS_INPUT_READY task=split poll_ms=%u render=dirty idle_ms=%u "
-        "irq=anyedge queue=%u\r\n",
+        "irq=anyedge queue=%u modes=page,row,detail,edit\r\n",
         FR_DIAG_FIRMWARE_ID,
         (unsigned int)FR_MENU_POLL_MS,
         (unsigned int)FR_MENU_IDLE_REFRESH_MS,

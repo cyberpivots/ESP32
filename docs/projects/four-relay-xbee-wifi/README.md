@@ -174,6 +174,18 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
   watchdog/backtrace/panic/LCD-init-failure markers, but no encoder/button
   input proof. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530K-LIVE-2026-05-31`.
+- PF0530L is the current flashed image for the live LCD menu UX test. It keeps
+  PF0530K interrupt input capture and adds local page/row/detail/edit modes,
+  software cursor/DDRAM metadata, dirty-cell render metadata, five named
+  eight-slot glyph banks, custom bar/chart/digit/gauge demo pages, and a
+  seven-second auto-demo cycle. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-2026-05-31`.
+- PF0530L write-flash and separate verify-flash passed on COM6. Its read-only
+  monitor showed `PF0530L BBS_LCD_READY`, `BBS_INPUT_READY`, `LCD_INIT_OK`, all
+  13 page names, all five glyph banks, 77 `BBS_LCD_RENDER`, 21 `BBS_MENU_AUTO`,
+  and 74 `BBS_MENU_HB` lines with no watchdog/backtrace/panic/LCD-init-failure
+  or unsafe-open markers, but no encoder/button input proof. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`.
 - Digi identifies the requested XBee model as `XBP9B-DPUT-001`, an
   XBee-PRO 900HP S3B Point2Multipoint 900 MHz, 250 mW, U.FL, 10 kbps part.
   Source ID: `SRC-DIGI-XBP9B-DPUT-001`.
@@ -302,7 +314,9 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
   ready/render/heartbeat proof but zero step/select proof. PF0530I fixed
   render-starved input polling but showed task-watchdog backtraces; PF0530J
   fixed the watchdog symptom but did not capture input-transition proof;
-  PF0530K is the current source fix. Visual LCD confirmation and rotary
+  PF0530K captured no input events after clean flash/verify, and PF0530L is
+  the current flashed image for renewed LCD menu UX testing. Visual LCD
+  confirmation, custom glyph readability, auto-demo behavior, and rotary
   acceptance remain user-test evidence gates.
 
 ## Hard gate
@@ -333,10 +347,11 @@ COM6 write/verify gate, but read-only live menu acceptance is blocked by
 diagnostic gate with serial `LCD_INIT_OK addr=0x27`. PF0530H completed the
 COM6-only BBS LCD menu flash/verify/read-only-monitor proof, but user testing
 reported no encoder/button LCD effect. PF0530I then showed task-watchdog
-backtraces, PF0530J showed no input-transition proof, and PF0530K is the
-current source fix. It still requires live LCD/encoder observation,
-page-change proof, encoder direction, and pushbutton proof. Further flash,
-monitor,
+backtraces, PF0530J showed no input-transition proof, PF0530K captured no
+input events after clean flash/verify, and PF0530L is the current flashed
+user-test image. It still requires live LCD/encoder observation, page-change
+proof, custom glyph readability, encoder direction, and pushbutton proof.
+Further flash, monitor,
 RF/range/throughput, relay/load/mains work, hardware acceptance, or
 direct-stimulus continuity testing outside that named gate needs a separate
 fresh gate.

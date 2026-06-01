@@ -26,6 +26,22 @@ REQUIRED_AGENT_PROFILES = [
     "kb-record-worker",
     "bounded-implementation-worker",
 ]
+DEVELOPMENT_PANEL_AGENT_PROFILES = [
+    "development-panel-coordinator",
+    "esp32-firmware-device-reviewer",
+    "xbee-radio-protocol-reviewer",
+    "ui-ux-interface-reviewer",
+    "source-research-reviewer",
+    "data-model-kb-reviewer",
+    "tooling-resource-reviewer",
+    "offgrid-comms-domain-reviewer",
+    "security-safety-risk-reviewer",
+    "devex-ci-release-reviewer",
+    "kb-prompt-registry-curator",
+    "protocol-bridge-abi-reviewer",
+    "power-wiring-isolation-reviewer",
+]
+REQUIRED_AGENT_PROFILES.extend(DEVELOPMENT_PANEL_AGENT_PROFILES)
 REQUIRED_SOURCE_IDS = [
     "SRC-CODEX-HOOKS-2026-05-27",
     "SRC-CODEX-SUBAGENTS-2026-05-27",
@@ -43,6 +59,10 @@ REQUIRED_SOURCE_IDS = [
     "SRC-LOCAL-ADMIN-STRICT-CODEX-ENFORCEMENT-2026-05-28",
     "SRC-LOCAL-AGENT-INSTRUCTION-YOLO-ENFORCEMENT-2026-05-28",
     "SRC-LOCAL-MULTI-AGENTIC-CONTINUOUS-ENFORCEMENT-2026-05-29",
+    "SRC-LOCAL-DEVELOPMENT-AGENT-PANEL-2026-05-31",
+    "SRC-LOCAL-COMPREHENSIVE-BENCH-DEVELOPMENT-PROCESS-2026-05-31",
+    "SRC-LOCAL-MULTI-WINDOW-CODEX-SCHEDULER-2026-06-01",
+    "SRC-LOCAL-SUBAGENT-LIFECYCLE-CLEANUP-2026-06-01",
 ]
 
 
@@ -180,6 +200,11 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "validation plan",
         "default-authorized",
         "no-P1/P2",
+        "Agent lifecycle cleanup",
+        "inspect completed agents before spawning",
+        "close completed/stale agents",
+        "close agents before fallback/final",
+        "fallback is valid only after a cleanup attempt",
         "## Agent Instruction Enforcement Boundary",
         ".codex/agents/*.toml",
         "operator sovereignty",
@@ -198,6 +223,10 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "project-local Codex hooks remain trust-gated runtime aids",
         "Agent instruction files are the default enforcement surface",
         "/etc/codex/requirements.toml",
+        "Agent lifecycle cleanup",
+        "wait_agent",
+        "close_agent",
+        "guarantee runtime slot release",
     ], "governance"))
 
     ownership_text = _read(root / ".agents/OWNERSHIP.md")
@@ -217,6 +246,8 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "## Agent Operations",
         "reviewer quorum",
         "default-authorized",
+        "agent lifecycle cleanup",
+        "fallback only after cleanup attempt",
     ], "roles"))
 
     docs_text = "\n".join(_read(root / rel) for rel in [
@@ -225,6 +256,7 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "docs/prompt/prompt-triage.md",
         "docs/prompt/expert-agent-panels.md",
         "docs/prompt/preengineered-prompts.md",
+        "docs/prompt/multi-window-codex-scheduler.md",
         "knowledge-base/prompt-registry.md",
     ])
     failures.extend(_require_markers(docs_text, [
@@ -244,7 +276,23 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "agent_process_decision.py",
         "ready_for_mutation",
         "default-authorized",
+        "agent lifecycle cleanup",
+        "inspect completed agents before spawning",
+        "close completed/stale agents",
+        "close agents before fallback/final",
+        "fallback only after cleanup attempt",
+        "bypassPermissions advisory only",
         "bounded-implementation-worker",
+        "development-agent-panel",
+        "bench_state_packet.v1",
+        "comprehensive-bench-development-process",
+        "development-panel-coordinator",
+        "security-safety-risk-reviewer",
+        "xbee-radio-protocol-reviewer",
+        "multi-window-codex-scheduler",
+        "agent_scheduler.py",
+        "scheduler-unavailable",
+        "multi_window_coordination.v1",
     ], "agent process docs"))
 
     decision_helper = root / "scripts" / "agent_process_decision.py"
@@ -309,10 +357,25 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
                 "Do not run live hardware",
                 "Do not commit or push",
             ], profile))
+        if profile in DEVELOPMENT_PANEL_AGENT_PROFILES:
+            if data.get("sandbox_mode") != "read-only":
+                failures.append(f"{path.relative_to(root)} must be read-only")
+            failures.extend(_require_markers(text, [
+                "Purpose:",
+                "Inputs:",
+                "Outputs:",
+                "Read scope:",
+                "Later mutation scope if separately authorized:",
+                "Stop conditions:",
+                "Escalation conditions:",
+                "Required evidence before action:",
+                "Validation method:",
+                "Tier boundaries:",
+            ], profile))
 
     hooks_config = json.loads(_read(root / ".codex/hooks.json"))
     hooks = hooks_config.get("hooks", {})
-    for event in ["UserPromptSubmit", "SubagentStart", "PreToolUse"]:
+    for event in ["UserPromptSubmit", "SubagentStart", "SubagentStop", "PreToolUse"]:
         groups = hooks.get(event)
         if not isinstance(groups, list) or not groups:
             failures.append(f".codex/hooks.json missing event: {event}")
@@ -326,6 +389,7 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
     for script in [
         "user_prompt_submit_agent_process.py",
         "subagent_start_agent_process.py",
+        "subagent_stop_agent_process.py",
         "pre_tool_use_agent_process.py",
     ]:
         path = root / ".codex/hooks" / script
@@ -333,6 +397,35 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
             failures.append(f"missing hook script: .codex/hooks/{script}")
         elif "hookSpecificOutput" not in _read(path):
             failures.append(f".codex/hooks/{script} missing hookSpecificOutput")
+
+    scheduler_path = root / "scripts" / "agent_scheduler.py"
+    if not scheduler_path.exists():
+        failures.append("missing script: scripts/agent_scheduler.py")
+    else:
+        failures.extend(_require_markers(_read(scheduler_path), [
+            "multi_window_coordination.v1",
+            "daemon",
+            "pretool-check",
+            "scheduler-unavailable",
+            "permission_mode=bypassPermissions",
+            "record-reserve",
+            "stale-reap",
+        ], "scripts/agent_scheduler.py"))
+    scheduler_tests = root / "tests" / "scaffold_audits" / "test_agent_scheduler.py"
+    if not scheduler_tests.exists():
+        failures.append("missing scheduler tests: tests/scaffold_audits/test_agent_scheduler.py")
+    else:
+        failures.extend(_require_markers(_read(scheduler_tests), [
+            "test_five_windows_can_hold_disjoint_write_claims",
+            "test_sixth_window_is_deterministically_rejected_or_queued",
+            "test_overlapping_write_claim_is_rejected",
+            "test_read_claim_warns_when_active_write_exists",
+            "test_stale_lease_expiry_records_reap_event",
+            "test_dirty_baseline_overlap_emits_warning_and_ack_field",
+            "test_concurrent_task_log_and_handoff_reservations_are_unique",
+            "test_bypass_permissions_hook_path_is_advisory_only",
+            "test_pretool_check_daemon_unavailable_fallback_is_advisory",
+        ], "tests/scaffold_audits/test_agent_scheduler.py"))
 
     admin_requirements = root / ".codex" / "admin" / "requirements.toml"
     yolo_requirements = root / ".codex" / "admin" / "profiles" / "yolo-compatible" / "requirements.toml"
@@ -454,14 +547,50 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "user_prompt_submit_agent_process.py",
         json.dumps({"hook_event_name": "UserPromptSubmit"}),
         "UserPromptSubmit",
-        ["evidence need", "default-authorized", "Weighted vote", "Missing evidence", "decision footer", "advisory aids"],
+        [
+            "evidence need",
+            "default-authorized",
+            "Weighted vote",
+            "Missing evidence",
+            "decision footer",
+            "agent lifecycle cleanup",
+            "inspect completed agents before spawning",
+            "close completed/stale agents",
+            "close agents before fallback/final",
+            "fallback only after cleanup attempt",
+            "advisory aids",
+        ],
     ))
     failures.extend(_run_hook(
         root,
         "subagent_start_agent_process.py",
         json.dumps({"agent_type": "qa-validation-reviewer", "permission_mode": "read-only"}),
         "SubagentStart",
-        ["default-authorized", "explicit disjoint write scope", "role, weight", "premature stop", "advisory aids"],
+        [
+            "default-authorized",
+            "explicit disjoint write scope",
+            "role, weight",
+            "premature stop",
+            "agent lifecycle cleanup",
+            "close completed/stale agents",
+            "close agents before fallback/final",
+            "fallback only after cleanup attempt",
+            "advisory aids",
+        ],
+    ))
+    failures.extend(_run_hook(
+        root,
+        "subagent_stop_agent_process.py",
+        json.dumps({"hook_event_name": "SubagentStop"}),
+        "SubagentStop",
+        [
+            "agent lifecycle cleanup",
+            "inspect completed agents before spawning",
+            "close completed/stale agents",
+            "close agents before fallback/final",
+            "fallback only after cleanup attempt",
+            "bypassPermissions advisory only",
+        ],
     ))
     failures.extend(_run_hook(
         root,
@@ -477,6 +606,7 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
     for script, event_name in [
         ("user_prompt_submit_agent_process.py", "UserPromptSubmit"),
         ("subagent_start_agent_process.py", "SubagentStart"),
+        ("subagent_stop_agent_process.py", "SubagentStop"),
         ("pre_tool_use_agent_process.py", "PreToolUse"),
     ]:
         failures.extend(_run_hook(
@@ -504,7 +634,16 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "../.agents/TASK_LOG/0089-multi-agentic-continuous-enforcement.md",
         "../.agents/handoffs/0078-multi-agentic-continuous-enforcement-to-qa.md",
         "../knowledge-base/source-ledger/2026-05-29-multi-agentic-continuous-enforcement.md",
+        "../.agents/TASK_LOG/0126-subagent-lifecycle-cleanup.md",
+        "../.agents/handoffs/0092-subagent-lifecycle-cleanup-to-qa-tooling.md",
+        "../knowledge-base/source-ledger/2026-06-01-subagent-lifecycle-cleanup.md",
         "prompt/admin-strict-codex-enforcement.md",
+        "prompt/comprehensive-bench-development-process.md",
+        "../.agents/TASK_LOG/0120-comprehensive-bench-development-process.md",
+        "../knowledge-base/source-ledger/2026-05-31-comprehensive-bench-development-process.md",
+        "prompt/multi-window-codex-scheduler.md",
+        "../.agents/TASK_LOG/0125-multi-agent-cli-window-scheduler.md",
+        "../knowledge-base/source-ledger/2026-06-01-multi-window-codex-scheduler.md",
     ]:
         if link not in docs_index:
             failures.append(f"docs index missing multi-agent link: {link}")
@@ -530,10 +669,45 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0089-multi-agentic-continuous-enforcement.md",
         ".agents/handoffs/0078-multi-agentic-continuous-enforcement-to-qa.md",
         "knowledge-base/source-ledger/2026-05-29-multi-agentic-continuous-enforcement.md",
+        ".agents/TASK_LOG/0126-subagent-lifecycle-cleanup.md",
+        ".agents/handoffs/0092-subagent-lifecycle-cleanup-to-qa-tooling.md",
+        "knowledge-base/source-ledger/2026-06-01-subagent-lifecycle-cleanup.md",
+        ".agents/TASK_LOG/0119-development-agent-panel.md",
+        "knowledge-base/source-ledger/2026-05-31-development-agent-panel.md",
+        ".agents/TASK_LOG/0120-comprehensive-bench-development-process.md",
+        "docs/prompt/comprehensive-bench-development-process.md",
+        "knowledge-base/source-ledger/2026-05-31-comprehensive-bench-development-process.md",
+        ".agents/TASK_LOG/0125-multi-agent-cli-window-scheduler.md",
+        "docs/prompt/multi-window-codex-scheduler.md",
+        "knowledge-base/source-ledger/2026-06-01-multi-window-codex-scheduler.md",
     ]:
         path = root / rel
         if not path.exists():
             failures.append(f"missing record: {rel}")
+
+    bench_process = _read(root / "docs/prompt/comprehensive-bench-development-process.md")
+    failures.extend(_require_markers(bench_process, [
+        "bench_state_packet.v1",
+        "PF0530L",
+        "COM6",
+        "serial/menu physical interaction accepted on retry",
+        "`ENC_RAW`",
+        "`ENC_EV`",
+        "`BBS_MENU_STEP`",
+        "`BBS_MENU_SELECT`",
+        "LCD visual/glyph readability",
+        "hardware/electrical acceptance",
+        "XBee",
+        "relay",
+        "ESP-NOW/BBS/CBBS",
+        "SoftAP/browser",
+        "does not authorize live hardware access",
+        "flashing",
+        "serial monitor",
+        "RF transmit",
+        "relay control",
+        "GitHub publication",
+    ], "comprehensive bench process"))
 
     tests_readme = _read(root / "tests/README.md")
     failures.extend(_require_markers(tests_readme, [

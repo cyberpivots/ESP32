@@ -17,6 +17,9 @@ task while preserving evidence and validation requirements.
 - gate authority: named gate and mutation boundary only.
 - weighted veto: required roles, reviewer weights, P1/P2 blockers, conditions,
   and final disposition.
+- agent lifecycle cleanup: inspect completed agents before spawning, close
+  completed/stale agents, close agents before fallback/final, and use fallback
+  only after cleanup attempt.
 
 ## Default tier rules
 
@@ -37,7 +40,8 @@ For Tier 1 or higher mutation, state verified facts, assumptions, unknowns,
 selected tier, owner role, evidence need, mutation boundary, and validation
 plan. For Tier 2 and Tier 3 work, run a reviewer quorum before mutation.
 Project-local read-only subagents are default-authorized when available and
-safe; if they are not spawned, record the local role lenses used instead.
+safe; if they are not spawned, record the local role lenses used instead and
+state whether fallback only after cleanup attempt applied.
 
 For Tier 2 and Tier 3 gates, a no-P1/P2 reviewer quorum may approve only the
 named gate and mutation boundary. Tier 3 approval also requires explicit
@@ -47,7 +51,8 @@ or rollback criteria.
 Under the yolo-compatible managed-hook profile, supported mutating tool paths
 may enforce the routing packet only when the active permission mode is not
 `bypassPermissions`. In `codex --yolo` bypass mode, hooks must not deny or
-block and may provide advisory context only. Weighted veto passes only when
+block and may provide advisory context only. Treat `bypassPermissions`
+advisory only lifecycle reminders the same way. Weighted veto passes only when
 required roles are present, approval weight is at least 70 percent, and no
 P1/P2 blockers remain.
 

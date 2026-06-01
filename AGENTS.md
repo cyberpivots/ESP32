@@ -67,6 +67,18 @@ weight 2, and low-risk helpers weight 1. A gate passes only when required roles
 are present, weighted approval is at least 70 percent, and no P1/P2 blockers
 remain. Tier 3 prerequisites cannot be waived by weights.
 
+Agent lifecycle cleanup is part of every Tier 2 and Tier 3 reviewer quorum:
+before spawning reviewers, inspect completed agents before spawning more work
+when visible lifecycle state exists; use `wait_agent` to collect outstanding
+reviewers; close completed/stale agents with `close_agent` when their output
+has been captured; and close agents before fallback/final decisions. Local
+role-lens fallback is valid only after a cleanup attempt is recorded, or after
+the coordinator records that lifecycle state was not visible or cleanup was
+unsafe. Repo-local docs and hooks may remind and audit this rule, but the
+parent agent must make the actual `close_agent` calls; under
+`bypassPermissions` this cleanup guidance is advisory only and must not block
+operator intent.
+
 Before Tier 1 or higher mutation, state:
 
 - verified facts,
@@ -83,8 +95,9 @@ disjoint for worker agents, and do not spawn mutating workers unless their
 write scope is explicit. A no-P1/P2 reviewer quorum may accept only the named
 gate and mutation boundary; Tier 3 acceptance still requires same-session
 evidence, explicit live-gate authority, recovery path, and closed-surface
-review. If read-only subagents are unavailable or unsafe, run the same role
-lenses locally and record that no subagents were spawned.
+review. If read-only subagents are unavailable or unsafe after agent lifecycle
+cleanup, run the same role lenses locally and record that no subagents were
+spawned.
 
 ## Required reading before edits
 

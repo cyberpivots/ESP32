@@ -21,6 +21,7 @@ ROUTING_PACKET = """ESP32 yolo-compatible routing packet advisory before Tier 1+
 - Validation plan: commands or evidence required before completion.
 - Reviewer quorum: required for Tier 2 and Tier 3 before mutation.
 - Weighted veto: coordinator/architecture-risk weight 5, high-reasoning specialist 3, medium specialist 2, low-risk helper 1; pass requires required roles, at least 70 percent weighted approval, and no P1/P2 blockers.
+- Agent lifecycle cleanup: inspect completed agents before spawning, use wait_agent to collect reviewer output, close completed/stale agents with close_agent, close agents before fallback/final, and allow fallback only after cleanup attempt.
 - Tier 3 remains closed unless explicit live-gate authority, same-session evidence, recovery path, reviewer quorum, and closed-surface review are present.
 - Missing evidence is a continuation state when the next evidence step is automatable; ask the user only for one irreducible physical fact, and block only at a hard safety or authority boundary.
 """
@@ -31,6 +32,7 @@ SUBAGENT_BOUNDARY = """ESP32 yolo-compatible subagent boundary:
 - Keep verified facts, assumptions, and unknowns separate.
 - Reviewer outputs must include role, evidence reviewed, P1/P2 findings, vote, conditions, and confidence.
 - Reviewer outputs must preserve the weighted-vote model and must not mark a gate accepted while P1/P2 blockers remain.
+- Agent lifecycle cleanup is required after reviewer output is captured: parent agents must inspect completed agents before spawning replacements, close completed/stale agents with close_agent, close agents before fallback/final, and record fallback only after cleanup attempt.
 - Do not run live hardware, flash, erase, monitor, serial-write, BLE, mesh, PCAP, relay, XBee write, TFT, MicroSD, load, wiring, mains, router/admin, or release-gate actions.
 - Do not commit or push unless the user explicitly requested it and validation passed.
 """
@@ -120,7 +122,8 @@ MUTATION_CLAIM_RE = re.compile(
 BYPASS_PERMISSION_MODE = "bypassPermissions"
 BYPASS_ADVISORY = (
     "ESP32 operator sovereignty: permission_mode=bypassPermissions was detected. "
-    "Hooks must not deny, block, or override the user-intended --yolo full-access launch."
+    "Hooks must not deny, block, or override the user-intended --yolo full-access launch; "
+    "bypassPermissions advisory only."
 )
 
 

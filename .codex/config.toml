@@ -40,6 +40,58 @@ config_file = "agents/qa-validation-reviewer.toml"
 description = "Read-only reviewer for LCD menu UX, glyph-bank constraints, encoder intents, and browser-mirror artifacts."
 config_file = "agents/lcd-menu-ux-reviewer.toml"
 
+[agents.development-panel-coordinator]
+description = "Read-only coordinator for development-agent panel routing, weighted quorum, handoffs, and gate authority."
+config_file = "agents/development-panel-coordinator.toml"
+
+[agents.esp32-firmware-device-reviewer]
+description = "Read-only reviewer for ESP32 firmware/device-development boundaries, accepted ADR scope, and no-flash validation."
+config_file = "agents/esp32-firmware-device-reviewer.toml"
+
+[agents.xbee-radio-protocol-reviewer]
+description = "Read-only reviewer for XBee radio, AT/API protocol, profile plans, and simulator-versus-live gates."
+config_file = "agents/xbee-radio-protocol-reviewer.toml"
+
+[agents.ui-ux-interface-reviewer]
+description = "Read-only reviewer for LCD, browser, Win31, CBBS, and operator UI/UX surfaces with unsafe-action separation."
+config_file = "agents/ui-ux-interface-reviewer.toml"
+
+[agents.source-research-reviewer]
+description = "Read-only reviewer for source-backed research, source hierarchy, citation coverage, and unresolved gaps."
+config_file = "agents/source-research-reviewer.toml"
+
+[agents.data-model-kb-reviewer]
+description = "Read-only reviewer for schemas, data models, knowledge-base structure, migrations, and persistent-data gates."
+config_file = "agents/data-model-kb-reviewer.toml"
+
+[agents.tooling-resource-reviewer]
+description = "Read-only reviewer for tooling, scripts, resource budgets, host-only commands, and non-live validation surfaces."
+config_file = "agents/tooling-resource-reviewer.toml"
+
+[agents.offgrid-comms-domain-reviewer]
+description = "Read-only reviewer for off-grid communications constraints across ESP-NOW, XBee, CBBS, LCD, and power workflows."
+config_file = "agents/offgrid-comms-domain-reviewer.toml"
+
+[agents.security-safety-risk-reviewer]
+description = "Read-only reviewer for security, safety, credentials, destructive operations, and closed-surface risk."
+config_file = "agents/security-safety-risk-reviewer.toml"
+
+[agents.devex-ci-release-reviewer]
+description = "Read-only reviewer for DevEx, CI, release, packaging, changelog, and GitHub-publication gates."
+config_file = "agents/devex-ci-release-reviewer.toml"
+
+[agents.kb-prompt-registry-curator]
+description = "Read-only curator for knowledge-base, prompt-registry, source-ledger, task-log, and handoff consistency."
+config_file = "agents/kb-prompt-registry-curator.toml"
+
+[agents.protocol-bridge-abi-reviewer]
+description = "Read-only reviewer for protocol contracts, bridge ABIs, schema versions, bounded-line formats, and action separation."
+config_file = "agents/protocol-bridge-abi-reviewer.toml"
+
+[agents.power-wiring-isolation-reviewer]
+description = "Read-only reviewer for power, voltage, boot-pin, isolation, wiring, fixture, and relay/load/mains stop gates."
+config_file = "agents/power-wiring-isolation-reviewer.toml"
+
 [agents.governance-doc-worker]
 description = "Worker for bounded governance documentation edits after coordinator triage and reviewer quorum."
 config_file = "agents/governance-doc-worker.toml"

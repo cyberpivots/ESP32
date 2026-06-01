@@ -27,6 +27,11 @@ Project-local read-only subagents are default-authorized for safe Tier 2 and
 Tier 3 reviewer quorum, while mutating workers still require explicit disjoint
 write scopes. Every non-trivial prompt is classified by tier, owner, evidence
 need, mutation boundary, and validation plan before mutation.
+Agent lifecycle cleanup is part of the panel contract: inspect completed agents
+before spawning, close completed/stale agents after capturing their output,
+close agents before fallback/final decisions, and record fallback only after
+cleanup attempt. This is an operational parent-agent duty; hooks can remind but
+cannot guarantee Codex runtime slot release.
 Managed-hook profiles from `.codex/admin/` can cover supported Codex hook
 events on this machine, while the project-local hooks remain advisory aids.
 The default managed profile is yolo-compatible and must not override a
@@ -45,8 +50,10 @@ user-launched `codex --yolo` session; admin-strict is explicit opt-in only.
   project-local read-only reviewers for Tier 2 and Tier 3 quorum when tools are
   available and safe.
 - Official Codex configuration guidance documents project/user config,
-  `skills.config`, and agent settings; this workspace does not need a
-  project-scoped `.codex/agents/*.toml` file for the v1 panel skill.
+  `skills.config`, and agent settings; the global panel skill remains usable
+  without project-local agents, while this workspace now also exposes
+  project-local `.codex/agents/*.toml` profiles for repeatable ESP32 panel
+  roles.
 - The verified local skill inventory for this pass uses plugin cache hash
   `eed16198`; older plugin cache hashes are stale for this session.
 - Current Codex hooks guidance documents project-local hooks, `UserPromptSubmit`,
@@ -93,7 +100,8 @@ user-launched `codex --yolo` session; admin-strict is explicit opt-in only.
 - Missing evidence is a continuation condition when safe evidence collection
   remains. Use `scripts/agent_process_decision.py` to turn weighted reviewer
   records into `continue`, `ask_user`, `blocked`, `ready_for_mutation`, or
-  `handoff` without prematurely ending a gate.
+  `handoff` without prematurely ending a gate, and record agent lifecycle
+  cleanup before any fallback or final decision.
 
 ## Prompt pattern
 
@@ -114,7 +122,9 @@ Tier 1, Tier 2, or Tier 3; state verified facts, assumptions, unknowns, owner
 role, evidence need, mutation boundary, reviewer quorum, gate authority,
 validation plan, and trust boundary before non-trivial mutation; use
 project-local read-only subagents by default for safe Tier 2 and Tier 3 quorum;
-use mutating workers only with explicit disjoint write scopes; end with a
+inspect completed agents before spawning, close completed/stale agents after
+reviewer output is captured, use fallback only after cleanup attempt, use
+mutating workers only with explicit disjoint write scopes; end with a
 decision footer naming the next gate, owner, evidence, validation, durable
 records, approved mutation boundary, and authority limits.
 ```
@@ -129,3 +139,58 @@ records, approved mutation boundary, and authority limits.
 - Validation evidence.
 - Source-index, source-ledger, prompt-registry, and task-log updates when the
   workspace contract requires durable records.
+
+## Development-agent-panel
+
+Use `development-agent-panel` when a task needs automated research and
+development routing across ESP32 firmware, LCD/UI, XBee/radio, CBBS, tooling,
+records, safety, and release lanes. The panel reduces routine human
+interruption by giving read-only specialists default evidence-gathering work,
+while keeping mandatory human gates for live hardware, flashing, serial writes,
+RF transmit, relay control, persistent settings, credentials, destructive
+operations, external services, GitHub publication, and safety-critical
+decisions.
+
+| Role | Agent profile | Default output | Stop gate |
+| --- | --- | --- | --- |
+| Panel coordinator / governance architect | `development-panel-coordinator` | Routing packet, quorum summary, decision footer | Missing quorum, P1/P2 blocker, unclear authority, Tier 3 surface |
+| Workspace cartographer | `governance-cartographer` | Repo map, ownership, docs/source coverage | Unsupported factual claim or scope drift |
+| LCD menu and display systems | `lcd-menu-ux-reviewer` | LCD/glyph/browser host findings | Live display, serial, flash, relay, RF, or browser-live claim |
+| ESP32 firmware and device development | `esp32-firmware-device-reviewer` | Firmware boundary and no-flash validation plan | Framework drift, flash, monitor, serial write, runtime proof claim |
+| XBee radio and protocol development | `xbee-radio-protocol-reviewer` | AT/API/profile and simulator/live gate review | WR/AC/API transmit, RF, profile write, serial radio action |
+| UI/UX interface | `ui-ux-interface-reviewer` | Operator UI intent/action findings | UI command coupled to RF, relay, flash, serial, config, or external action |
+| Source-backed research | `source-research-reviewer` | Source coverage, unresolved gaps, citation needs | Unsupported hardware/protocol/toolchain/safety claim |
+| Code implementation | `bounded-implementation-worker` | Scoped patch and changed paths | Missing write scope, dirty-tree conflict, live action, commit/push |
+| QA, testing, and evidence review | `qa-validation-reviewer` | Validation plan and acceptance findings | Missing tests, missing task record, unsupported acceptance |
+| Database / data model / knowledge base | `data-model-kb-reviewer` | Schema, KB, migration, persistence findings | Persistent write, migration, secret handling, destructive data operation |
+| Tooling and resource research | `tooling-resource-reviewer` | Safe command and resource-validation plan | System install, `/etc/codex` mutation, live device action |
+| Off-grid communications domain expert | `offgrid-comms-domain-reviewer` | Field workflow and cross-transport risk findings | Coupled XBee/Wi-Fi/ESP-NOW/CBBS gates or assumed range/power proof |
+| Security, safety, and risk reviewer | `security-safety-risk-reviewer` | Mandatory human gates and closed-surface risks | Credentials, destructive ops, live hardware, relay/load/mains |
+| DevEx / CI / release automation | `devex-ci-release-reviewer` | CI/release reproducibility and publication gate findings | GitHub publication, release, external service, secret-backed workflow |
+| Hardware bench gate reviewer | `live-bench-gate-reviewer` | Same-session live-gate evidence review | Missing identity, recovery path, manifest, closed-surface proof |
+| Knowledge-base and prompt-registry curator | `kb-prompt-registry-curator` | Durable-record and prompt-registry findings | Missing source coverage, missing task log, unscoped source-index update |
+| Protocol / bridge ABI reviewer | `protocol-bridge-abi-reviewer` | Schema, ABI, bounds, unsafe-action separation | Firmware/serial/bridge ABI change without gate |
+| Power / wiring / isolation reviewer | `power-wiring-isolation-reviewer` | Power, voltage, boot-pin, isolation, wiring risks | Physical bench, wiring, relay/load/mains, battery/solar action |
+
+Each new panel profile is read-only by default and defines purpose, inputs,
+outputs, read scope, later mutation scope if separately authorized, stop
+conditions, escalation conditions, required evidence before action, validation
+method, and tier boundaries. Mutating work still routes through existing worker
+profiles with explicit disjoint write scopes.
+
+## Orchestration model
+
+1. `development-panel-coordinator` classifies the prompt and names the owner,
+   evidence need, mutation boundary, reviewer quorum, validation plan, and
+   trust boundary.
+2. Read-only specialists gather only the evidence needed for the selected
+   boundary. The coordinator avoids broad fan-out when one local lookup is
+   enough.
+3. The quorum is reduced with the weighted-veto rule. Missing automatable
+   evidence routes to continued evidence gathering; one irreducible physical or
+   authority fact routes to `ask_user`; P1/P2 blockers or hard safety limits
+   block the gate.
+4. Approved Tier 1 or Tier 2 edits use a bounded worker or direct parent edit
+   inside the named scope. Tier 3 remains closed until explicit live authority,
+   same-session evidence, recovery path, and closed-surface review exist.
+5. The final answer records validation, durable records, and authority limits.

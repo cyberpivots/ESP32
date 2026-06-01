@@ -110,6 +110,32 @@ class AdminPolicyHookTests(unittest.TestCase):
         self.assertEqual("block", data["decision"])
         self.assertIn("reviewer output missing", data["reason"])
 
+    def test_user_prompt_and_subagent_start_include_lifecycle_cleanup(self) -> None:
+        fixtures = [
+            ("UserPromptSubmit", {"hook_event_name": "UserPromptSubmit"}),
+            ("SubagentStart", {"hook_event_name": "SubagentStart"}),
+        ]
+        for event, payload in fixtures:
+            with self.subTest(event=event):
+                result = run_hook(payload)
+                data = self.assert_clean_json(result)
+                context = data["hookSpecificOutput"]["additionalContext"]
+                self.assertIn("Agent lifecycle cleanup", context)
+                self.assertIn("inspect completed agents before spawning", context)
+                self.assertIn("close completed/stale agents", context)
+                self.assertIn("close agents before fallback/final", context)
+                self.assertIn("fallback only after cleanup attempt", context)
+
+    def test_bypass_user_prompt_marks_lifecycle_advisory_only(self) -> None:
+        result = run_hook({
+            "hook_event_name": "UserPromptSubmit",
+            "permission_mode": "bypassPermissions",
+        })
+        data = self.assert_clean_json(result)
+        context = data["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("bypassPermissions advisory only", context)
+        self.assertIn("Agent lifecycle cleanup", context)
+
     def test_subagent_stop_rejects_open_blocker_or_reject_vote(self) -> None:
         messages = [
             (

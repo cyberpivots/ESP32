@@ -8,28 +8,32 @@ import html
 import json
 import sys
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
+
+from generated_menu import (  # noqa: E402
+    FIRMWARE_ID,
+    GLYPH_BANKS as GENERATED_GLYPH_BANKS,
+    MENU_SCHEMA,
+    PAGES as GENERATED_PAGES,
+    RENDER_SCHEMA,
+    SOURCE_ID,
+    SOURCE_XML,
+)
 
 
 LCD_COLUMNS = 20
 LCD_ROWS = 4
+LCD_CONTENT_COLUMNS = 19
 LCD_DDRAM_ROW_BASES = (0x00, 0x40, 0x14, 0x54)
 SNAPSHOT_SCHEMA = "bbs_lcd_state.v1"
-RENDER_SCHEMA = "bbs_lcd_render.v1"
 GLYPH_SWAP_MIN_MS = 250
-PAGES = (
-    "HOME",
-    "MESSAGES",
-    "PEERS",
-    "QUEUE",
-    "FILES",
-    "MESH",
-    "XBEE",
-    "DIAG",
-    "LOCKS",
-)
-NAVIGATION_MODES = frozenset({"page_browse", "row_browse", "detail", "edit_lab"})
+MARQUEE_HOLD_MS = 750
+MARQUEE_STEP_MS = 250
+MARQUEE_GAP = 2
+MAX_PAGE_STACK = 4
+PAGES = tuple(str(page["id"]) for page in GENERATED_PAGES)
+NAVIGATION_MODES = frozenset({"scroll", "detail", "edit_lab", "page_browse", "row_browse"})
 INPUT_EVENTS = frozenset({"rotate_left", "rotate_right", "short_press", "long_press"})
 API_STATE_PATH = "/api/lcd/state"
 API_INTENT_PATH = "/api/lcd/intent"
@@ -47,6 +51,8 @@ ALLOWED_TOP_LEVEL_FIELDS = frozenset(
         "telemetry",
         "mesh",
         "xbee",
+        "bridge",
+        "errors",
         "locks",
         "last_event",
         "uptime_ms",
@@ -143,22 +149,28 @@ class GlyphBankManager:
 @dataclass(frozen=True)
 class MenuViewState:
     page: str = "HOME"
+    selected_item: int = 0
+    viewport_top_line: int = 0
     selected_row: int = 0
     detail: bool = False
     notification_ack: bool = False
     last_intent: str = "home"
-    mode: str = "page_browse"
+    mode: str = "scroll"
     edit_value: int = 0
+    page_stack: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "page": self.page,
+            "selected_item": self.selected_item,
+            "viewport_top_line": self.viewport_top_line,
             "selected_row": self.selected_row,
             "detail": self.detail,
             "notification_ack": self.notification_ack,
             "last_intent": self.last_intent,
             "mode": self.mode,
             "edit_value": self.edit_value,
+            "page_stack": list(self.page_stack),
         }
 
 
@@ -209,15 +221,13 @@ class CursorTracker:
         previous_lines: Sequence[str] | None = None,
     ) -> CursorState:
         mode = _effective_mode(view)
-        row = view.selected_row if mode in {"row_browse", "detail", "edit_lab"} else 0
-        row = max(0, min(LCD_ROWS - 1, row))
-        column = 0 if mode != "edit_lab" else min(LCD_COLUMNS - 1, 10)
+        row = max(0, min(LCD_ROWS - 1, view.selected_row))
+        column = 18 if mode == "edit_lab" else 1 if mode == "detail" else 0
         focus = {
-            "page_browse": "page",
-            "row_browse": "row",
+            "scroll": "item",
             "detail": "detail",
             "edit_lab": "edit",
-        }[mode]
+        }[_canonical_mode(mode)]
         dirty_rows, dirty_cells = _dirty_metadata(lines, previous_lines)
         return CursorState(
             row=row,
@@ -232,17 +242,24 @@ class CursorTracker:
 @dataclass(frozen=True)
 class RenderedLcdMenu:
     schema: str
+    source_xml_version: str
+    firmware_id: str
+    source_id: str
     page: str
     glyph_bank_name: str
     lines: tuple[str, ...]
     glyph_bank: tuple[Glyph, ...]
     view: MenuViewState
     cursor: CursorState
+    viewport: Mapping[str, Any]
     widgets: Mapping[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema": self.schema,
+            "source_xml_version": self.source_xml_version,
+            "firmware_id": self.firmware_id,
+            "source_id": self.source_id,
             "page": self.page,
             "glyph_bank_name": self.glyph_bank_name,
             "lines": list(self.lines),
@@ -252,6 +269,7 @@ class RenderedLcdMenu:
             ],
             "view": self.view.to_dict(),
             "cursor": self.cursor.to_dict(),
+            "viewport": dict(self.viewport),
             "widgets": dict(self.widgets),
         }
 
@@ -267,7 +285,7 @@ GLYPH_BANKS = {
             Glyph(4, "ack_mark", (0x00, 0x01, 0x03, 0x16, 0x1C, 0x08, 0x00, 0x00)),
             Glyph(5, "radio_low", (0x00, 0x04, 0x0A, 0x04, 0x00, 0x04, 0x04, 0x00)),
             Glyph(6, "radio_high", (0x11, 0x0A, 0x04, 0x0A, 0x11, 0x04, 0x04, 0x00)),
-            Glyph(7, "spinner", (0x04, 0x0E, 0x15, 0x04, 0x15, 0x0E, 0x04, 0x00)),
+            Glyph(7, "select", (0x04, 0x06, 0x1F, 0x06, 0x04, 0x00, 0x00, 0x00)),
         ),
     ),
     "horizontal_bar": GlyphBank(
@@ -322,6 +340,19 @@ GLYPH_BANKS = {
             Glyph(7, "dot", (0x00, 0x00, 0x00, 0x04, 0x0E, 0x04, 0x00, 0x00)),
         ),
     ),
+    "table": GlyphBank(
+        "table",
+        (
+            Glyph(0, "vertical", (0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04)),
+            Glyph(1, "horizontal", (0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00, 0x00)),
+            Glyph(2, "corner_tl", (0x00, 0x00, 0x00, 0x07, 0x04, 0x04, 0x04, 0x04)),
+            Glyph(3, "corner_tr", (0x00, 0x00, 0x00, 0x1C, 0x04, 0x04, 0x04, 0x04)),
+            Glyph(4, "tee_left", (0x04, 0x04, 0x04, 0x07, 0x04, 0x04, 0x04, 0x04)),
+            Glyph(5, "tee_right", (0x04, 0x04, 0x04, 0x1C, 0x04, 0x04, 0x04, 0x04)),
+            Glyph(6, "cross", (0x04, 0x04, 0x04, 0x1F, 0x04, 0x04, 0x04, 0x04)),
+            Glyph(7, "continuation", (0x04, 0x0E, 0x15, 0x04, 0x04, 0x04, 0x04, 0x00)),
+        ),
+    ),
 }
 GLYPH_BANK = GLYPH_BANKS["core_status"].glyphs
 SPINNER_FRAMES = ("-", "\\", "|", "/")
@@ -353,88 +384,89 @@ def validate_snapshot(snapshot: Mapping[str, Any]) -> None:
 def apply_input(view: MenuViewState, event: str) -> MenuViewState:
     if event not in INPUT_EVENTS:
         raise LcdMenuError("unsupported_input", event)
-    page_index = PAGES.index(view.page) if view.page in PAGES else 0
-    page = PAGES[page_index]
-    mode = _effective_mode(view)
+    view = _normalized_view(view)
+    page = _page_by_id(view.page)
+    selected_item = _selected_item(page, view.selected_item)
+    mode = _canonical_mode(_effective_mode(view))
+
     if event == "long_press":
-        if mode == "page_browse":
-            return MenuViewState(page="HOME", last_intent="home")
-        return MenuViewState(
-            page=page,
-            selected_row=view.selected_row,
-            last_intent="back",
-            mode="page_browse",
-            edit_value=view.edit_value,
-        )
+        if mode == "edit_lab":
+            return _normalized_view(replace(view, mode="detail", last_intent="back_detail"))
+        if mode == "detail":
+            return _normalized_view(replace(view, mode="scroll", detail=False, last_intent="back_list"))
+        if view.page_stack:
+            previous = view.page_stack[-1]
+            return _normalized_view(
+                MenuViewState(
+                    page=previous,
+                    page_stack=view.page_stack[:-1],
+                    last_intent="back_page",
+                    edit_value=view.edit_value,
+                )
+            )
+        return _normalized_view(MenuViewState(page="HOME", last_intent="home", edit_value=view.edit_value))
+
     if event == "short_press":
-        if mode == "page_browse":
-            return MenuViewState(
-                page=page,
-                selected_row=0,
+        if mode == "edit_lab":
+            return _normalized_view(
+                replace(
+                    view,
+                    mode="detail",
+                    detail=True,
+                    notification_ack=True,
+                    last_intent="local_commit",
+                )
+            )
+        item = page["items"][selected_item]
+        action = str(item["action"])
+        if action == "page":
+            target = str(item["target"])
+            stack = (*view.page_stack, view.page)[-MAX_PAGE_STACK:]
+            return _normalized_view(
+                MenuViewState(
+                    page=target,
+                    page_stack=stack,
+                    last_intent=f"page:{target}",
+                    edit_value=view.edit_value,
+                )
+            )
+        if action == "edit":
+            return _normalized_view(
+                replace(view, mode="edit_lab", detail=True, last_intent="edit_enter")
+            )
+        if action == "back":
+            return apply_input(view, "long_press")
+        return _normalized_view(
+            replace(
+                view,
+                mode="detail",
                 detail=True,
                 notification_ack=True,
-                last_intent="local_ack",
-                mode="row_browse",
-                edit_value=view.edit_value,
+                last_intent=f"detail:{item['id']}",
             )
-        if mode == "row_browse":
-            return MenuViewState(
-                page=page,
-                selected_row=view.selected_row,
-                detail=True,
-                notification_ack=False,
-                last_intent="local_select",
-                mode="detail",
-                edit_value=view.edit_value,
-            )
-        if mode == "detail":
-            return MenuViewState(
-                page=page,
-                selected_row=view.selected_row,
-                detail=True,
-                notification_ack=False,
-                last_intent="edit_enter",
-                mode="edit_lab",
-                edit_value=view.edit_value,
-            )
-        return MenuViewState(
-            page=page,
-            selected_row=view.selected_row,
-            detail=True,
-            notification_ack=True,
-            last_intent="local_commit",
-            mode="row_browse",
-            edit_value=view.edit_value,
         )
-    if mode in {"row_browse", "detail"}:
-        delta = 1 if event == "rotate_right" else -1
-        return MenuViewState(
-            page=page,
-            selected_row=(view.selected_row + delta) % LCD_ROWS,
-            detail=True,
-            notification_ack=False,
-            last_intent="row_next" if delta > 0 else "row_previous",
-            mode=mode,
-            edit_value=view.edit_value,
-        )
-    if mode == "edit_lab":
-        delta = 5 if event == "rotate_right" else -5
-        return MenuViewState(
-            page=page,
-            selected_row=view.selected_row,
-            detail=True,
-            notification_ack=False,
-            last_intent="value_up" if delta > 0 else "value_down",
-            mode="edit_lab",
-            edit_value=(view.edit_value + delta) % 105,
-        )
+
     delta = 1 if event == "rotate_right" else -1
-    next_page = PAGES[(page_index + delta) % len(PAGES)]
-    return MenuViewState(
-        page=next_page,
-        last_intent="page_next" if delta > 0 else "page_previous",
-        mode="page_browse",
-        edit_value=view.edit_value,
+    if mode == "edit_lab":
+        value = (view.edit_value + (5 if delta > 0 else -5)) % 105
+        return _normalized_view(
+            replace(
+                view,
+                edit_value=value,
+                notification_ack=False,
+                last_intent="value_up" if delta > 0 else "value_down",
+            )
+        )
+    item_count = max(1, len(page["items"]))
+    next_item = (selected_item + delta) % item_count
+    return _normalized_view(
+        replace(
+            view,
+            selected_item=next_item,
+            detail=mode == "detail",
+            notification_ack=False,
+            last_intent="item_next" if delta > 0 else "item_previous",
+        )
     )
 
 
@@ -442,38 +474,35 @@ def render(
     snapshot: Mapping[str, Any],
     view: MenuViewState | None = None,
     previous_lines: Sequence[str] | None = None,
-    glyph_bank_name: str = "core_status",
+    glyph_bank_name: str | None = None,
+    now_ms: int = 0,
 ) -> RenderedLcdMenu:
     validate_snapshot(snapshot)
-    view = view or MenuViewState()
-    if _effective_mode(view) not in NAVIGATION_MODES:
-        raise LcdMenuError("navigation_mode_invalid", view.mode)
+    view = _normalized_view(view or MenuViewState())
+    page = _page_by_id(view.page)
+    if glyph_bank_name is None:
+        glyph_bank_name = str(page["glyph_bank"])
     if glyph_bank_name not in GLYPH_BANKS:
         raise LcdMenuError("glyph_bank_unknown", glyph_bank_name)
-    page = view.page if view.page in PAGES else "HOME"
-    renderers = {
-        "HOME": _render_home,
-        "MESSAGES": _render_messages,
-        "PEERS": _render_peers,
-        "QUEUE": _render_queue,
-        "FILES": _render_files,
-        "MESH": _render_mesh,
-        "XBEE": _render_xbee,
-        "DIAG": _render_diag,
-        "LOCKS": _render_locks,
-    }
-    lines = tuple(_fit(line) for line in renderers[page](snapshot))
+    if glyph_bank_name == "table" and str(page["glyph_bank"]) != "table":
+        raise LcdMenuError("table_bank_page_mismatch", str(page["id"]))
+    lines, viewport = _render_page_lines(snapshot, page, view, now_ms)
+    lines = tuple(_fit(line) for line in lines)
     if len(lines) != LCD_ROWS or any(len(line) != LCD_COLUMNS for line in lines):
-        raise LcdMenuError("render_shape_invalid", page)
+        raise LcdMenuError("render_shape_invalid", str(page["id"]))
     cursor = CursorTracker.from_lines(lines, view, previous_lines)
     return RenderedLcdMenu(
         schema=RENDER_SCHEMA,
-        page=page,
+        source_xml_version=MENU_SCHEMA,
+        firmware_id=FIRMWARE_ID,
+        source_id=SOURCE_ID,
+        page=str(page["id"]),
         glyph_bank_name=glyph_bank_name,
         lines=lines,
         glyph_bank=GLYPH_BANKS[glyph_bank_name].glyphs,
         view=view,
         cursor=cursor,
+        viewport=viewport,
         widgets=render_widgets(snapshot),
     )
 
@@ -491,116 +520,16 @@ def sample_state() -> dict[str, Any]:
         "telemetry": {"temp_c": 31, "errors": 0, "level": 65, "history": [1, 3, 2, 4]},
         "mesh": {"mode": "sim", "root": "coord01", "hops": 2, "heal": 1},
         "xbee": {"surface": "closed", "np": 256},
+        "bridge": {"state": "closed", "host_baud": 115200, "xbee_baud": 9600},
+        "errors": {"count": 0, "last": "none"},
         "locks": {"relay": True, "xbee": True, "flash": True, "serial_write": True},
         "last_event": "ACK peer01",
         "uptime_ms": 125000,
     }
 
 
-def _render_home(snapshot: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    return (
-        f"BBS {_upper(_get(snapshot, 'mode'))} LINK:{_upper(_get(snapshot, 'link', 'status'))}",
-        f"Peers:{_get(snapshot, 'peers', 'count')} Queue:{_get(snapshot, 'queue', 'pending')}",
-        f"Cust:{_get(snapshot, 'custody', 'owner')}",
-        f"Last:{_get(snapshot, 'last_event')}",
-    )
-
-
-def _render_messages(snapshot: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    return (
-        f"MSG N:{_get(snapshot, 'messages', 'new')} IN:{_get(snapshot, 'messages', 'inbox')}",
-        f"OUT:{_get(snapshot, 'messages', 'outbox')} ACK:{_get(snapshot, 'custody', 'acked')}",
-        f"Custody:{_get(snapshot, 'custody', 'status')}",
-        f"Last:{_get(snapshot, 'last_event')}",
-    )
-
-
-def _render_peers(snapshot: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    return (
-        f"PEERS {_get(snapshot, 'peers', 'active')}/{_get(snapshot, 'peers', 'count')}",
-        f"Link:{_upper(_get(snapshot, 'link', 'status'))} RSSI:{_get(snapshot, 'link', 'rssi')}",
-        f"ACK:{_get(snapshot, 'link', 'acks')} Dup:{_get(snapshot, 'link', 'dups')}",
-        f"Mesh:{_get(snapshot, 'mesh', 'root')}",
-    )
-
-
-def _render_queue(snapshot: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    return (
-        f"QUEUE P:{_get(snapshot, 'queue', 'pending')} F:{_get(snapshot, 'queue', 'failed')}",
-        f"Retry:{_get(snapshot, 'queue', 'retry')}",
-        f"Cust:{_get(snapshot, 'custody', 'status')}",
-        "Control:CLOSED",
-    )
-
-
-def _render_files(snapshot: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    return (
-        f"FILES Q:{_get(snapshot, 'files', 'queued')} D:{_get(snapshot, 'files', 'done')}",
-        f"Bytes:{_get(snapshot, 'files', 'bytes')}",
-        "Names:CLOSED",
-        "Transfer:CLOSED",
-    )
-
-
-def _render_mesh(snapshot: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    return (
-        f"MESH {_get(snapshot, 'mesh', 'mode')}",
-        f"Root:{_get(snapshot, 'mesh', 'root')}",
-        f"Hops:{_get(snapshot, 'mesh', 'hops')} Heal:{_get(snapshot, 'mesh', 'heal')}",
-        "Live:CLOSED",
-    )
-
-
-def _render_xbee(snapshot: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    surface = _upper(_get(snapshot, "xbee", "surface", default="CLOSED"))
-    if surface == "?":
-        surface = "CLOSED"
-    return (
-        f"XBEE {surface}",
-        "UART:CLOSED",
-        f"NP:{_get(snapshot, 'xbee', 'np')}",
-        "TX CLOSED",
-    )
-
-
-def _render_diag(snapshot: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    return (
-        f"DIAG {_upper(_get(snapshot, 'mode'))}",
-        f"Up:{_format_uptime(_get(snapshot, 'uptime_ms'))}",
-        f"LCD:{_get(snapshot, 'telemetry', 'lcd', default='sim')}",
-        f"Event:{_get(snapshot, 'last_event')}",
-    )
-
-
-def _render_locks(snapshot: Mapping[str, Any]) -> tuple[str, str, str, str]:
-    return (
-        "LOCKS",
-        f"Relay:{_lock(snapshot, 'relay')}",
-        f"XBee:{_lock(snapshot, 'xbee')}",
-        f"Flash:{_lock(snapshot, 'flash')} Ser:{_lock(snapshot, 'serial_write')}",
-    )
-
-
-def _get(snapshot: Mapping[str, Any], *path: str, default: Any = "?") -> str:
-    value: Any = snapshot
-    for key in path:
-        if not isinstance(value, Mapping) or key not in value:
-            return str(default)
-        value = value[key]
-    if value is None or value == "":
-        return str(default)
-    return str(value)
-
-
-def _upper(value: str) -> str:
-    return value.upper() if value != "?" else value
-
-
-def _lock(snapshot: Mapping[str, Any], key: str) -> str:
-    locks = snapshot.get("locks", {})
-    if not isinstance(locks, Mapping) or key not in locks:
-        return "?"
-    return "LOCK" if bool(locks[key]) else "OPEN"
+def glyph_bank_for_page(page: str) -> str:
+    return str(_page_by_id(page)["glyph_bank"])
 
 
 def render_widgets(snapshot: Mapping[str, Any]) -> dict[str, Any]:
@@ -748,6 +677,7 @@ class LcdBrowserMirror:
         self.snapshot = snapshot
         self.view = view or MenuViewState()
         self.previous_lines: tuple[str, ...] | None = None
+        self.now_ms = 0
 
     def handle_request(
         self,
@@ -765,9 +695,10 @@ class LcdBrowserMirror:
                 intent = str(payload.get("intent", ""))
                 if intent not in INPUT_EVENTS:
                     raise LcdMenuError("unsupported_input", intent)
-                rendered_before = render(self.snapshot, self.view)
+                rendered_before = render(self.snapshot, self.view, now_ms=self.now_ms)
                 self.previous_lines = rendered_before.lines
                 self.view = apply_input(self.view, intent)
+                self.now_ms = 0
                 return self._state_response()
             if path in {API_STATE_PATH, API_INTENT_PATH}:
                 return _api_response(405, {"error": "method_closed"})
@@ -778,17 +709,25 @@ class LcdBrowserMirror:
             return _api_response(400, {"error": "json_invalid", "detail": str(exc)})
 
     def _state_response(self) -> BrowserApiResponse:
-        rendered = render(self.snapshot, self.view, previous_lines=self.previous_lines)
+        rendered = render(
+            self.snapshot,
+            self.view,
+            previous_lines=self.previous_lines,
+            now_ms=self.now_ms,
+        )
         self.previous_lines = rendered.lines
         return _api_response(200, rendered.to_dict())
 
 
 def build_browser_document(rendered: RenderedLcdMenu) -> str:
     cursor_ddram = f"0x{rendered.cursor.ddram_address:02X}"
+    selected_item = str(rendered.viewport.get("selected_item_id", ""))
     lines = "\n".join(
         (
             f'      <div class="lcd-row{" lcd-row-cursor" if index == rendered.cursor.row else ""}" '
             f'data-row="{index}" '
+            f'data-item="{html.escape(str(rendered.viewport["visible_item_ids"][index]))}" '
+            f'data-scroll-offset="{rendered.viewport["horizontal_scroll_offsets"][index]}" '
             f'data-cursor="{str(index == rendered.cursor.row).lower()}">'
             f"{html.escape(line)}</div>"
         )
@@ -818,8 +757,8 @@ def build_browser_document(rendered: RenderedLcdMenu) -> str:
       button {{ font: inherit; }}
     </style>
   </head>
-  <body data-schema="{html.escape(rendered.schema)}" data-page="{html.escape(rendered.page)}" data-glyph-bank="{html.escape(rendered.glyph_bank_name)}">
-    <main class="lcd" aria-label="20 by 4 LCD mirror" data-cursor-row="{rendered.cursor.row}" data-cursor-column="{rendered.cursor.column}" data-cursor-ddram="{cursor_ddram}" data-cursor-focus="{html.escape(rendered.cursor.focus)}">
+  <body data-schema="{html.escape(rendered.schema)}" data-page="{html.escape(rendered.page)}" data-glyph-bank="{html.escape(rendered.glyph_bank_name)}" data-source-xml="{html.escape(rendered.source_xml_version)}">
+    <main class="lcd" aria-label="20 by 4 LCD mirror" data-selected-item="{html.escape(selected_item)}" data-viewport-top-line="{rendered.viewport["viewport_top_line"]}" data-cursor-row="{rendered.cursor.row}" data-cursor-column="{rendered.cursor.column}" data-cursor-ddram="{cursor_ddram}" data-cursor-focus="{html.escape(rendered.cursor.focus)}">
 {lines}
     </main>
     <div class="lcd-status" aria-label="Cursor" data-row="{rendered.cursor.row}" data-column="{rendered.cursor.column}" data-ddram="{cursor_ddram}" data-focus="{html.escape(rendered.cursor.focus)}">CUR R{rendered.cursor.row} C{rendered.cursor.column} DDRAM {cursor_ddram} {html.escape(rendered.cursor.focus)}</div>
@@ -840,6 +779,196 @@ def build_browser_document(rendered: RenderedLcdMenu) -> str:
 """
 
 
+def _render_page_lines(
+    snapshot: Mapping[str, Any],
+    page: Mapping[str, Any],
+    view: MenuViewState,
+    now_ms: int,
+) -> tuple[tuple[str, ...], dict[str, Any]]:
+    visible_lines: list[str] = []
+    visible_item_ids: list[str] = []
+    scroll_offsets: list[int] = []
+    top_line = view.viewport_top_line
+    selected_id = str(page["items"][view.selected_item]["id"])
+    for physical_row in range(LCD_ROWS):
+        logical_line = top_line + physical_row
+        item_index, row_offset = _item_for_line(page, logical_line)
+        if item_index is None:
+            visible_lines.append(" " * LCD_COLUMNS)
+            visible_item_ids.append("")
+            scroll_offsets.append(0)
+            continue
+        item = page["items"][item_index]
+        item_id = str(item["id"])
+        is_selected = item_index == view.selected_item
+        indicator = ">" if is_selected and row_offset == 0 else ":" if is_selected else "|"
+        if row_offset == 0:
+            text = str(item["label"])
+        else:
+            text = str(item["rows"][row_offset - 1])
+        text = _expand_tokens(text, snapshot)
+        offset = _marquee_offset(text, now_ms) if is_selected else 0
+        content = _marquee_content(text, offset) if is_selected else _content_fit(text)
+        visible_lines.append(indicator + content)
+        visible_item_ids.append(item_id)
+        scroll_offsets.append(offset)
+    viewport_top_item, viewport_top_row_offset = _item_for_line(page, top_line)
+    viewport = {
+        "source_xml_version": MENU_SCHEMA,
+        "source_xml_file": SOURCE_XML,
+        "selected_item_id": selected_id,
+        "selected_item_index": view.selected_item,
+        "visible_item_ids": visible_item_ids,
+        "physical_indicator_row": view.selected_row,
+        "viewport_top_line": top_line,
+        "viewport_top_item": ""
+        if viewport_top_item is None
+        else str(page["items"][viewport_top_item]["id"]),
+        "viewport_top_item_line": 0 if viewport_top_item is None else viewport_top_row_offset,
+        "horizontal_scroll_offsets": scroll_offsets,
+        "marquee_hold_ms": MARQUEE_HOLD_MS,
+        "marquee_step_ms": MARQUEE_STEP_MS,
+        "marquee_gap": MARQUEE_GAP,
+        "logical_line_count": int(page["line_count"]),
+        "page_item_count": len(page["items"]),
+    }
+    return tuple(visible_lines), viewport
+
+
+def _normalized_view(view: MenuViewState) -> MenuViewState:
+    page = _page_by_id(view.page)
+    mode = _canonical_mode(_effective_mode(view))
+    selected_item = _selected_item(page, view.selected_item)
+    line_start = _item_start_line(page, selected_item)
+    selected_rows = int(page["items"][selected_item]["rows"].__len__()) + 1
+    max_top = max(0, int(page["line_count"]) - LCD_ROWS)
+    top = max(0, min(view.viewport_top_line, max_top))
+    if line_start < top:
+        top = line_start
+    elif line_start + selected_rows > top + LCD_ROWS:
+        top = max(0, line_start + selected_rows - LCD_ROWS)
+    top = max(0, min(top, max_top))
+    selected_row = max(0, min(LCD_ROWS - 1, line_start - top))
+    return replace(
+        view,
+        page=str(page["id"]),
+        selected_item=selected_item,
+        viewport_top_line=top,
+        selected_row=selected_row,
+        mode=mode,
+        detail=mode in {"detail", "edit_lab"},
+    )
+
+
+def _page_by_id(page_id: str) -> Mapping[str, Any]:
+    for page in GENERATED_PAGES:
+        if page["id"] == page_id:
+            return page
+    return GENERATED_PAGES[0]
+
+
+def _selected_item(page: Mapping[str, Any], selected_item: int) -> int:
+    item_count = max(1, len(page["items"]))
+    return max(0, min(selected_item, item_count - 1))
+
+
+def _item_start_line(page: Mapping[str, Any], selected_item: int) -> int:
+    line = 0
+    for index, item in enumerate(page["items"]):
+        if index == selected_item:
+            return line
+        line += 1 + len(item["rows"])
+    return 0
+
+
+def _item_for_line(page: Mapping[str, Any], logical_line: int) -> tuple[int | None, int]:
+    line = 0
+    for index, item in enumerate(page["items"]):
+        row_count = 1 + len(item["rows"])
+        if line <= logical_line < line + row_count:
+            return index, logical_line - line
+        line += row_count
+    return None, 0
+
+
+def _marquee_offset(text: str, now_ms: int) -> int:
+    clean = _ascii_clean(text)
+    if len(clean) <= LCD_CONTENT_COLUMNS:
+        return 0
+    if now_ms < MARQUEE_HOLD_MS:
+        return 0
+    cycle = len(clean) + MARQUEE_GAP
+    return ((now_ms - MARQUEE_HOLD_MS) // MARQUEE_STEP_MS) % cycle
+
+
+def _marquee_content(text: str, offset: int) -> str:
+    clean = _ascii_clean(text)
+    if len(clean) <= LCD_CONTENT_COLUMNS:
+        return clean.ljust(LCD_CONTENT_COLUMNS)
+    loop = clean + (" " * MARQUEE_GAP) + clean
+    return loop[offset : offset + LCD_CONTENT_COLUMNS].ljust(LCD_CONTENT_COLUMNS)
+
+
+def _content_fit(text: str) -> str:
+    clean = _ascii_clean(text)
+    return clean[:LCD_CONTENT_COLUMNS].ljust(LCD_CONTENT_COLUMNS)
+
+
+def _expand_tokens(text: str, snapshot: Mapping[str, Any]) -> str:
+    result = str(text)
+    for key in (
+        "bridge.state",
+        "custody.status",
+        "errors.count",
+        "errors.last",
+        "files.done",
+        "files.queued",
+        "last_event",
+        "link.acks",
+        "link.rssi",
+        "link.status",
+        "mesh.heal",
+        "mesh.hops",
+        "mesh.mode",
+        "mesh.root",
+        "messages.inbox",
+        "messages.new",
+        "messages.outbox",
+        "peers.active",
+        "peers.count",
+        "queue.failed",
+        "queue.pending",
+        "queue.retry",
+        "telemetry.level",
+        "uptime_ms",
+        "xbee.surface",
+    ):
+        result = result.replace("{" + key + "}", _get(snapshot, *key.split(".")))
+    return result
+
+
+def _get(snapshot: Mapping[str, Any], *path: str, default: Any = "?") -> str:
+    value: Any = snapshot
+    for key in path:
+        if not isinstance(value, Mapping) or key not in value:
+            return str(default)
+        value = value[key]
+    if value is None or value == "":
+        return str(default)
+    return str(value)
+
+
+def _upper(value: str) -> str:
+    return value.upper() if value != "?" else value
+
+
+def _lock(snapshot: Mapping[str, Any], key: str) -> str:
+    locks = snapshot.get("locks", {})
+    if not isinstance(locks, Mapping) or key not in locks:
+        return "?"
+    return "LOCK" if bool(locks[key]) else "OPEN"
+
+
 def _format_uptime(value: str) -> str:
     try:
         milliseconds = int(value)
@@ -855,10 +984,16 @@ def _format_uptime(value: str) -> str:
 
 def _effective_mode(view: MenuViewState) -> str:
     mode = view.mode
-    if mode == "page_browse" and view.detail:
-        mode = "row_browse"
+    if mode == "page_browse" or mode == "row_browse":
+        mode = "scroll"
     if mode not in NAVIGATION_MODES:
         raise LcdMenuError("navigation_mode_invalid", mode)
+    return mode
+
+
+def _canonical_mode(mode: str) -> str:
+    if mode in {"page_browse", "row_browse"}:
+        return "scroll"
     return mode
 
 
@@ -923,10 +1058,14 @@ def _api_response(status: int, body: Mapping[str, Any]) -> BrowserApiResponse:
 
 
 def _fit(text: str) -> str:
-    clean = "".join(char if 32 <= ord(char) < 127 else "?" for char in str(text))
+    clean = _ascii_clean(text)
     if len(clean) > LCD_COLUMNS:
         return clean[:LCD_COLUMNS]
     return clean.ljust(LCD_COLUMNS)
+
+
+def _ascii_clean(text: str) -> str:
+    return "".join(char if 32 <= ord(char) < 127 else "?" for char in str(text))
 
 
 def _load_snapshot(path: str | None) -> Mapping[str, Any]:
@@ -942,10 +1081,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("snapshot", nargs="?", help="JSON snapshot path, or '-' for stdin")
     parser.add_argument("--page", choices=PAGES, default="HOME")
+    parser.add_argument("--now-ms", type=int, default=0, help="deterministic render tick")
     parser.add_argument("--browser-html", action="store_true", help="emit inert browser mirror HTML")
     args = parser.parse_args(argv)
     snapshot = _load_snapshot(args.snapshot)
-    rendered = render(snapshot, MenuViewState(page=args.page))
+    rendered = render(snapshot, MenuViewState(page=args.page), now_ms=args.now_ms)
     if args.browser_html:
         print(build_browser_document(rendered), end="")
     else:

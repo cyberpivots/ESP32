@@ -53,8 +53,17 @@
   blockers remain. Tier 3 still requires explicit live-gate authority,
   same-session evidence, recovery path, reviewer quorum, and closed-surface
   review.
-- If read-only subagents are unavailable or unsafe, run the same role
-  perspectives locally and record that no subagents were spawned.
+- Agent lifecycle cleanup is required around reviewer quorum. Coordinators
+  inspect completed agents before spawning more reviewers when lifecycle state
+  is visible, use `wait_agent` to collect reviewer output, close completed/stale
+  agents with `close_agent` after their evidence is captured, and close agents
+  before fallback/final decisions. Local role-lens fallback is allowed only
+  after a cleanup attempt is recorded, or after lifecycle state is recorded as
+  unavailable or unsafe to act on. This is an operational requirement on the
+  parent agent; repo-local hooks and tests can remind or audit it but cannot
+  guarantee runtime slot release.
+- If read-only subagents are unavailable or unsafe after lifecycle cleanup, run
+  the same role perspectives locally and record that no subagents were spawned.
 
 ## Validation gates
 
@@ -83,6 +92,8 @@
 - Hardware status: photographed `four-relay-xbee-wifi` target profiles added;
   physical bench verification pending.
 - Agent-process status: tiered multi-agent triage is the default workspace
-  process; project-local Codex hooks remain trust-gated runtime aids, while
-  optional managed-hook profiles are available for supported Codex hook events.
-  The default profile is yolo-compatible; admin-strict is not the default.
+  process; reviewer quorum includes agent lifecycle cleanup for completed or
+  stale subagents; project-local Codex hooks remain trust-gated runtime aids,
+  while optional managed-hook profiles are available for supported Codex hook
+  events. The default profile is yolo-compatible; admin-strict is not the
+  default.

@@ -28,6 +28,7 @@ def main() -> int:
 - Project-local read-only subagents are default-authorized for safe Tier 2 and Tier 3 reviewer quorum.
 - Stay read-only unless the parent gave an explicit disjoint write scope.
 - Reviewer outputs must include role, weight, evidence reviewed, P1/P2 findings, vote, conditions, and confidence.
+- agent lifecycle cleanup is a parent-agent duty: after this reviewer output is captured, the parent must close completed/stale agents with close_agent, close agents before fallback/final, and use fallback only after cleanup attempt.
 - Missing evidence should become a next safe evidence action when automatable, not a premature stop.
 - Preserve dirty work and never revert user or other-agent changes.
 - Do not select a firmware framework unless an accepted ADR authorizes it.
@@ -35,7 +36,7 @@ def main() -> int:
 - List changed paths and validation performed if mutation is authorized.
 - Do not commit or push unless the user explicitly requested it.
 Current permission mode reported to the hook: {permission_mode}.
-Project-local hooks and prompt packets are advisory aids; source-backed records and explicit gate authority remain authoritative."""
+Project-local hooks and prompt packets are advisory aids; source-backed records and explicit gate authority remain authoritative; bypassPermissions advisory only."""
     if shape_unknown:
         message += "\nHook input shape was unknown; require explicit coordinator triage before mutation."
 

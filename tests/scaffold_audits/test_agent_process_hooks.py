@@ -60,6 +60,11 @@ class AgentProcessHookTests(unittest.TestCase):
         self.assert_hook_context(
             result,
             "UserPromptSubmit",
+            "agent lifecycle cleanup",
+            "inspect completed agents before spawning",
+            "close completed/stale agents",
+            "close agents before fallback/final",
+            "fallback only after cleanup attempt",
             "evidence need",
             "default-authorized",
             "Weighted vote",
@@ -76,6 +81,10 @@ class AgentProcessHookTests(unittest.TestCase):
         self.assert_hook_context(
             result,
             "SubagentStart",
+            "agent lifecycle cleanup",
+            "close completed/stale agents",
+            "close agents before fallback/final",
+            "fallback only after cleanup attempt",
             "default-authorized",
             "explicit disjoint write scope",
             "role, weight",
@@ -83,10 +92,27 @@ class AgentProcessHookTests(unittest.TestCase):
             "advisory aids",
         )
 
+    def test_subagent_stop_hook_emits_lifecycle_cleanup_boundary(self) -> None:
+        result = run_hook(
+            "subagent_stop_agent_process.py",
+            json.dumps({"hook_event_name": "SubagentStop"}),
+        )
+        self.assert_hook_context(
+            result,
+            "SubagentStop",
+            "agent lifecycle cleanup",
+            "inspect completed agents before spawning",
+            "close completed/stale agents",
+            "close agents before fallback/final",
+            "fallback only after cleanup attempt",
+            "bypassPermissions advisory only",
+        )
+
     def test_hooks_do_not_crash_on_malformed_or_non_object_stdin(self) -> None:
         scripts = [
             ("user_prompt_submit_agent_process.py", "UserPromptSubmit"),
             ("subagent_start_agent_process.py", "SubagentStart"),
+            ("subagent_stop_agent_process.py", "SubagentStop"),
             ("pre_tool_use_agent_process.py", "PreToolUse"),
         ]
         for script, event_name in scripts:
@@ -124,6 +150,8 @@ class AgentProcessHookTests(unittest.TestCase):
         hooks = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
         pretool = json.dumps(hooks["hooks"]["PreToolUse"])
         self.assertIn("functions\\\\.exec_command", pretool)
+        self.assertIn("SubagentStop", hooks["hooks"])
+        self.assertIn("subagent_stop_agent_process.py", json.dumps(hooks["hooks"]["SubagentStop"]))
 
     def test_pre_tool_partial_triage_still_warns_for_missing_fields(self) -> None:
         result = run_hook(
@@ -158,7 +186,7 @@ class AgentProcessHookTests(unittest.TestCase):
         self.assertEqual("", result.stderr)
         self.assertEqual("", result.stdout)
 
-    def test_pre_tool_complete_triage_does_not_warn(self) -> None:
+    def test_pre_tool_complete_triage_emits_scheduler_advisory_only(self) -> None:
         prompt = (
             "Verified facts: local hook edit. Assumptions: none. Unknowns: active "
             "runtime trust. Selected tier: Tier 2. Owner role: QA. Evidence need: "
@@ -172,9 +200,15 @@ class AgentProcessHookTests(unittest.TestCase):
                 "prompt": prompt,
             }),
         )
-        self.assertEqual(0, result.returncode)
-        self.assertEqual("", result.stderr)
-        self.assertEqual("", result.stdout)
+        context = self.assert_hook_context(
+            result,
+            "PreToolUse",
+            "ESP32 multi-window scheduler advisory",
+            "scheduler-unavailable",
+            "no deny/block",
+        )
+        self.assertNotIn("verified facts", context)
+        self.assertNotIn("missing routing packet", context)
 
 
 if __name__ == "__main__":

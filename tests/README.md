@@ -11,6 +11,9 @@ Project-local host tests:
 - `python3 tests/lcd_bbs_menu/test_lcd_bbs_menu.py`
 - `python3 -m unittest discover -s tests/lcd_bbs_menu -p 'test_*.py'`
 - `python3 -m unittest discover -s tests/scaffold_audits -p 'test_*.py'`
+- `python3 -m unittest tests.scaffold_audits.test_agent_scheduler`
+- `python3 scripts/agent_scheduler.py self-test`
+- `python3 scripts/agent_scheduler.py doctor --repo /mnt/h/ESP32`
 - `python3 scripts/scaffold_audit_agent_process.py`
 - `python3 tests/scaffold_audits/test_source_image_scan.py`
 - `python3 scripts/audit_public_manifest.py` after

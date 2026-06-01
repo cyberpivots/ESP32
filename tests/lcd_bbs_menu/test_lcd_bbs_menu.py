@@ -3,14 +3,27 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
+import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools" / "simulators" / "lcd_bbs_menu"))
+SIM_DIR = ROOT / "tools" / "simulators" / "lcd_bbs_menu"
+sys.path.insert(0, str(SIM_DIR))
 
+from generate_lcd_menu import (  # noqa: E402
+    FIRMWARE_ID,
+    MENU_SCHEMA,
+    RENDER_SCHEMA,
+    FW_HEADER_PATH,
+    MenuGenerationError,
+    load_menu,
+)
+from generated_menu import PAGES as GENERATED_PAGES, SOURCE_ID  # noqa: E402
 from lcd_bbs_menu import (  # noqa: E402
     API_INTENT_PATH,
     API_STATE_PATH,
@@ -18,9 +31,12 @@ from lcd_bbs_menu import (  # noqa: E402
     GLYPH_BANKS,
     INPUT_EVENTS,
     LCD_COLUMNS,
+    LCD_CONTENT_COLUMNS,
     LCD_DDRAM_ROW_BASES,
     LCD_ROWS,
-    RENDER_SCHEMA,
+    MARQUEE_HOLD_MS,
+    MARQUEE_STEP_MS,
+    PAGES,
     SNAPSHOT_SCHEMA,
     CursorTracker,
     Glyph,
@@ -33,6 +49,7 @@ from lcd_bbs_menu import (  # noqa: E402
     big_digits,
     build_browser_document,
     gauge_demo,
+    glyph_bank_for_page,
     horizontal_bar,
     render,
     sample_state,
@@ -44,153 +61,200 @@ from lcd_bbs_menu import (  # noqa: E402
 
 
 class LcdBbsMenuTests(unittest.TestCase):
-    def test_home_lines_are_exactly_20_cells(self) -> None:
+    def test_home_lines_are_exactly_20_cells_and_v2(self) -> None:
         rendered = render(sample_state())
         self.assertEqual(rendered.schema, RENDER_SCHEMA)
+        self.assertEqual(rendered.source_xml_version, MENU_SCHEMA)
+        self.assertEqual(rendered.firmware_id, FIRMWARE_ID)
+        self.assertEqual(rendered.source_id, SOURCE_ID)
         self.assertEqual(len(rendered.lines), LCD_ROWS)
         self.assertTrue(all(len(line) == LCD_COLUMNS for line in rendered.lines))
+        self.assertEqual(rendered.lines[0], ">BBS FIELD STATUS RE")
+        self.assertEqual(rendered.viewport["selected_item_id"], "home-status")
+        self.assertEqual(rendered.viewport["visible_item_ids"][0], "home-status")
 
-    def test_page_snapshots_are_stable(self) -> None:
-        home = render(sample_state(), MenuViewState(page="HOME"))
-        self.assertEqual(
-            home.lines,
-            (
-                "BBS FIELD LINK:OK   ",
-                "Peers:3 Queue:2     ",
-                "Cust:OPCON          ",
-                "Last:ACK peer01     ",
-            ),
+    def test_generated_menu_files_are_fresh(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(SIM_DIR / "generate_lcd_menu.py"), "--check"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
         )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('FR_DIAG_FIRMWARE_ID_VALUE "PF0530N"', FW_HEADER_PATH.read_text(encoding="utf-8"))
 
-        mesh = render(sample_state(), MenuViewState(page="MESH"))
-        self.assertEqual(
-            mesh.lines,
-            (
-                "MESH sim            ",
-                "Root:coord01        ",
-                "Hops:2 Heal:1       ",
-                "Live:CLOSED         ",
-            ),
-        )
+    def test_xml_source_generates_pages_and_table_bank(self) -> None:
+        pages = load_menu()
+        self.assertEqual(len(pages), 14)
+        self.assertEqual(PAGES[0], "HOME")
+        self.assertIn("ROUTES", PAGES)
+        routes = next(page for page in GENERATED_PAGES if page["id"] == "ROUTES")
+        self.assertEqual(routes["glyph_bank"], "table")
+        self.assertEqual(routes["items"][0]["id"], "routes-table")
+        self.assertEqual(routes["items"][0]["rows"][0], "coord01|-67 |2")
 
-        xbee = render(sample_state(), MenuViewState(page="XBEE"))
-        self.assertEqual(
-            xbee.lines,
-            (
-                "XBEE CLOSED         ",
-                "UART:CLOSED         ",
-                "NP:256              ",
-                "TX CLOSED           ",
-            ),
-        )
+    def test_xml_rejections_fail_closed(self) -> None:
+        cases = {
+            "target_unknown": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="Bad" action="page" target="NOPE" /></page></menu>',
+            "duplicate_item": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="dup" label="A" action="detail" /><item id="dup" label="B" action="detail" /></page></menu>',
+            "bad_glyph": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="bad"><item id="i1" label="A" action="detail" /></page></menu>',
+            "wide_table": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="table"><item id="i1" label="12345678901234567890" action="detail" table="true" /></page></menu>',
+            "bad_token": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="{secret.value}" action="detail" /></page></menu>',
+            "secret_attr": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" pairing_token="x" /></page></menu>',
+            "doctype": '<!DOCTYPE menu [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" /></page></menu>',
+        }
+        for name, xml in cases.items():
+            with self.subTest(name=name), tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as handle:
+                handle.write(xml)
+                path = Path(handle.name)
+            try:
+                with self.assertRaises(MenuGenerationError):
+                    load_menu(path)
+            finally:
+                path.unlink(missing_ok=True)
 
-    def test_glyph_bank_bounds(self) -> None:
+    def test_glyph_bank_bounds_include_table(self) -> None:
         rendered = render(sample_state())
         self.assertEqual(rendered.glyph_bank_name, "core_status")
         self.assertEqual(rendered.glyph_bank, GLYPH_BANK)
-        self.assertEqual(rendered.to_dict()["glyph_bank_name"], "core_status")
-        self.assertEqual(len(rendered.glyph_bank), 8)
-        for expected_slot, glyph in enumerate(rendered.glyph_bank):
-            self.assertEqual(glyph.slot, expected_slot)
-            self.assertEqual(len(glyph.rows), 8)
-            self.assertTrue(all(0 <= row <= 0x1F for row in glyph.rows))
+        self.assertEqual(set(GLYPH_BANKS), set(["core_status", "horizontal_bar", "vertical_chart", "big_digits", "gauge_demo", "table"]))
+        for bank in GLYPH_BANKS.values():
+            self.assertLessEqual(len(bank.glyphs), 8)
+            for expected_slot, glyph in enumerate(bank.glyphs):
+                self.assertEqual(glyph.slot, expected_slot)
+                self.assertEqual(len(glyph.rows), 8)
+                self.assertTrue(all(0 <= row <= 0x1F for row in glyph.rows))
 
-    def test_named_glyph_banks_and_swap_throttle(self) -> None:
-        self.assertEqual(
-            set(GLYPH_BANKS),
-            {"core_status", "horizontal_bar", "vertical_chart", "big_digits", "gauge_demo"},
-        )
         manager = GlyphBankManager()
         with self.assertRaisesRegex(LcdMenuError, "glyph_bank_swap_throttled"):
-            manager.select("horizontal_bar", now_ms=100)
-        selected = manager.select("horizontal_bar", now_ms=250)
-        self.assertEqual(selected.name, "horizontal_bar")
-
+            manager.select("table", now_ms=100)
+        self.assertEqual(manager.select("table", now_ms=250).name, "table")
         with self.assertRaisesRegex(LcdMenuError, "glyph_bank_overflow"):
-            GlyphBank(
-                "too_many",
-                tuple(Glyph(index, f"g{index}", (0,) * 8) for index in range(9)),
-            )
+            GlyphBank("too_many", tuple(Glyph(index, f"g{index}", (0,) * 8) for index in range(9)))
         with self.assertRaisesRegex(LcdMenuError, "glyph_row_byte_invalid"):
             GlyphBank("bad_row", (Glyph(0, "bad", (0x20,) * 8),))
 
-    def test_truncates_long_lines(self) -> None:
-        state = sample_state()
-        state["last_event"] = "ACK peer01 with an intentionally overlong event"
-        rendered = render(state)
-        self.assertEqual(rendered.lines[3], "Last:ACK peer01 with")
-        self.assertEqual(len(rendered.lines[3]), LCD_COLUMNS)
+    def test_all_xml_pages_render_with_expected_glyph_bank(self) -> None:
+        self.assertEqual(len(PAGES), 14)
+        for page in PAGES:
+            rendered = render(sample_state(), MenuViewState(page=page))
+            self.assertEqual(len(rendered.lines), LCD_ROWS)
+            self.assertTrue(all(len(line) == LCD_COLUMNS for line in rendered.lines))
+            self.assertEqual(rendered.glyph_bank_name, glyph_bank_for_page(page))
+            self.assertEqual(rendered.schema, "bbs_lcd_render.v2")
 
-    def test_missing_data_renders_unknown_or_closed(self) -> None:
+    def test_more_than_four_options_scroll_vertically(self) -> None:
+        view = MenuViewState(page="HOME")
+        for _ in range(4):
+            view = apply_input(view, "rotate_right")
+        self.assertEqual(view.selected_item, 4)
+        self.assertEqual(view.viewport_top_line, 1)
+        self.assertEqual(view.selected_row, 3)
+        rendered = render(sample_state(), view)
+        self.assertEqual(rendered.viewport["selected_item_id"], "home-mesh")
+        self.assertEqual(rendered.lines[3], ">Mesh routes table  ")
+
+    def test_indicator_moves_before_viewport_scrolls(self) -> None:
+        view = MenuViewState(page="HOME")
+        rows = []
+        tops = []
+        for _ in range(4):
+            rendered = render(sample_state(), view)
+            rows.append(rendered.viewport["physical_indicator_row"])
+            tops.append(rendered.viewport["viewport_top_line"])
+            view = apply_input(view, "rotate_right")
+        self.assertEqual(rows, [0, 1, 2, 3])
+        self.assertEqual(tops, [0, 0, 0, 0])
+
+    def test_short_press_follows_xml_target_and_long_press_backs_stack(self) -> None:
+        view = MenuViewState(page="HOME")
+        view = apply_input(view, "rotate_right")
+        view = apply_input(view, "short_press")
+        self.assertEqual(view.page, "MESSAGES")
+        self.assertEqual(view.page_stack, ("HOME",))
+        self.assertEqual(view.last_intent, "page:MESSAGES")
+        view = apply_input(view, "long_press")
+        self.assertEqual(view.page, "HOME")
+        self.assertEqual(view.page_stack, ())
+        view = apply_input(view, "long_press")
+        self.assertEqual(view.page, "HOME")
+        self.assertEqual(view.last_intent, "home")
+
+    def test_detail_and_edit_modes_are_local_only(self) -> None:
+        detail = apply_input(MenuViewState(page="HOME"), "short_press")
+        self.assertEqual(detail.mode, "detail")
+        self.assertEqual(detail.last_intent, "detail:home-status")
+        back = apply_input(detail, "long_press")
+        self.assertEqual(back.mode, "scroll")
+
+        edit = MenuViewState(page="BARS", selected_item=2)
+        edit = apply_input(edit, "short_press")
+        self.assertEqual(edit.mode, "edit_lab")
+        edit = apply_input(edit, "rotate_right")
+        self.assertEqual(edit.edit_value, 5)
+        edit = apply_input(edit, "short_press")
+        self.assertEqual(edit.mode, "detail")
+        self.assertEqual(edit.last_intent, "local_commit")
+
+    def test_grouped_multirow_item_selects_only_first_row(self) -> None:
+        rendered = render(sample_state(), MenuViewState(page="ROUTES"))
+        self.assertEqual(rendered.glyph_bank_name, "table")
+        self.assertEqual(rendered.viewport["selected_item_id"], "routes-table")
+        self.assertEqual(rendered.lines[0], ">NODE |RSSI|Q       ")
+        self.assertEqual(rendered.lines[1], ":coord01|-67 |2     ")
+        self.assertEqual(rendered.lines[2], ":peer02 |-71 |0     ")
+        self.assertEqual(rendered.lines[3], ":peer03 |-82 |1     ")
+
+        moved = apply_input(MenuViewState(page="ROUTES"), "rotate_right")
+        self.assertEqual(moved.selected_item, 1)
+        self.assertEqual(moved.selected_row, 3)
+        self.assertEqual(render(sample_state(), moved).lines[3], ">Back mesh          ")
+
+    def test_selected_overlong_text_scrolls_and_unselected_clips(self) -> None:
+        view = MenuViewState(page="MESSAGES", selected_item=3)
+        at_start = render(sample_state(), view, now_ms=0)
+        after_hold = render(sample_state(), view, now_ms=MARQUEE_HOLD_MS + MARQUEE_STEP_MS)
+        self.assertEqual(at_start.viewport["horizontal_scroll_offsets"][3], 0)
+        self.assertEqual(after_hold.viewport["horizontal_scroll_offsets"][3], 1)
+        self.assertNotEqual(at_start.lines[3], after_hold.lines[3])
+        self.assertEqual(at_start.lines[1], "|Outbox pending ackn")
+        self.assertEqual(after_hold.lines[1], "|Outbox pending ackn")
+        self.assertEqual(len(after_hold.lines[3]), LCD_COLUMNS)
+        self.assertEqual(LCD_CONTENT_COLUMNS, 19)
+
+    def test_marquee_resets_on_selection_change(self) -> None:
+        selected = render(sample_state(), MenuViewState(page="MESSAGES", selected_item=3), now_ms=2000)
+        moved = apply_input(MenuViewState(page="MESSAGES", selected_item=3), "rotate_right")
+        moved_render = render(sample_state(), moved, now_ms=0)
+        self.assertGreater(selected.viewport["horizontal_scroll_offsets"][3], 0)
+        self.assertEqual(moved_render.viewport["horizontal_scroll_offsets"][3], 0)
+
+    def test_missing_data_and_secret_fields(self) -> None:
         state = {"schema": SNAPSHOT_SCHEMA}
-        home = render(state)
-        self.assertIn("LINK:?", home.lines[0])
-        self.assertEqual(home.lines[1], "Peers:? Queue:?     ")
-        self.assertEqual(home.lines[2], "Cust:?              ")
+        rendered = render(state)
+        self.assertEqual(rendered.lines[0], ">BBS FIELD STATUS RE")
 
-        xbee = render(state, MenuViewState(page="XBEE"))
-        self.assertEqual(xbee.lines[0], "XBEE CLOSED         ")
-        self.assertEqual(xbee.lines[2], "NP:?                ")
-
-    def test_secret_fields_are_rejected(self) -> None:
         state = sample_state()
         state["mesh"] = {"pairing_token": "do-not-render"}
         with self.assertRaisesRegex(LcdMenuError, "secret_field_rejected"):
             render(state)
 
-    def test_unknown_top_level_fields_are_rejected(self) -> None:
         state = sample_state()
         state["extra"] = "not in bbs_lcd_state.v1"
         with self.assertRaisesRegex(LcdMenuError, "field_unknown"):
             render(state)
 
-    def test_input_event_transitions_are_ui_only(self) -> None:
-        view = MenuViewState()
-        view = apply_input(view, "rotate_right")
-        self.assertEqual(view.page, "MESSAGES")
-        self.assertEqual(view.last_intent, "page_next")
-
-        view = apply_input(view, "short_press")
-        self.assertTrue(view.detail)
-        self.assertTrue(view.notification_ack)
-        self.assertEqual(view.last_intent, "local_ack")
-        self.assertEqual(view.mode, "row_browse")
-
-        view = apply_input(view, "rotate_right")
-        self.assertEqual(view.page, "MESSAGES")
-        self.assertEqual(view.selected_row, 1)
-        self.assertEqual(view.last_intent, "row_next")
-
-        view = apply_input(view, "long_press")
-        self.assertEqual(view.page, "MESSAGES")
-        self.assertEqual(view.last_intent, "back")
-        view = apply_input(view, "long_press")
-        self.assertEqual(view, MenuViewState(page="HOME", last_intent="home"))
-
-    def test_edit_lab_mode_changes_local_value_only(self) -> None:
-        view = MenuViewState(page="DIAG", selected_row=2, detail=True, mode="edit_lab", edit_value=10)
-        view = apply_input(view, "rotate_right")
-        self.assertEqual(view.edit_value, 15)
-        self.assertEqual(view.last_intent, "value_up")
-        view = apply_input(view, "short_press")
-        self.assertEqual(view.last_intent, "local_commit")
-        self.assertEqual(view.mode, "row_browse")
-
-    def test_double_click_is_not_a_v1_input(self) -> None:
+    def test_double_click_is_not_a_v2_input(self) -> None:
         with self.assertRaisesRegex(LcdMenuError, "unsupported_input"):
             apply_input(MenuViewState(), "double_click")
 
     def test_closed_surface_labels_do_not_emit_commands(self) -> None:
         rendered = render(sample_state(), MenuViewState(page="LOCKS"))
-        self.assertEqual(
-            rendered.lines,
-            (
-                "LOCKS               ",
-                "Relay:LOCK          ",
-                "XBee:LOCK           ",
-                "Flash:LOCK Ser:LOCK ",
-            ),
-        )
+        self.assertEqual(rendered.lines[0], ">Relay LOCK         ")
+        self.assertIn("XBee LOCK", rendered.lines[1])
+        self.assertIn("Flash LOCK", rendered.lines[2])
+        self.assertIn("Serial write LOCK", rendered.lines[3])
 
     def test_cursor_ddram_mapping_and_dirty_metadata(self) -> None:
         self.assertEqual(LCD_DDRAM_ROW_BASES, (0x00, 0x40, 0x14, 0x54))
@@ -198,11 +262,9 @@ class LcdBbsMenuTests(unittest.TestCase):
         self.assertEqual(CursorTracker.ddram_to_row_column(0x54), (3, 0))
 
         base = render(sample_state())
-        changed_state = sample_state()
-        changed_state["last_event"] = "ACK peer02"
-        changed = render(changed_state, previous_lines=base.lines)
-        self.assertEqual(changed.cursor.dirty_rows, (3,))
-        self.assertIn((3, 14), changed.cursor.dirty_cells)
+        changed = render(sample_state(), MenuViewState(selected_item=1), previous_lines=base.lines)
+        self.assertEqual(changed.cursor.dirty_rows, (0, 1))
+        self.assertIn((1, 0), changed.cursor.dirty_cells)
 
     def test_widget_renderers_are_stable_and_ascii(self) -> None:
         self.assertEqual(horizontal_bar(50, 100, width=10), "[#####-----]")
@@ -217,18 +279,17 @@ class LcdBbsMenuTests(unittest.TestCase):
         self.assertEqual(rendered.widgets["queue"], "Q~ P2 R1")
         self.assertIn("vertical_chart", rendered.widgets)
 
-    def test_browser_mirror_api_and_static_html_are_host_only(self) -> None:
+    def test_browser_mirror_api_and_static_html_are_host_only_v2(self) -> None:
         mirror = LcdBrowserMirror(sample_state())
         state_response = mirror.handle_request("GET", API_STATE_PATH)
         self.assertEqual(state_response.status, 200)
         self.assertEqual(state_response.body["schema"], RENDER_SCHEMA)
-        self.assertEqual(state_response.body["glyph_bank_name"], "core_status")
-        self.assertEqual(len(state_response.body["lines"]), LCD_ROWS)
-        self.assertEqual(state_response.body["cursor"]["focus"], "page")
+        self.assertEqual(state_response.body["viewport"]["selected_item_id"], "home-status")
+        self.assertEqual(state_response.body["cursor"]["focus"], "item")
 
         intent_response = mirror.handle_request("POST", API_INTENT_PATH, {"intent": "rotate_right"})
         self.assertEqual(intent_response.status, 200)
-        self.assertEqual(intent_response.body["view"]["page"], "MESSAGES")
+        self.assertEqual(intent_response.body["view"]["selected_item"], 1)
 
         bad_intent = mirror.handle_request("POST", API_INTENT_PATH, {"intent": "relay_toggle"})
         self.assertEqual(bad_intent.status, 400)
@@ -241,11 +302,12 @@ class LcdBbsMenuTests(unittest.TestCase):
         html = build_browser_document(render(sample_state()))
         self.assertIn('class="lcd-row"', html)
         self.assertIn('class="lcd-row lcd-row-cursor"', html)
-        self.assertIn('data-cursor-row="0"', html)
-        self.assertIn('data-cursor-column="0"', html)
+        self.assertIn('data-selected-item="home-status"', html)
+        self.assertIn('data-viewport-top-line="0"', html)
         self.assertIn('data-cursor-ddram="0x00"', html)
-        self.assertIn('data-cursor-focus="page"', html)
+        self.assertIn('data-cursor-focus="item"', html)
         self.assertIn('data-glyph-bank="core_status"', html)
+        self.assertIn('data-source-xml="bbs_lcd_menu.v1"', html)
         self.assertIn('data-intent="rotate_right"', html)
         for forbidden in (
             "fetch(",
@@ -257,22 +319,26 @@ class LcdBbsMenuTests(unittest.TestCase):
             "Bluetooth",
             "gpio_set_level",
             "uart_write",
+            "relay_toggle",
         ):
             self.assertNotIn(forbidden, html)
 
-    def test_browser_mirror_accepts_only_v1_intents(self) -> None:
+    def test_browser_mirror_accepts_only_v2_intents(self) -> None:
         for intent in sorted(INPUT_EVENTS):
             mirror = LcdBrowserMirror(sample_state())
             response = mirror.handle_request("POST", API_INTENT_PATH, {"intent": intent})
             self.assertEqual(response.status, 200, intent)
             self.assertEqual(response.body["schema"], RENDER_SCHEMA)
-            self.assertIn(response.body["view"]["last_intent"], {
-                "back",
-                "home",
-                "local_ack",
-                "page_next",
-                "page_previous",
-            })
+            self.assertIn(
+                response.body["view"]["last_intent"],
+                {
+                    "back_list",
+                    "home",
+                    "item_next",
+                    "item_previous",
+                    "detail:home-status",
+                },
+            )
 
     def test_browser_mirror_rejects_closed_methods_and_bad_payloads(self) -> None:
         mirror = LcdBrowserMirror(sample_state())

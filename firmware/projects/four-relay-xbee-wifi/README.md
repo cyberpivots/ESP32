@@ -121,11 +121,11 @@ ESP-IDF build or bench step.
   proof. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-LCD-INIT-DIAG-PF0530G-2026-05-30`.
 - The PF0530G COM6 live gate passed serial LCD init diagnosis: COM6 identity
-  matched ESP32-D0WDQ6 MAC `78:e3:6d:0a:90:14`, write-flash and separate
+  matched ESP32-D0WDQ6 MAC `<redacted-mac>`, write-flash and separate
   verify-flash succeeded, and the read-only monitor captured one LCD ACK at
   `0x27`, `LCD_INIT_OK addr=0x27`, and 15 `LCD_DIAG_HB status=ok` lines with
   no crash or closed-surface violation markers. Evidence directory:
-  `research/bench-records/xbee-readonly/local-ky040-pf0530g-lcd-init-diag-live-20260530T223218Z/`.
+  `<redacted-local-evidence-path>`.
 - The PF0530H source image combines the PF0530G detailed LCD init/probe path
   with the PF0530F GPIO13/GPIO14/GPIO32 encoder menu loop, changes the active
   task to a nine-page static BBS LCD console, and emits `PF0530H
@@ -185,6 +185,30 @@ ESP-IDF build or bench step.
   accepted as proven physically interactive until actuation is captured. Source
   ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`.
+- PF0530M is a non-live source/test continuation after PF0530L LCD visual and
+  electrical acceptance. It keeps the same closed bridge and input-only GPIO
+  boundary, changes the active firmware ID to `PF0530M`, replaces demo-only
+  labels with operational status rows, adds local bridge-closed display,
+  diagnostic/error rows, row action labels, and editable widget rows, and
+  extends host-side LCD menu tests for page wrapping, glyph-bank selection,
+  selection/detail/edit behavior, and 20-character display bounds. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530M-2026-06-01`.
+- PF0530N is the current LCD/menu scrolling/XML source/test continuation. It
+  keeps the closed bridge, GPIO13/GPIO14/GPIO32 input-only, and GPIO21/GPIO22
+  display-only LCD boundaries, changes the active firmware ID to `PF0530N`,
+  adds build-time `bbs_lcd_menu.v1` XML, generated static firmware/simulator
+  menu definitions, `bbs_lcd_render.v2` host metadata, scroll-list item
+  navigation, grouped multi-row items, selected-row marquee timing, and a
+  separate table glyph bank. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-SCROLLING-XML-2026-06-01`.
+- PF0530N was written and separately verify-flashed to COM6. Its read-only
+  monitor captured `PF0530N BBS_LCD_READY`, `PF0530N BBS_INPUT_READY`,
+  `bbs_lcd_menu.v1`, `bbs_lcd_render.v2`, 61 `BBS_LCD_RENDER`, 61
+  `BBS_CURSOR`, 59 `BBS_MENU_HB`, 17 `BBS_MENU_AUTO`, and seven
+  `BBS_GLYPH_BANK` lines with no watchdog/backtrace/panic/LCD-init-failure or
+  unsafe-open markers. Physical scroll-list/table readability and physical
+  encoder/button input remain unproven. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`.
 
 ## Assumptions
 
@@ -193,9 +217,10 @@ ESP-IDF build or bench step.
 - The normal bridge image initializes in-memory safe-core defaults, configures
   UART0 for host USB serial at `115200 8N1`, configures UART2 for XBee DIN/DOUT
   at `9600 8N1` on GPIO17/GPIO16, and copies raw bytes in both directions. The
-  current `PF0530L` BBS LCD menu image sets `FR_DIAG_XBEE_BRIDGE_CLOSED 1`, so
-  it runs LCD init diagnosis and local BBS menu display without running the
-  UART bridge loop.
+  current `PF0530N` source image sets `FR_DIAG_XBEE_BRIDGE_CLOSED 1`, so it
+  runs LCD init diagnosis and local BBS menu display without running the UART
+  bridge loop; PF0530N is now flashed for user visual testing, but physical
+  scroll-list/table readability remains a user-observation gap.
 - The bridge does not parse, generate, or persist XBee setting writes. In
   `PF0530G`, it does not forward host or XBee bytes at runtime.
 - The LCD path assumes one HD44780-compatible 20x4 LCD backpack using a
@@ -209,13 +234,16 @@ ESP-IDF build or bench step.
   diagnostic wiring is KY-040 `CLK` to GPIO13, `DT` to GPIO14, `SW` to
   GPIO32, and `GND` to ESP32 GND, following the module silkscreen rather than
   physical pin order. GPIO13/GPIO14/GPIO32 use ESP32 internal pullups for this
-  menu-proof branch. PF0530L is the current LCD menu UX source image for
-  renewed LCD/encoder testing after PF0530H showed no user-visible
+  menu-proof branch. PF0530N is the current LCD menu UX source image for
+  non-live development after PF0530H showed no user-visible
   encoder/button effect, PF0530I showed task-watchdog backtraces, PF0530J
   showed no input-transition proof, and PF0530K flashed cleanly but captured
-  no input events. Physical LCD readability, page changes, encoder direction,
-  `BBS_MENU_STEP`, `BBS_MENU_SELECT`, custom glyph readability, and auto-demo
-  behavior remain live evidence items.
+  no input events. PF0530L later accepted physical serial/menu interaction and
+  LCD visual/glyph/electrical behavior; PF0530M added operational non-live
+  menu behavior, and PF0530N adds build-time XML, scroll-list navigation, v2
+  host metadata, and table formatting. PF0530N now has COM6 flash/verify and
+  read-only boot proof; physical input/readability proof still requires a
+  fresh attended gate or user observation.
 - The encoder diagnostics path assumes page-0 raw levels and transition
   counters are used only to decide the next branch: hardware/electrical gap,
   switch polarity/debounce fix, quadrature decoder fix, or acceptance cleanup.
@@ -258,9 +286,11 @@ ESP-IDF build or bench step.
   passed with BBS ready/render/heartbeat proof but zero step/select proof.
   PF0530I is the source fix for render-starved input polling, PF0530J fixes
   the PF0530I task-watchdog delay issue, PF0530K adds interrupt-queued GPIO
-  input capture, and PF0530L adds the source-level LCD menu UX/glyph/browser-
-  plan visual surface for the next live flash. LCD visual confirmation and
-  rotary acceptance remain user-test gates.
+  input capture, PF0530L adds the source-level LCD menu UX/glyph/browser-plan
+  visual surface, PF0530M adds non-live operational menu behavior plus
+  host-side state-machine tests, and PF0530N adds non-live XML-generated
+  scroll-list/table menu behavior. Any PF0530N device proof remains a separate
+  future live gate.
 - Final FreeRTOS task layout, pins, authentication, telemetry cadence, storage
   policy, and rollback behavior are unresolved.
 
@@ -293,8 +323,9 @@ ESP-IDF build or bench step.
   read-only monitor gate, but user testing reported no encoder/button LCD
   effect. PF0530I then showed task-watchdog backtraces, PF0530J showed no
   input-transition proof, PF0530K captured no input events after clean
-  flash/verify, and PF0530L is the current flashed user-test image. It still
-  requires attended physical LCD/encoder proof. Any further flash, monitor,
+  flash/verify, PF0530L became the accepted LCD visual/electrical image,
+  PF0530M remained source/test-only, and PF0530N is the current non-live
+  scrolling/XML source/test branch. Any further flash, monitor,
   direct-stimulus continuity test, RF, relay, load, or mains action outside
   that named gate needs a separate fresh gate.
 
@@ -304,15 +335,18 @@ ESP-IDF build or bench step.
 - `main/main.c` is the bridge app when the bridge loop is open: UART0 host
   `115200`, UART2 XBee `9600`, TX GPIO17 to XBee DIN, RX GPIO16 from XBee DOUT,
 - no flow control, and no app logging during bridge operation. The current
-  PF0530L BBS LCD menu build closes that bridge loop, runs the PF0530G-derived
+  PF0530N BBS LCD menu source closes that bridge loop, runs the PF0530G-derived
   LCD init diagnosis on GPIO21/GPIO22, splits GPIO13/GPIO14/GPIO32 input
   polling into a higher-priority task, keeps GPIO any-edge interrupt queueing,
-  renders local BBS pages with dirty-cell LCD updates, loads named HD44780
-  glyph banks, tracks cursor/DDRAM metadata, supports row/detail/edit local UI
-  modes, and auto-cycles demo pages when no encoder input is proven. It prints
+  renders XML-generated local BBS status, bridge, error, widget, and route
+  table pages with dirty-cell LCD updates, loads named HD44780 glyph banks,
+  tracks cursor/DDRAM metadata, supports scroll-list/detail/edit local UI
+  modes, and keeps auto-demo page cycling available before live input. It
+  consumes generated static menu definitions rather than parsing XML at
+  runtime. It prints
   `LCD_DIAG_READY`, `LCD_BUS`,
   `LCD_PROBE`, `LCD_PROBE_SUMMARY`, `LCD_DEVICE`, `LCD_HD44780`,
-  `LCD_INIT_OK` or `LCD_INIT_FAIL`, `PF0530L BBS_LCD_READY`,
+  `LCD_INIT_OK` or `LCD_INIT_FAIL`, `PF0530N BBS_LCD_READY`,
   `BBS_INPUT_READY`, `irq=anyedge queue=64`, `ENC_RAW`, `ENC_EV`,
   `BBS_GLYPH_BANK`, `BBS_CURSOR`, `BBS_LCD_RENDER`, `BBS_MENU_HB`,
   `BBS_MENU_AUTO`, `BBS_MENU_STEP`, and `BBS_MENU_SELECT` proof lines on

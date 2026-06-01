@@ -11,7 +11,10 @@ assumptions, unknowns, owner role, evidence need, mutation boundary, reviewer
 quorum, gate authority, validation plan, and trust boundary before
 non-trivial mutation. Project-local read-only subagents are default-authorized
 for safe Tier 2 and Tier 3 quorum; mutating workers require explicit disjoint
-write scopes. End with a decision footer: continue, ask_user, blocked,
+write scopes. Perform agent lifecycle cleanup: inspect completed agents before
+spawning, close completed/stale agents after capturing output, close agents
+before fallback/final decisions, and use fallback only after cleanup attempt.
+End with a decision footer: continue, ask_user, blocked,
 ready_for_mutation, or handoff; next gate; owner; evidence; approved mutation
 boundary; validation; durable records; and authority limits.
 ```
@@ -24,8 +27,9 @@ reviewer quorum. Record role, weight, evidence reviewed, P1/P2 findings, vote,
 conditions, and confidence. Missing evidence is a continuation state when a
 safe evidence step remains: continue automatable evidence acquisition, ask the
 user only for one irreducible physical fact, and block only at a hard safety or
-authority boundary. A gate passes only with required roles present, at least
-70 percent weighted approval, no P1/P2 blockers, and all named Tier 3
+authority boundary. Record agent lifecycle cleanup status before accepting a
+fallback or final decision. A gate passes only with required roles present, at
+least 70 percent weighted approval, no P1/P2 blockers, and all named Tier 3
 prerequisites when live hardware or radio work is in scope.
 ```
 
@@ -40,7 +44,8 @@ vote, blockers, conditions, and confidence. Do not proceed when required roles
 are missing, weighted approval is below 70 percent, a P1/P2 blocker remains,
 or Tier 3 live-gate authority fields are missing. When permission_mode is
 bypassPermissions, hooks must not deny or block the user's intended
-`codex --yolo` full-access launch.
+`codex --yolo` full-access launch; lifecycle cleanup guidance is
+bypassPermissions advisory only.
 ```
 
 ## Agent instruction enforcement prompt

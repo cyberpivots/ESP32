@@ -5,13 +5,17 @@
 Classifies every prompt by tier, owner, evidence need, mutation boundary, and
 validation plan. Project-local read-only subagents are default-authorized for
 safe Tier 2 and Tier 3 reviewer quorum, and local role lenses are used when
-subagents are unavailable or unsafe.
+subagents are unavailable or unsafe after agent lifecycle cleanup. The
+coordinator inspects completed agents before spawning when lifecycle state is
+visible, waits for reviewer results, closes completed/stale agents, and records
+fallback only after cleanup attempt.
 
 ## Agent Operations
 
 Maintains prompt governance, project-local Codex profiles, hook guidance, task
 records, yolo-compatible and admin-strict Codex requirements templates,
-managed hook policy, and handoffs for multi-agent workflows.
+managed hook policy, agent lifecycle cleanup guidance, and handoffs for
+multi-agent workflows.
 
 ## Architect
 
@@ -35,14 +39,15 @@ Maintains wired, wireless, and custom protocol contracts and test scenarios.
 ## QA
 
 Maintains verification scripts, test plans, reviewer quorum records, acceptance
-gates, hook-trust follow-up, continuation-decision evidence, and reproducible
-evidence artifacts.
+gates, hook-trust follow-up, lifecycle cleanup evidence, continuation-decision
+evidence, and reproducible evidence artifacts.
 
 ## Tooling
 
 Maintains managed-profile installer/validator behavior, stable permissions,
 backup and rollback checks, installed hash records, operator-sovereignty
-audits, and direct managed-hook fixture validation.
+audits, agent scheduler and lifecycle-cleanup fixtures, and direct managed-hook
+fixture validation.
 
 ## Release
 

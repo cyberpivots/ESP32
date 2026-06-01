@@ -41,6 +41,8 @@ def audit_firmware_readme(root: Path = ROOT) -> list[str]:
         "PF0530J",
         "PF0530K",
         "PF0530L",
+        "PF0530M",
+        "PF0530N",
         "FR_DIAG_XBEE_BRIDGE_CLOSED 1",
         "SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30",
         "SRC-LOCAL-FOUR-RELAY-KY040-LCD-INIT-DIAG-PF0530G-2026-05-30",
@@ -49,6 +51,8 @@ def audit_firmware_readme(root: Path = ROOT) -> list[str]:
         "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530J-2026-05-31",
         "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530K-2026-05-31",
         "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-2026-05-31",
+        "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530M-2026-06-01",
+        "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-SCROLLING-XML-2026-06-01",
         "pure-C API payload validation",
         "normalized state snapshots",
         "split host-test binaries",
@@ -176,7 +180,11 @@ def audit_uart_bridge_boundary(root: Path = ROOT) -> list[str]:
 
 def audit_lcd_test_boundary(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
-    bridge = (root / UART_BRIDGE_SOURCE).read_text(encoding="utf-8")
+    bridge = (
+        (root / UART_BRIDGE_SOURCE).read_text(encoding="utf-8")
+        + "\n"
+        + (root / "firmware/projects/four-relay-xbee-wifi/main/bbs_lcd_menu_generated.h").read_text(encoding="utf-8")
+    )
     failures.extend(require_markers(bridge, [
         "FR_LCD_I2C_PORT 0",
         "FR_LCD_I2C_SDA_GPIO GPIO_NUM_21",
@@ -189,8 +197,10 @@ def audit_lcd_test_boundary(root: Path = ROOT) -> list[str]:
         "fr_lcd_probe_range(lcd->bus, 0x38, 0x3f",
         "i2c_master_transmit",
         "FR_DIAG_XBEE_BRIDGE_CLOSED 1",
-        "FR_DIAG_FIRMWARE_ID \"PF0530L\"",
-        "FR_GLYPH_BANK_COUNT 5",
+        "FR_DIAG_FIRMWARE_ID FR_DIAG_FIRMWARE_ID_VALUE",
+        "FR_DIAG_FIRMWARE_ID_VALUE \"PF0530N\"",
+        "FR_GLYPH_BANK_COUNT FR_BBS_GLYPH_BANK_COUNT",
+        "FR_BBS_GLYPH_BANK_COUNT 6u",
         "FR_GLYPH_BANK_SWAP_MIN_MS 250",
         "FR_MENU_AUTO_DEMO_MS 7000",
         "LCD_DIAG_READY gpio=21/22 speed=%d pullups=external",
@@ -211,7 +221,7 @@ def audit_lcd_test_boundary(root: Path = ROOT) -> list[str]:
         "BBS_LCD_RENDER page=%s index=%u row0=\\\"%s\\\" row1=\\\"%s\\\"",
         "rows=%u seq=%lu dur_ms=%lu reason=%s",
         "dirty_rows=0x%02x dirty_cells=%u",
-        "BBS FIELD UX READY",
+        "BBS FIELD STATUS",
         "MESSAGES",
         "PEERS",
         "QUEUE",
@@ -223,7 +233,7 @@ def audit_lcd_test_boundary(root: Path = ROOT) -> list[str]:
         "BARS LINK QUEUE",
         "VERT CHART HISTORY",
         "BIG DIGITS 12:34",
-        "GAUGE DEMO",
+        "GAUGE STATUS",
         "fr_lcd_start_task",
     ], "LCD-only I2C firmware boundary"))
     if "xTaskCreate(\n        fr_lcd_diag_task" in bridge:
@@ -235,7 +245,11 @@ def audit_lcd_test_boundary(root: Path = ROOT) -> list[str]:
 
 def audit_encoder_menu_boundary(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
-    bridge = (root / UART_BRIDGE_SOURCE).read_text(encoding="utf-8")
+    bridge = (
+        (root / UART_BRIDGE_SOURCE).read_text(encoding="utf-8")
+        + "\n"
+        + (root / "firmware/projects/four-relay-xbee-wifi/main/bbs_lcd_menu_generated.h").read_text(encoding="utf-8")
+    )
     failures.extend(require_markers(bridge, [
         "#include \"driver/gpio.h\"",
         "#include \"freertos/queue.h\"",
@@ -249,15 +263,18 @@ def audit_encoder_menu_boundary(root: Path = ROOT) -> list[str]:
         "FR_ENCODER_AB_STABLE_SAMPLES 3",
         "FR_GPIO_SWEEP_COUNT 3",
         "FR_MENU_POLL_MS 10",
-        "FR_MENU_PAGE_COUNT 13",
+        "FR_MENU_PAGE_COUNT FR_BBS_MENU_PAGE_COUNT",
+        "FR_BBS_MENU_PAGE_COUNT 14u",
         "FR_MENU_HEARTBEAT_MS 2000",
         "FR_MENU_AUTO_DEMO_MS 7000",
         "FR_MENU_ANIMATION_MS 2000",
         "FR_ENCODER_EVENT_QUEUE_DEPTH 64",
         "FR_ENCODER_IRQ_DRAIN_LIMIT 32",
-        "FR_DIAG_FIRMWARE_ID \"PF0530L\"",
+        "FR_DIAG_FIRMWARE_ID FR_DIAG_FIRMWARE_ID_VALUE",
+        "FR_DIAG_FIRMWARE_ID_VALUE \"PF0530N\"",
         "FR_DIAG_XBEE_BRIDGE_CLOSED 1",
-        "FR_GLYPH_BANK_COUNT 5",
+        "FR_GLYPH_BANK_COUNT FR_BBS_GLYPH_BANK_COUNT",
+        "FR_BBS_GLYPH_BANK_COUNT 6u",
         "FR_GLYPH_SLOTS 8",
         "FR_GLYPH_ROWS 8",
         "FR_GLYPH_BANK_SWAP_MIN_MS 250",
@@ -285,7 +302,17 @@ def audit_encoder_menu_boundary(root: Path = ROOT) -> list[str]:
         "BBS_LCD_READY gpio=13/14/32 pullups=on lcd=21/22 addr=0x%02x",
         "BBS_INPUT_READY task=split poll_ms=%u render=dirty idle_ms=%u ",
         "irq=anyedge queue=%u",
-        "modes=page,row,detail,edit",
+        "modes=scroll,detail,edit actions=page,detail,edit,back",
+        "FR_BBS_MENU_XML_SCHEMA",
+        "FR_BBS_MENU_RENDER_SCHEMA",
+        "FR_BBS_MENU_MARQUEE_HOLD_MS 750u",
+        "FR_BBS_MENU_MARQUEE_STEP_MS 250u",
+        "fr_bbs_generated_pages",
+        "fr_bbs_sync_menu_view",
+        "fr_bbs_render_generated_frame",
+        ".name = \"table\"",
+        "NODE |RSSI|Q",
+        "ROUTES",
         "ENC_RAW kind=%s levels=C%uD%uS%u raw_ab=%lu raw_sw=%lu t=%lu",
         "ENC_EV pin=%d label=%s level=%u count=%lu t=%lu",
         "BBS_MENU_STEP dir=%c page=%s index=%u pos=%ld cw=%lu ccw=%lu t=%lu",
@@ -336,20 +363,20 @@ def audit_encoder_menu_boundary(root: Path = ROOT) -> list[str]:
         "fr_diag_short_display_count",
         "fr_diag_short_position_magnitude",
         "fr_bbs_page_name",
-        "BBS FIELD UX READY",
+        "BBS FIELD STATUS",
         "fr_menu_level_char",
-        "MSG N:1 IN:12",
-        "PEERS 2/3",
+        "MSG NEW:01 IN:12",
+        "PEERS ACTIVE 2/3",
         "QUEUE P:2 F:0",
         "FILES Q:1 D:3",
         "MESH sim",
-        "XBEE CLOSED",
-        "DIAG FIELD",
+        "BRIDGE LOCAL CLOSED",
+        "DIAG ERRORS:0",
         "Flash:LOCK Ser:LOCK",
         "BARS LINK QUEUE",
         "VERT CHART HISTORY",
         "BIG DIGITS 12:34",
-        "GAUGE DEMO",
+        "GAUGE STATUS",
     ], "encoder LCD menu firmware boundary"))
     for forbidden in [
         "FR_DIAG_SERIAL_PINTRACE 1",

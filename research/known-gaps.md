@@ -162,14 +162,60 @@
   diagnosis with one ACK at `0x27`, all HD44780 steps ok, and
   `LCD_INIT_OK addr=0x27`; physical LCD visual confirmation and another
   encoder menu proof remain separate.
-- PF0530H source is recorded under
-  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530H-2026-05-31`. It combines
-  the PF0530G LCD init path with PF0530F GPIO13/GPIO14/GPIO32 input-only menu
-  handling and static/simulated BBS pages.
-- PF0530H live flash/verify/read-only monitor is recorded under
-  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530H-LIVE-2026-05-31`. Physical
-  LCD visual confirmation, encoder direction, `BBS_MENU_STEP`, and
-  `BBS_MENU_SELECT` remain user-test evidence items.
+- PF0530L source is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-2026-05-31`. It builds on
+  the PF0530K interrupt-input path and adds LCD menu UX, cursor metadata,
+  custom glyph banks, widget demo pages, and auto-demo cycling.
+- PF0530L live flash/verify/read-only monitor is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`. PF0530L
+  is available for user visual testing, but physical interaction remains
+  unaccepted because the monitor captured zero `ENC_RAW`, zero `ENC_EV`, zero
+  `BBS_MENU_STEP`, and zero `BBS_MENU_SELECT`.
+- The Tier 3 COM6 attended interaction proof is recorded under
+  `SRC-LOCAL-TIER3-COM6-ATTENDED-INTERACTION-PROOF-2026-05-31`. The initial
+  transcript missed the user's actuation window, but the restarted transcript
+  accepted serial/menu physical interaction with `ENC_RAW`, `ENC_EV`,
+  `BBS_MENU_STEP` in both directions, and short/long `BBS_MENU_SELECT` proof.
+- The LCD glyph and electrical acceptance attempt is recorded under
+  `SRC-LOCAL-LCD-GLYPH-ELECTRICAL-ACCEPTANCE-2026-05-31`. Same-session COM6
+  identity passed, and the first read-only monitor again captured PF0530L
+  readiness plus strong `ENC_RAW`, `ENC_EV`, `BBS_MENU_STEP`, and
+  `BBS_MENU_SELECT` proof with no crash or unsafe markers. A follow-up
+  read-only reset/monitor captured `LCD_INIT_FAIL stage=probe
+  detail=scan-error` and repeated failed LCD heartbeats for the full 150
+  seconds. User-reported follow-up evidence shows a bi-directional LCD level
+  converter, LCD-side 4.73 V on `VCC`/`SDA`/`SCL`, visible LCD life, and
+  KY-040 `+`/idle `CLK`/idle `DT`/idle `SW` at 3.3 V with affirmative
+  drop-low/press-low responses, followed by ESP32-side/LV-side `SDA`/`SCL` at
+  3.3 V. A read-only retry then restored `LCD_INIT_OK`, BBS LCD/input
+  readiness, all 13 page names, all five glyph banks, and zero unsafe markers.
+  User visual confirmation accepts four readable rows, visible page changes,
+  and readable custom glyph/widget pages. User final DMM confirmation accepts
+  remaining continuity, KY-040 toggle, and current-margin checks for this gate.
+  No further DMM evidence is required for this PF0530L LCD glyph/electrical
+  acceptance gate; broader relay/load/mains, XBee/RF expansion, future flash,
+  serial-write, wiring-under-power, deployment, and publication surfaces remain
+  closed outside this gate.
+- PF0530M non-live LCD/menu behavior work is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530M-2026-06-01`. It keeps the
+  PF0530L closed bridge and input-only/display-only boundaries, adds
+  operational BBS status pages, bridge-closed display, diagnostic/error rows,
+  editable widget rows, page-specific glyph-bank mapping, and host-side menu
+  state/display-bound tests. PF0530M has not been flashed; live runtime proof
+  remains a future Tier 3 gate.
+- PF0530N non-live scrolling/XML LCD/menu work is recorded under
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-SCROLLING-XML-2026-06-01`.
+  It keeps the PF0530L/PF0530M closed bridge and input-only/display-only
+  boundaries, adds build-time `bbs_lcd_menu.v1` XML, generated static
+  firmware/simulator menu definitions, `bbs_lcd_render.v2` viewport metadata,
+  scroll-list navigation, grouped multi-row items, selected-row marquee timing,
+  table glyph bank constraints, and host-side display-bound tests. PF0530N has
+  now also been written and separately verify-flashed to COM6 under
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`; the
+  read-only monitor captured PF0530N readiness/schema/render/heartbeat proof
+  with zero crash/unsafe markers. Physical readability of the scroll-list/table
+  page and physical encoder/button input remain future Tier 3 or user-observed
+  gates.
 - XCTU host install evidence is recorded, but live XCTU behavior remains
   blocked. Complete XBee Studio host evidence separately if it becomes the
   selected GUI, and do not rely on GUI discovery until exact ports, physical
@@ -191,7 +237,7 @@
 - Define first flashing target board and recovery method.
 - Incorporate the Windows COM6 DevKitC-class board into the hardware evidence
   package: local DOS-C evidence identifies ESP32-D0WDQ6 MAC
-  `78:e3:6d:10:4d:6c` behind a CP210x bridge, but this workspace still needs
+  `<redacted-mac>` behind a CP210x bridge, but this workspace still needs
   physical carrier-board inspection before pin or flashing decisions.
 - Complete DOSBox-X SLIRP proof from the Windows 3.1 operator console to the
   simulator at `10.0.2.2:31331`; current bridge proof is host-side protocol
@@ -319,6 +365,11 @@
   enforcement advisory unless the active Codex runtime reports managed hook
   support. `scripts/agent_process_decision.py` proves packet evaluation only;
   it does not replace same-session evidence or Tier 3 live-gate prerequisites.
+- Keep subagent lifecycle cleanup marked as a parent-agent operational duty.
+  Repo-local hooks and audits remind and test the protocol, but they do not
+  prove future Codex runtime slot release; future quorum work must still record
+  actual `wait_agent`/`close_agent` cleanup or unavailable/unsafe lifecycle
+  state before local fallback or final acceptance.
 - Select first protocol only for lanes that do not already have accepted or
   simulator-proven protocol records; ESP-NOW BBS custom wireless work already
   has Gate B/C/D/E/F/G/H and Gate M1/M2-A records.
@@ -352,7 +403,7 @@
 | XBee read-only bench proof | Superseded for user-selected `COM15`/`COM6` identity by `SRC-LOCAL-XBEE-SELECTED-PORT-PROGRAMMING-2026-05-29`; adapter markings, physical isolation, voltage/carrier, antenna, recovery/cleanup evidence, and full one-at-a-time mapping remain useful before any carrier/wiring work. |
 | XBee radio programming study | Selected-port programming is complete for `COM15` and `COM6` under `SRC-LOCAL-XBEE-SELECTED-PORT-PROGRAMMING-2026-05-29`, and bidirectional benign OTA `link_probe` proof is complete under `SRC-LOCAL-XBEE-OTA-LINK-PROOF-2026-05-29`. Corrected evidence later identified `COM6` as the ESP32 target and `COM15` as the peer under `SRC-LOCAL-CORRECTED-ESP32-COM6-PEER-COM15-LIVE-TEST-2026-05-30`; the permanent bridge implementation and accepted COM6 bridge flash/retest are recorded under `SRC-LOCAL-ESP32-XBEE-UART-BRIDGE-FLASH-RETEST-2026-05-30`. Firmware update/recovery beyond the named bridge gate, reset/restore beyond normal flash hard reset, range tests, throughput tests, relay/load/mains work, future XBee setting changes, relay command payloads, and public key/identifier exposure remain separate closed gates. |
 | ESP32 XBee UART bridge flash/retest | Named COM6 bridge gate accepted under `SRC-LOCAL-ESP32-XBEE-UART-BRIDGE-FLASH-RETEST-2026-05-30`: physical wiring/no-load confirmation, backups, artifact hashes, COM6-only flash proof, boot-settle/flush, redacted COM6 local-AT readback, COM15 peer readback, and bidirectional benign `link_probe` proof are recorded. Remaining gaps are measured rail-current margin for broader hardware expansion, deployment range/throughput, source address allowlisting integration, antenna/regulatory deployment review, relay command acceptance, load/mains readiness, future XBee setting writes, and public raw identifier exposure. |
-| Four-relay rotary encoder menu input | PF0530E r5 under `SRC-LOCAL-FOUR-RELAY-KY040-SERIAL-PINTRACE-PF0530E-2026-05-30` proved GPIO-level changes on GPIO13 `CLK`, GPIO14 `DT`, and GPIO32 `SW` during user-confirmed actuation. PF0530F under `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30` is the LCD menu-proof image; the later COM6 live attempt under `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-LIVE-2026-05-30` passed write-flash and verify-flash and captured `PF0530F MENU_READY`, but live menu acceptance is blocked by `PF0530F LCD_INIT_FAILED`. PF0530G under `SRC-LOCAL-FOUR-RELAY-KY040-LCD-INIT-DIAG-PF0530G-2026-05-30` passed serial LCD init diagnosis with `LCD_INIT_OK addr=0x27`. PF0530H source under `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530H-2026-05-31` prepares the combined BBS LCD menu image, and PF0530H live under `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530H-LIVE-2026-05-31` passed COM6 flash/verify/read-only monitor with BBS ready/render/heartbeat proof. Before acceptance, collect `BBS_MENU_STEP` in both directions, `BBS_MENU_SELECT` events, LCD page changes, suppressed button-window A/B noise, physical LCD visual confirmation, power-off silkscreen/continuity from KY-040 `CLK`/`DT`/`SW`, A/B idle high and toggle-low evidence while rotating, SW idle high and pulls-low evidence when pressed, rail-current margin, rotation direction, and boot behavior. |
+| Four-relay rotary encoder menu input | PF0530E r5 under `SRC-LOCAL-FOUR-RELAY-KY040-SERIAL-PINTRACE-PF0530E-2026-05-30` proved GPIO-level changes on GPIO13 `CLK`, GPIO14 `DT`, and GPIO32 `SW` during user-confirmed actuation. PF0530G under `SRC-LOCAL-FOUR-RELAY-KY040-LCD-INIT-DIAG-PF0530G-2026-05-30` passed serial LCD init diagnosis. PF0530L source/live/attended proof plus `SRC-LOCAL-LCD-GLYPH-ELECTRICAL-ACCEPTANCE-2026-05-31` accept serial/menu physical interaction, four-row visual readability, custom glyph/widget readability, low-side I2C/KY-040 voltage domain, and user-confirmed continuity/toggle/current-margin evidence for the closed LCD/DMM gate. PF0530M under `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530M-2026-06-01` is the prior non-live operational menu behavior update. PF0530N under `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-SCROLLING-XML-2026-06-01` is the XML-generated scroll-list LCD/menu source/test update, and `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01` records the COM6 write/verify/read-only monitor gate with PF0530N readiness/schema/render proof and zero crash/unsafe markers. Remaining gaps outside this gate are physical readability of the scroll-list/table page, PF0530N attended encoder/button input proof, direction-label expectation, final BBS/XBee payload mapping, relay/load/mains readiness, XBee/RF expansion, future flash, serial writes, wiring-under-power, DMM/current checks, deployment readiness, and publication. |
 | MicroSD reader and card policy | Reader identity and card-prep record with 3.3 V path, pullups, card-detect/write-protect behavior, shield continuity, capacity, FAT preparation, low-space handling, rotation, and fallback behavior. |
 | Bench instruments and fixtures | Instrument inventory record covering DMM, current-limited supply, logic analyzer or LED proof fixture, USB serial tools, labeled harnesses, low-voltage dummy loads, and calibration/identity notes. |
 | Qualified mains package | Qualified-review package for load type, enclosure, overcurrent protection, grounding/bonding, strain relief, GFCI/de-energization, separation, labels/disconnect, and test record. |

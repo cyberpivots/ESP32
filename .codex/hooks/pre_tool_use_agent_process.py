@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -36,6 +38,9 @@ ASSUMPTIONS_RE = re.compile(r"\bassumptions?\b", re.IGNORECASE)
 UNKNOWNS_RE = re.compile(r"\bunknowns?\b", re.IGNORECASE)
 OWNER_RE = re.compile(r"\b(owner role|owner)\b", re.IGNORECASE)
 EVIDENCE_RE = re.compile(r"\bevidence need\b|\bevidence\s*:\b", re.IGNORECASE)
+ROOT = Path(__file__).resolve().parents[2]
+SCHEDULER = ROOT / "scripts" / "agent_scheduler.py"
+SCHEDULER_TIMEOUT_SECONDS = float(os.environ.get("ESP32_SCHEDULER_HOOK_TIMEOUT", "0.75"))
 
 
 def _load_payload() -> tuple[dict[str, Any], bool]:
@@ -132,7 +137,44 @@ def _is_mutating(tool_name: str, tool_input: Any) -> bool:
     return False
 
 
-def _emit_warning(missing: list[str]) -> None:
+def _scheduler_context(payload: dict[str, Any]) -> str:
+    if not SCHEDULER.exists():
+        return "ESP32 multi-window scheduler advisory: scheduler-unavailable (missing scripts/agent_scheduler.py); no deny/block."
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCHEDULER),
+                "pretool-check",
+                "--repo",
+                str(ROOT),
+                "--hook-json",
+                json.dumps(payload),
+                "--timeout",
+                str(SCHEDULER_TIMEOUT_SECONDS),
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=SCHEDULER_TIMEOUT_SECONDS + 0.5,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return f"ESP32 multi-window scheduler advisory: scheduler-unavailable ({exc}); no deny/block."
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or f"exit {result.returncode}").strip()
+        return f"ESP32 multi-window scheduler advisory: scheduler-unavailable ({detail}); no deny/block."
+    try:
+        output = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        return f"ESP32 multi-window scheduler advisory: scheduler-unavailable (invalid output: {exc}); no deny/block."
+    hook_output = output.get("hookSpecificOutput")
+    if not isinstance(hook_output, dict):
+        return ""
+    context = hook_output.get("additionalContext")
+    return context if isinstance(context, str) else ""
+
+
+def _emit_warning(missing: list[str], scheduler_context: str = "") -> None:
     shape_note = ""
     if "valid hook input shape" in missing:
         shape_note = "Hook input shape was unknown; "
@@ -146,6 +188,8 @@ def _emit_warning(missing: list[str]) -> None:
         "Project-local hooks and prompt packets are advisory aids; source-backed "
         "records and explicit gate authority remain authoritative."
     )
+    if scheduler_context:
+        message = f"{message}\n\n{scheduler_context}"
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
@@ -164,6 +208,7 @@ def main() -> int:
     tool_input = payload.get("tool_input")
     if not _is_mutating(tool_name, tool_input):
         return 0
+    scheduler_context = _scheduler_context(payload)
 
     prompt = str(payload.get("prompt") or "") or _latest_prompt_from_transcript(
         payload.get("transcript_path")
@@ -186,9 +231,16 @@ def main() -> int:
     if not BOUNDARY_RE.search(prompt):
         missing.append("mutation boundary")
     if not missing:
+        if scheduler_context:
+            print(json.dumps({
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "additionalContext": scheduler_context,
+                }
+            }))
         return 0
 
-    _emit_warning(missing)
+    _emit_warning(missing, scheduler_context)
     return 0
 
 

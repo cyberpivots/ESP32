@@ -80,7 +80,26 @@ UI intents only.
   read-only monitor captured auto-demo coverage for all 13 page names and all
   five glyph banks, but no physical encoder/button input proof. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`.
-  Source IDs:
+- PF0530M is the prior non-live source/test continuation after PF0530L visual
+  and electrical acceptance. It kept the closed bridge and input-only GPIO
+  boundaries, adds operational status rows, bridge-closed display,
+  diagnostic/error rows, row action labels, editable widget rows, and host-side
+  menu state tests. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530M-2026-06-01`.
+- PF0530N is the scrolling/XML source/test continuation after
+  PF0530M. It adds build-time `bbs_lcd_menu.v1` XML, generated static
+  firmware/simulator definitions, host render schema `bbs_lcd_render.v2`,
+  scroll-list item navigation, grouped multi-row items, selected-row marquee,
+  and a separate table glyph bank while preserving the closed bridge,
+  input-only GPIO13/GPIO14/GPIO32, and display-only GPIO21/GPIO22 LCD
+  boundaries. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-SCROLLING-XML-2026-06-01`.
+- PF0530N write-flash and separate verify-flash passed on COM6. The read-only
+  monitor captured `PF0530N BBS_LCD_READY`, `PF0530N BBS_INPUT_READY`,
+  `bbs_lcd_menu.v1`, `bbs_lcd_render.v2`, render/cursor/heartbeat/auto-demo/
+  glyph-bank proof, and no crash/unsafe markers. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`.
+- Earlier encoder-menu lineage source IDs:
   `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30`,
   `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-LIVE-2026-05-30`.
 - HD44780 CGRAM planning is limited to eight 5x8 custom-character types.
@@ -99,11 +118,12 @@ UI intents only.
 - First implementation is read-only/static or simulator-fed.
 - `bbs_lcd_state.v1` is a local renderer snapshot schema, not a bridge ABI,
   radio ABI, coordinator serial ABI, firmware ABI, or Win31 transport change.
+- PF0530N keeps `bbs_lcd_state.v1` as renderer input and emits
+  `bbs_lcd_render.v2` as host-render output.
 - Missing values render as `?`; closed surfaces render as `CLOSED`.
-- The next renewed firmware proof image name is `PF0530L`, combining PF0530G
-  LCD init diagnostics, PF0530F/PF0530H BBS menu content, PF0530K
-  interrupt-queued KY-040 input capture, and the host-planned cursor/glyph/
-  widget menu UX surface.
+- The current renewed live-tested firmware source image name is `PF0530N`,
+  combining the PF0530L/PF0530M LCD/menu lineage with XML-generated
+  scroll-list, marquee, grouped-row, and table menu behavior.
 
 ## Unknowns
 
@@ -112,6 +132,8 @@ UI intents only.
   electrical behavior.
 - Encoder rotation sign and boot behavior with the encoder untouched, rotated,
   or held down during reset.
+- PF0530N serial boot/runtime proof is recorded, but physical readability of
+  the scroll-list and table page remains unproven.
 - Any future XBee/ESP-NOW bridge mapping, payload shape, or framing selection.
 
 ## Snapshot Schema
@@ -148,14 +170,19 @@ credentials, and raw identifiers must not enter the LCD snapshot.
 - `XBEE`: closed UART/TX surface and measured/planned `NP` budget value.
 - `DIAG`: uptime, display simulator status, and last event.
 - `LOCKS`: relay, XBee, flash, and serial-write lock labels.
+- `ROUTES`: table-formatted route/peer status summary in PF0530N.
 
 ## Input Rules
 
-- Rotate changes page in normal view.
-- Rotate changes selected row only in detail view.
-- Short press enters local detail or acknowledges a local notification.
-- Long press returns home.
-- Double-click is not part of v1.
+- PF0530N rotate changes the selected XML-defined item in the active page's
+  scroll list, not the page.
+- The indicator moves through the four physical LCD rows and the viewport
+  scrolls when the selected item reaches a visible edge.
+- Short press follows the selected item's XML-defined action: navigate to a
+  target page, open local detail, enter local edit mode, or go back.
+- Long press exits edit/detail first, then backs through a bounded page stack,
+  then returns home.
+- Double-click is not part of the current schema.
 - Input events must not directly trigger relay output, XBee transmit, ESP-NOW
   transmit, flash/erase, persistent configuration, serial writes, or bridge
   commands.
@@ -163,12 +190,17 @@ credentials, and raw identifiers must not enter the LCD snapshot.
 ## Display Rules
 
 - Every render emits exactly four lines of exactly 20 cells.
-- No scrolling is required in v1. Detail-page marquee behavior is future work
-  and must update no faster than 250 ms if added.
+- The left LCD column is reserved for the selection/continuation indicator; the
+  remaining 19 columns are content.
+- PF0530N selected overlong item rows marquee after a 750 ms start hold, then
+  advance every 250 ms with two spaces between wrap cycles.
+- Non-selected overlong text clips to the 19-column content area.
+- Grouped multi-row items select only on the group's first row; continuation
+  rows scroll with the group.
 - Truncated values are safer than guessed values.
 - `CLOSED` labels are explicit for locked live surfaces.
-- Only eight custom glyph slots are available: lock, warning, envelope, queue
-  arrow, ACK mark, radio-low, radio-high, and spinner.
+- Each page selects one eight-slot glyph bank. The PF0530N `table` bank must
+  not be mixed with bar/chart/big-digit/gauge pages.
 
 ## Host Renderer
 
@@ -181,15 +213,20 @@ It accepts a `bbs_lcd_state.v1` snapshot and emits:
 - four fixed-width `lines`
 - eight-slot `glyph_bank`
 - local `view` state
+- PF0530N `bbs_lcd_render.v2` viewport metadata: selected item ID, visible item
+  IDs, physical indicator row, viewport top line, horizontal scroll offsets,
+  and source XML metadata.
 
 Tests live under
 [test_lcd_bbs_menu.py](../../../tests/lcd_bbs_menu/test_lcd_bbs_menu.py).
 
 The graphics/browser continuation is tracked in
 [lcd-menu-graphics-browser-agent-plan.md](lcd-menu-graphics-browser-agent-plan.md).
-It adds `bbs_lcd_render.v1`, software cursor metadata, named glyph banks,
-widget previews, an inert host browser mirror, and a recallable
-LCD-menu-operations skill while preserving this plan's closed live surfaces.
+It originally added `bbs_lcd_render.v1`, software cursor metadata, named glyph
+banks, widget previews, an inert host browser mirror, and a recallable
+LCD-menu-operations skill. PF0530N supersedes the host render output with
+`bbs_lcd_render.v2` viewport metadata while preserving this plan's closed live
+surfaces.
 
 ## PF0530H Source Gate
 
@@ -299,6 +336,47 @@ zero `ENC_RAW`, zero `ENC_EV`, zero `BBS_MENU_STEP`, and zero
 `BBS_MENU_SELECT`, so PF0530L is flashed for user visual testing but not
 accepted as proven physically interactive. Source ID:
 `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`.
+
+## PF0530M Non-Live Menu Behavior Gate
+
+PF0530M source work supersedes PF0530L as the current non-live development
+branch. Required source/test markers are:
+
+- `PF0530M BBS_LCD_READY`
+- `BBS FIELD STATUS`
+- `BRIDGE LOCAL CLOSED`
+- `DIAG ERRORS:0`
+- `actions=detail,edit,back`
+- host-rendered 13-page `PAGES`
+- widget-page glyph-bank mapping
+- row/detail/edit state-machine tests
+
+PF0530M must keep the PF0530L closed-surface boundaries. It does not authorize
+COM6 access, flash, monitor, serial writes, RF/XBee writes, relay/load/mains,
+wiring mutation, persistent config, or publication.
+
+## PF0530N Scrolling/XML Gate
+
+PF0530N source work supersedes PF0530M as the current non-live development
+branch. Required source/test markers are:
+
+- `PF0530N BBS_LCD_READY`
+- `bbs_lcd_menu.v1`
+- `bbs_lcd_render.v2`
+- generated static firmware menu definitions
+- 14-page generated menu model with 63 generated items
+- scroll-list selection and viewport metadata
+- selected-row marquee timing
+- grouped multi-row item behavior
+- table glyph bank within eight HD44780 slots
+
+PF0530N must keep the PF0530L/PF0530M closed-surface boundaries and must not
+add an ESP32 runtime XML parser. The later COM6 live gate is recorded under
+`SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`; it
+authorizes only the completed PF0530N write/verify/read-only monitor evidence
+and does not open serial writes, RF/XBee writes, relay/load/mains, wiring
+mutation, DMM/current measurement, persistent config, publication, commit, or
+push.
 
 ## Validation Plan
 

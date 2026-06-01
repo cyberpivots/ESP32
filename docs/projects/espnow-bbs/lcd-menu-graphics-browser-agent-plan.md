@@ -19,10 +19,13 @@ configuration endpoints, release gating, commit, or push.
 - `bbs_lcd_state.v1` remains the production input snapshot schema for the
   host renderer. Source ID:
   `SRC-LOCAL-ESPNOW-BBS-LCD-ENCODER-FIELD-CONSOLE-2026-05-30`.
-- The renderer now emits `bbs_lcd_render.v1`, including four 20-character
-  lines, eight glyph slots, cursor metadata, dirty-cell metadata, widgets, and
-  local view state. Source ID:
-  `SRC-LOCAL-ESPNOW-BBS-LCD-MENU-GRAPHICS-BROWSER-AGENT-2026-05-31`.
+- The renderer originally emitted `bbs_lcd_render.v1`, including four
+  20-character lines, eight glyph slots, cursor metadata, dirty-cell metadata,
+  widgets, and local view state. PF0530N now emits `bbs_lcd_render.v2` with
+  scroll-list viewport metadata while keeping `bbs_lcd_state.v1` as input.
+  Source IDs:
+  `SRC-LOCAL-ESPNOW-BBS-LCD-MENU-GRAPHICS-BROWSER-AGENT-2026-05-31`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-SCROLLING-XML-2026-06-01`.
 - The current PF0530K live gate passed flash and verify-flash but captured zero
   `ENC_RAW`, `ENC_EV`, `BBS_MENU_STEP`, and `BBS_MENU_SELECT`; it is not
   accepted as proven interactive. Source ID:
@@ -36,6 +39,23 @@ configuration endpoints, release gating, commit, or push.
   monitor captured all 13 auto-demo page names and all five glyph banks, but no
   physical encoder/button events. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`.
+- PF0530M is the prior non-live source/test continuation for real LCD/menu
+  behavior. It kept the closed hardware surfaces while adding operational
+  status rows, bridge-closed display, diagnostic/error rows, row action labels,
+  editable widget rows, 13-page host rendering, and state-machine tests.
+  Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530M-2026-06-01`.
+- PF0530N is the scrolling/XML source/test continuation. It
+  adds build-time `bbs_lcd_menu.v1` XML, generated static firmware/simulator
+  menu definitions, 14 generated pages, 63 generated items, host render schema
+  `bbs_lcd_render.v2`, scroll-list item navigation, grouped multi-row items,
+  selected-row marquee timing, and a separate table glyph bank. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-SCROLLING-XML-2026-06-01`.
+- PF0530N write-flash and separate verify-flash passed on COM6. The read-only
+  monitor captured PF0530N readiness plus `bbs_lcd_menu.v1`,
+  `bbs_lcd_render.v2`, render/cursor/heartbeat/auto-demo/glyph-bank proof, and
+  no crash/unsafe markers. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`.
 - HD44780 CGRAM planning is limited to eight 5x8 custom-character types.
   Source ID: `SRC-HITACHI-HD44780U-DDRAM-CGRAM-2026-05-31`.
 - The local 20x4 cursor tracker uses row bases `0x00`, `0x40`, `0x14`, and
@@ -58,8 +78,10 @@ configuration endpoints, release gating, commit, or push.
 ## Assumptions
 
 - Browser mirror work is an inert host-only simulator surface.
-- Custom glyph bank changes now have firmware monitor coverage, but physical
-  glyph appearance on the LCD remains unproven until visual user testing.
+- PF0530L custom glyph bank changes now have firmware monitor coverage and user
+  visual readability confirmation. PF0530N now has COM6 write/verify and
+  read-only monitor proof; physical readability of the scroll-list/table page
+  still requires user observation.
 - Rotary input remains local UI intent only and cannot directly trigger relay,
   XBee, radio, serial-write, flash/erase, persistent configuration, or bridge
   commands.
@@ -68,10 +90,9 @@ configuration endpoints, release gating, commit, or push.
 
 ## Unknowns
 
-- Physical LCD visual behavior with custom glyph bank swaps.
-- Encoder direction/select proof after PF0530L.
-- Physical LCD readability of PF0530L custom glyph banks, cursor placement,
-  widget pages, and auto-demo page cycling.
+- PF0530N physical LCD readability after the COM6 flash.
+- Physical readability of the PF0530N scroll-list and table page.
+- Direction-label expectation for the rotary encoder.
 - Target firmware memory budget for any future browser mirror.
 - Whether a future live device should expose SoftAP before a separate network
   and security gate.
@@ -97,7 +118,9 @@ The host renderer now tracks:
 - fixed four-row, 20-column ASCII-safe display lines;
 - cursor row/column and DDRAM address;
 - dirty rows and dirty cells compared with a prior render;
-- focus state for page, row, detail, and edit lab modes;
+- focus state for scroll-list, detail, and edit lab modes;
+- selected item ID, visible item IDs, physical indicator row, viewport top
+  line, viewport top item, horizontal scroll offsets, and XML source metadata;
 - local widget previews for progress bars, sliders, signal bars, queue/custody
   indicators, spinner frames, big digits, vertical charts, and a gauge demo.
 
@@ -106,16 +129,17 @@ counter reads or R/W wiring.
 
 ## Navigation Model
 
-Modes are:
+PF0530N modes are:
 
-- `page_browse`: rotate changes page; short press enters row browse; long
-  press returns home.
-- `row_browse`: rotate changes selected row; short press selects; long press
-  backs out to page browse.
-- `detail`: rotate changes selected row; short press enters the edit lab;
+- `scroll`: rotate changes the selected XML-defined item; the physical
+  indicator moves through visible rows and the viewport scrolls at edges.
+- `detail`: short press opens local detail for selected detail items; long
+  press backs out to the generated page.
+- `edit_lab`: rotate changes a local value; short press commits local UI state;
   long press backs out.
-- `edit_lab`: rotate changes a local value; short press commits local UI
-  state; long press backs out.
+
+Short press in `scroll` follows the selected item's XML action: target page,
+detail, edit, or back. Long press uses a bounded page stack, then home.
 
 `double_click` remains outside v1 and is rejected.
 
@@ -128,17 +152,19 @@ The host `GlyphBankManager` defines these named banks:
 - `vertical_chart`
 - `big_digits`
 - `gauge_demo`
+- `table`
 
 Each bank is capped at eight slots, each glyph has eight rows, and each row
 byte must stay in `0x00..0x1F`. Bank swaps are guarded at 250 ms minimum in the
-host manager.
+host manager. The `table` bank is page-level and must not be mixed with
+bar/chart/big-digit/gauge pages.
 
 ## Browser Mirror
 
 The host mirror is a Python request shim and static HTML generator. It opens no
 socket and starts no server.
 
-- `GET /api/lcd/state` returns `bbs_lcd_render.v1`.
+- `GET /api/lcd/state` returns `bbs_lcd_render.v2`.
 - `POST /api/lcd/intent` accepts only `rotate_left`, `rotate_right`,
   `short_press`, and `long_press`.
 - The intent payload accepts only an `intent` field. Unknown or secret-bearing
@@ -146,17 +172,21 @@ socket and starts no server.
 - Unknown routes and methods return closed errors.
 - Secret-bearing fields are rejected before rendering.
 - The static HTML mirrors the active glyph-bank name plus cursor row, column,
-  DDRAM address, and focus through inert markup/data attributes.
+  DDRAM address, focus, selected item, visible items, viewport top line, and
+  source XML metadata through inert markup/data attributes.
 - The static HTML includes no `fetch`, WebSocket, EventSource, serial,
   Bluetooth, relay, XBee, flash, erase, or GPIO behavior.
 
 ## Browser QA Hardening Continuation
 
-Task 0117 continues this host-only plan by tightening the inert browser mirror
-contract:
+Task 0117 continued this host-only plan by tightening the inert browser mirror
+contract, and PF0530N adds the v2 viewport metadata layer:
 
 - `bbs_lcd_render.v1` now includes `glyph_bank_name` alongside the eight-slot
   `glyph_bank` list.
+- `bbs_lcd_render.v2` adds scroll-list selected item, visible items, physical
+  indicator row, viewport top line, horizontal scroll offsets, and source XML
+  metadata.
 - Static HTML exposes cursor and glyph-bank mirror metadata without opening
   network, browser device, GPIO, serial, RF, flash, relay, or persistent
   surfaces.

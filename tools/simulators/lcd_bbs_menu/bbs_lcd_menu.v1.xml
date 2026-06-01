@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N">
+  <page id="HOME" title="BBS Field" glyphBank="core_status">
+    <item id="home-status" label="BBS FIELD STATUS READY" action="detail" />
+    <item id="home-messages" label="Messages queue and custody" action="page" target="MESSAGES" />
+    <item id="home-peers" label="Peers and RSSI" action="page" target="PEERS" />
+    <item id="home-queue" label="Queue/files overview" action="page" target="QUEUE" />
+    <item id="home-mesh" label="Mesh routes table" action="page" target="ROUTES" />
+    <item id="home-diag" label="Diagnostics and locks" action="page" target="DIAG" />
+    <item id="home-widgets" label="Local widget pages" action="page" target="BARS" />
+  </page>
+  <page id="MESSAGES" title="Messages" glyphBank="core_status">
+    <item id="msg-new" label="New inbox messages" action="detail" />
+    <item id="msg-outbox" label="Outbox pending acknowledgements" action="detail" />
+    <item id="msg-custody" label="Custody ACKED local only" action="detail" />
+    <item id="msg-last" label="Last event ACK peer01 with long scroll text" action="detail" />
+    <item id="msg-back" label="Back home" action="page" target="HOME" />
+  </page>
+  <page id="PEERS" title="Peers" glyphBank="core_status">
+    <item id="peer-count" label="Active peers 2 of 3" action="detail" />
+    <item id="peer-rssi" label="RSSI -67 ACK 07" action="detail" />
+    <item id="peer-root" label="Root coord01 hops 2" action="detail" />
+    <item id="peer-dup" label="Duplicate count zero" action="detail" />
+    <item id="peer-back" label="Back home" action="page" target="HOME" />
+  </page>
+  <page id="QUEUE" title="Queue" glyphBank="core_status">
+    <item id="queue-pending" label="Pending messages 02" action="detail" />
+    <item id="queue-retry" label="Retry queue 01" action="detail" />
+    <item id="queue-files" label="Files queued 01 done 03" action="page" target="FILES" />
+    <item id="queue-control" label="Control bridge CLOSED" action="detail" />
+    <item id="queue-back" label="Back home" action="page" target="HOME" />
+  </page>
+  <page id="FILES" title="Files" glyphBank="core_status">
+    <item id="files-counts" label="Files queued 01 done 03" action="detail" />
+    <item id="files-bytes" label="Bytes staged 4096" action="detail" />
+    <item id="files-names" label="File names closed surface" action="detail" />
+    <item id="files-back" label="Back queue" action="page" target="QUEUE" />
+  </page>
+  <page id="MESH" title="Mesh" glyphBank="core_status">
+    <item id="mesh-mode" label="Mesh simulator mode" action="detail" />
+    <item id="mesh-root" label="Root coordinator coord01" action="detail" />
+    <item id="mesh-heal" label="Heal events 01" action="detail" />
+    <item id="mesh-routes" label="Open route table" action="page" target="ROUTES" />
+    <item id="mesh-back" label="Back home" action="page" target="HOME" />
+  </page>
+  <page id="XBEE" title="XBee Bridge" glyphBank="core_status">
+    <item id="xbee-closed" label="Bridge local CLOSED" action="detail" />
+    <item id="xbee-host" label="Host UART0 115200" action="detail" />
+    <item id="xbee-radio" label="XBee UART2 9600 closed" action="detail" />
+    <item id="xbee-back" label="Back home" action="page" target="HOME" />
+  </page>
+  <page id="DIAG" title="Diagnostics" glyphBank="core_status">
+    <item id="diag-errors" label="Diagnostics errors zero" action="detail" />
+    <item id="diag-uptime" label="Uptime host snapshot" action="detail" />
+    <item id="diag-lcd" label="LCD GPIO21 GPIO22 display only" action="detail" />
+    <item id="diag-locks" label="Locks relay xbee flash serial" action="page" target="LOCKS" />
+    <item id="diag-back" label="Back home" action="page" target="HOME" />
+  </page>
+  <page id="LOCKS" title="Locks" glyphBank="core_status">
+    <item id="lock-relay" label="Relay LOCK" action="detail" />
+    <item id="lock-xbee" label="XBee LOCK" action="detail" />
+    <item id="lock-flash" label="Flash LOCK" action="detail" />
+    <item id="lock-serial" label="Serial write LOCK" action="detail" />
+    <item id="lock-back" label="Back diagnostics" action="page" target="DIAG" />
+  </page>
+  <page id="BARS" title="Bars" glyphBank="horizontal_bar">
+    <item id="bars-link" label="Link level local bar" action="detail" />
+    <item id="bars-queue" label="Queue level local bar" action="detail" />
+    <item id="bars-edit" label="Edit demo value" action="edit" editable="true" />
+    <item id="bars-chart" label="Open chart page" action="page" target="CHART" />
+    <item id="bars-back" label="Back home" action="page" target="HOME" />
+  </page>
+  <page id="CHART" title="Chart" glyphBank="vertical_chart">
+    <item id="chart-history" label="Vertical chart history" action="detail" />
+    <item id="chart-spark" label="Sparkline local only" action="detail" />
+    <item id="chart-digits" label="Open digits page" action="page" target="DIGITS" />
+    <item id="chart-back" label="Back bars" action="page" target="BARS" />
+  </page>
+  <page id="DIGITS" title="Digits" glyphBank="big_digits">
+    <item id="digits-status" label="Big digits status" action="detail" />
+    <item id="digits-clock" label="No clock writes" action="detail" />
+    <item id="digits-gauge" label="Open gauge page" action="page" target="GAUGE" />
+    <item id="digits-back" label="Back chart" action="page" target="CHART" />
+  </page>
+  <page id="GAUGE" title="Gauge" glyphBank="gauge_demo">
+    <item id="gauge-signal" label="Signal local gauge" action="edit" editable="true" />
+    <item id="gauge-load" label="Safe load off" action="detail" />
+    <item id="gauge-back" label="Back widgets" action="page" target="BARS" />
+  </page>
+  <page id="ROUTES" title="Routes" glyphBank="table">
+    <item id="routes-table" label="NODE |RSSI|Q" action="detail" table="true">
+      <row>coord01|-67 |2</row>
+      <row>peer02 |-71 |0</row>
+      <row>peer03 |-82 |1</row>
+    </item>
+    <item id="routes-back" label="Back mesh" action="page" target="MESH" />
+  </page>
+</menu>

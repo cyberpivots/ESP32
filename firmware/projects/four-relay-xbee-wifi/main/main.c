@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "bbs_lcd_menu_generated.h"
+
 #define FR_DIAG_XBEE_BRIDGE_CLOSED 1
 
 #if !FR_DIAG_XBEE_BRIDGE_CLOSED
@@ -40,14 +42,15 @@
 #define FR_LCD_TASK_PRIORITY tskIDLE_PRIORITY
 #define FR_LCD_COLUMNS 20
 #define FR_LCD_ROWS 4
-#define FR_MENU_PAGE_COUNT 13
+#define FR_MENU_PAGE_COUNT FR_BBS_MENU_PAGE_COUNT
 #define FR_MENU_POLL_MS 10
 #define FR_MENU_RENDER_POLL_MS 20
 #define FR_MENU_IDLE_REFRESH_MS 60000
 #define FR_MENU_AUTO_DEMO_MS 7000
 #define FR_MENU_ANIMATION_MS 2000
 #define FR_MENU_ACK_MS 1500
-#define FR_DIAG_FIRMWARE_ID "PF0530L"
+#define FR_MENU_PAGE_STACK_DEPTH 4
+#define FR_DIAG_FIRMWARE_ID FR_DIAG_FIRMWARE_ID_VALUE
 #define FR_ENCODER_AB_STABLE_SAMPLES 3
 #define FR_ENCODER_SW_GUARD_MS 150
 #define FR_MENU_HEARTBEAT_MS 2000
@@ -56,7 +59,7 @@
 #define FR_MENU_INPUT_TASK_STACK_BYTES 4096
 #define FR_MENU_INPUT_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
 #define FR_MENU_EDIT_VALUE_MAX 100
-#define FR_GLYPH_BANK_COUNT 5
+#define FR_GLYPH_BANK_COUNT FR_BBS_GLYPH_BANK_COUNT
 #define FR_GLYPH_SLOTS 8
 #define FR_GLYPH_ROWS 8
 #define FR_GLYPH_BANK_SWAP_MIN_MS 250
@@ -141,6 +144,10 @@ typedef struct {
     uint8_t page;
     fr_menu_mode_t mode;
     uint8_t selected_row;
+    uint8_t selected_item;
+    uint8_t viewport_top_line;
+    uint8_t page_stack[FR_MENU_PAGE_STACK_DEPTH];
+    uint8_t page_stack_depth;
     uint8_t edit_value;
     uint8_t cursor_row;
     uint8_t cursor_col;
@@ -212,6 +219,10 @@ typedef struct {
 
 static QueueHandle_t fr_encoder_event_queue;
 static volatile uint32_t fr_encoder_irq_drop_count;
+
+static const fr_bbs_menu_page_t *fr_bbs_menu_page(uint8_t page);
+static const fr_bbs_menu_item_t *fr_bbs_menu_selected_item(const fr_menu_state_t *menu);
+static void fr_bbs_sync_menu_view(fr_menu_state_t *menu);
 
 static void fr_bridge_init_safe_defaults(void)
 {
@@ -468,7 +479,7 @@ static void fr_menu_print_heartbeat(const fr_menu_state_t *menu, uint32_t now_ms
     printf(
         "BBS_MENU_HB page=%s index=%u pos=%ld levels=C%uD%uS%u steps=%lu/%lu "
         "buttons=%lu invalid=%lu suppressed=%lu irq_drop=%lu t=%lu "
-        "mode=%s row=%u value=%u auto_demo=%u\r\n",
+        "mode=%s row=%u item=%u top=%u value=%u auto_demo=%u\r\n",
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
         (long)menu->position,
@@ -484,6 +495,8 @@ static void fr_menu_print_heartbeat(const fr_menu_state_t *menu, uint32_t now_ms
         (unsigned long)now_ms,
         fr_menu_mode_name(menu->mode),
         (unsigned int)menu->selected_row,
+        (unsigned int)menu->selected_item,
+        (unsigned int)menu->viewport_top_line,
         (unsigned int)menu->edit_value,
         menu->auto_demo_enabled ? 1U : 0U
     );
@@ -503,12 +516,21 @@ static void fr_menu_step(fr_menu_state_t *menu, int8_t direction, uint32_t now_m
     switch (menu->mode) {
     case FR_MENU_MODE_ROW_BROWSE:
     case FR_MENU_MODE_DETAIL:
-        menu->selected_row = (uint8_t)(
-            (menu->selected_row + FR_LCD_ROWS + (direction > 0 ? 1 : -1)) %
-            FR_LCD_ROWS
-        );
-        fr_menu_set_last_event(menu, direction > 0 ? "ROW NEXT" : "ROW PREV");
+    case FR_MENU_MODE_PAGE_BROWSE: {
+        const fr_bbs_menu_page_t *page = fr_bbs_menu_page(menu->page);
+        if (page->item_count > 0U) {
+            if (direction > 0) {
+                menu->selected_item = (uint8_t)((menu->selected_item + 1U) % page->item_count);
+            } else {
+                menu->selected_item = (uint8_t)(
+                    (menu->selected_item + page->item_count - 1U) % page->item_count
+                );
+            }
+            fr_bbs_sync_menu_view(menu);
+        }
+        fr_menu_set_last_event(menu, direction > 0 ? "ITEM NEXT" : "ITEM PREV");
         break;
+    }
     case FR_MENU_MODE_EDIT_LAB:
         if (direction > 0) {
             menu->edit_value = (uint8_t)(
@@ -521,24 +543,18 @@ static void fr_menu_step(fr_menu_state_t *menu, int8_t direction, uint32_t now_m
         }
         fr_menu_set_last_event(menu, "EDIT VALUE");
         break;
-    case FR_MENU_MODE_PAGE_BROWSE:
     default:
-        if (direction > 0) {
-            menu->page = (uint8_t)((menu->page + 1U) % FR_MENU_PAGE_COUNT);
-            fr_menu_set_last_event(menu, "STEP CW");
-        } else {
-            menu->page = (uint8_t)(
-                (menu->page + FR_MENU_PAGE_COUNT - 1U) % FR_MENU_PAGE_COUNT
-            );
-            fr_menu_set_last_event(menu, "STEP CCW");
-        }
+        menu->mode = FR_MENU_MODE_PAGE_BROWSE;
         menu->selected_row = 0;
+        menu->selected_item = 0;
+        menu->viewport_top_line = 0;
+        fr_menu_set_last_event(menu, "PAGE BROWSE");
         break;
     }
     fr_menu_mark_display_dirty(menu);
     printf(
         "BBS_MENU_STEP dir=%c page=%s index=%u pos=%ld cw=%lu ccw=%lu t=%lu "
-        "mode=%s row=%u value=%u\r\n",
+        "mode=%s row=%u item=%u top=%u value=%u\r\n",
         direction > 0 ? '+' : '-',
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
@@ -548,6 +564,8 @@ static void fr_menu_step(fr_menu_state_t *menu, int8_t direction, uint32_t now_m
         (unsigned long)now_ms,
         fr_menu_mode_name(menu->mode),
         (unsigned int)menu->selected_row,
+        (unsigned int)menu->selected_item,
+        (unsigned int)menu->viewport_top_line,
         (unsigned int)menu->edit_value
     );
 }
@@ -649,18 +667,54 @@ static void fr_menu_handle_switch_stable(fr_menu_state_t *menu, uint32_t now_ms)
 
     if (!menu->long_press_handled) {
         switch (menu->mode) {
-        case FR_MENU_MODE_PAGE_BROWSE:
-            menu->mode = FR_MENU_MODE_ROW_BROWSE;
-            menu->selected_row = 0;
-            fr_menu_set_last_event(menu, "ROW BROWSE");
-            break;
         case FR_MENU_MODE_ROW_BROWSE:
-            menu->mode = FR_MENU_MODE_DETAIL;
-            fr_menu_set_last_event(menu, "DETAIL");
+        case FR_MENU_MODE_PAGE_BROWSE: {
+            const fr_bbs_menu_item_t *item = fr_bbs_menu_selected_item(menu);
+            if (item->action == FR_BBS_ACTION_PAGE) {
+                if (menu->page_stack_depth < FR_MENU_PAGE_STACK_DEPTH) {
+                    menu->page_stack[menu->page_stack_depth] = menu->page;
+                    menu->page_stack_depth += 1U;
+                } else {
+                    for (uint8_t index = 1; index < FR_MENU_PAGE_STACK_DEPTH; ++index) {
+                        menu->page_stack[index - 1U] = menu->page_stack[index];
+                    }
+                    menu->page_stack[FR_MENU_PAGE_STACK_DEPTH - 1U] = menu->page;
+                }
+                menu->page = item->target_page;
+                menu->selected_item = 0;
+                menu->viewport_top_line = 0;
+                menu->mode = FR_MENU_MODE_PAGE_BROWSE;
+                fr_bbs_sync_menu_view(menu);
+                fr_menu_set_last_event(menu, "PAGE TARGET");
+            } else if (item->action == FR_BBS_ACTION_EDIT) {
+                menu->mode = FR_MENU_MODE_EDIT_LAB;
+                fr_menu_set_last_event(menu, "EDIT LAB");
+            } else if (item->action == FR_BBS_ACTION_BACK) {
+                if (menu->page_stack_depth > 0U) {
+                    menu->page_stack_depth -= 1U;
+                    menu->page = menu->page_stack[menu->page_stack_depth];
+                } else {
+                    menu->page = 0;
+                }
+                menu->selected_item = 0;
+                menu->viewport_top_line = 0;
+                menu->mode = FR_MENU_MODE_PAGE_BROWSE;
+                fr_bbs_sync_menu_view(menu);
+                fr_menu_set_last_event(menu, "BACK PAGE");
+            } else {
+                menu->mode = FR_MENU_MODE_DETAIL;
+                fr_menu_set_last_event(menu, "DETAIL");
+            }
             break;
+        }
         case FR_MENU_MODE_DETAIL:
-            menu->mode = FR_MENU_MODE_EDIT_LAB;
-            fr_menu_set_last_event(menu, "EDIT LAB");
+            if (fr_bbs_menu_selected_item(menu)->editable) {
+                menu->mode = FR_MENU_MODE_EDIT_LAB;
+                fr_menu_set_last_event(menu, "EDIT LAB");
+            } else {
+                menu->mode = FR_MENU_MODE_PAGE_BROWSE;
+                fr_menu_set_last_event(menu, "DETAIL OK");
+            }
             break;
         case FR_MENU_MODE_EDIT_LAB:
             menu->mode = FR_MENU_MODE_DETAIL;
@@ -677,13 +731,15 @@ static void fr_menu_handle_switch_stable(fr_menu_state_t *menu, uint32_t now_ms)
         fr_menu_mark_display_dirty(menu);
         printf(
             "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=short t=%lu "
-            "mode=%s row=%u value=%u\r\n",
+            "mode=%s row=%u item=%u top=%u value=%u\r\n",
             (unsigned long)menu->button_press_count,
             fr_bbs_page_name(menu->page),
             (unsigned int)menu->page,
             (unsigned long)now_ms,
             fr_menu_mode_name(menu->mode),
             (unsigned int)menu->selected_row,
+            (unsigned int)menu->selected_item,
+            (unsigned int)menu->viewport_top_line,
             (unsigned int)menu->edit_value
         );
     }
@@ -702,14 +758,22 @@ static void fr_menu_handle_long_press(fr_menu_state_t *menu, uint32_t now_ms)
         menu->mode = FR_MENU_MODE_DETAIL;
         fr_menu_set_last_event(menu, "BACK DETAIL");
     } else if (menu->mode == FR_MENU_MODE_DETAIL) {
-        menu->mode = FR_MENU_MODE_ROW_BROWSE;
-        fr_menu_set_last_event(menu, "BACK ROW");
-    } else if (menu->mode == FR_MENU_MODE_ROW_BROWSE) {
         menu->mode = FR_MENU_MODE_PAGE_BROWSE;
+        fr_menu_set_last_event(menu, "BACK LIST");
+    } else if (menu->page_stack_depth > 0U) {
+        menu->page_stack_depth -= 1U;
+        menu->page = menu->page_stack[menu->page_stack_depth];
+        menu->selected_item = 0;
+        menu->viewport_top_line = 0;
+        menu->mode = FR_MENU_MODE_PAGE_BROWSE;
+        fr_bbs_sync_menu_view(menu);
         fr_menu_set_last_event(menu, "BACK PAGE");
     } else {
         menu->page = 0;
+        menu->selected_item = 0;
+        menu->viewport_top_line = 0;
         menu->selected_row = 0;
+        fr_bbs_sync_menu_view(menu);
         fr_menu_set_last_event(menu, "LONG HOME");
     }
     menu->button_press_count += 1U;
@@ -719,13 +783,15 @@ static void fr_menu_handle_long_press(fr_menu_state_t *menu, uint32_t now_ms)
     fr_menu_mark_display_dirty(menu);
     printf(
         "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=long t=%lu "
-        "mode=%s row=%u value=%u\r\n",
+        "mode=%s row=%u item=%u top=%u value=%u\r\n",
         (unsigned long)menu->button_press_count,
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
         (unsigned long)now_ms,
         fr_menu_mode_name(menu->mode),
         (unsigned int)menu->selected_row,
+        (unsigned int)menu->selected_item,
+        (unsigned int)menu->viewport_top_line,
         (unsigned int)menu->edit_value
     );
 }
@@ -849,8 +915,11 @@ static bool fr_menu_poll(fr_menu_state_t *menu)
         menu->page = (uint8_t)((menu->page + 1U) % FR_MENU_PAGE_COUNT);
         menu->mode = FR_MENU_MODE_PAGE_BROWSE;
         menu->selected_row = 0;
+        menu->selected_item = 0;
+        menu->viewport_top_line = 0;
         menu->position += 1;
         menu->last_auto_demo_ms = now_ms;
+        fr_bbs_sync_menu_view(menu);
         fr_menu_set_last_event(menu, "AUTO DEMO");
         fr_menu_mark_display_dirty(menu);
         printf(
@@ -1436,46 +1505,35 @@ static const fr_lcd_glyph_bank_t fr_lcd_glyph_banks[FR_GLYPH_BANK_COUNT] = {
             {0x00, 0x04, 0x04, 0x0e, 0x0e, 0x1f, 0x1f, 0x00},
         },
     },
+    {
+        .name = "table",
+        .rows = {
+            {0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04},
+            {0x00, 0x00, 0x00, 0x1f, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x07, 0x04, 0x04, 0x04, 0x04},
+            {0x00, 0x00, 0x00, 0x1c, 0x04, 0x04, 0x04, 0x04},
+            {0x04, 0x04, 0x04, 0x07, 0x04, 0x04, 0x04, 0x04},
+            {0x04, 0x04, 0x04, 0x1c, 0x04, 0x04, 0x04, 0x04},
+            {0x04, 0x04, 0x04, 0x1f, 0x04, 0x04, 0x04, 0x04},
+            {0x04, 0x0e, 0x15, 0x04, 0x04, 0x04, 0x04, 0x00},
+        },
+    },
 };
 
 static const char *fr_bbs_page_name(uint8_t page)
 {
-    static const char *const page_names[FR_MENU_PAGE_COUNT] = {
-        "HOME",
-        "MESSAGES",
-        "PEERS",
-        "QUEUE",
-        "FILES",
-        "MESH",
-        "XBEE",
-        "DIAG",
-        "LOCKS",
-        "BARS",
-        "CHART",
-        "DIGITS",
-        "GAUGE",
-    };
-
     if (page >= FR_MENU_PAGE_COUNT) {
         return "HOME";
     }
-    return page_names[page];
+    return fr_bbs_generated_pages[page].id;
 }
 
 static uint8_t fr_bbs_page_glyph_bank_index(uint8_t page)
 {
-    switch (page) {
-    case 9:
-        return 1;
-    case 10:
-        return 2;
-    case 11:
-        return 3;
-    case 12:
-        return 4;
-    default:
+    if (page >= FR_MENU_PAGE_COUNT) {
         return 0;
     }
+    return fr_bbs_generated_pages[page].glyph_bank_index;
 }
 
 static const char *fr_lcd_glyph_bank_name(uint8_t index)
@@ -1588,6 +1646,193 @@ static void fr_lcd_frame_put_chart(
     }
 }
 
+static const fr_bbs_menu_page_t *fr_bbs_menu_page(uint8_t page)
+{
+    if (page >= FR_MENU_PAGE_COUNT) {
+        page = 0;
+    }
+    return &fr_bbs_generated_pages[page];
+}
+
+static const fr_bbs_menu_item_t *fr_bbs_menu_selected_item(const fr_menu_state_t *menu)
+{
+    const fr_bbs_menu_page_t *page = fr_bbs_menu_page(menu->page);
+    uint8_t item = menu->selected_item;
+    if (item >= page->item_count) {
+        item = 0;
+    }
+    return &page->items[item];
+}
+
+static uint8_t fr_bbs_item_start_line(const fr_bbs_menu_page_t *page, uint8_t item_index)
+{
+    uint8_t line = 0;
+    for (uint8_t index = 0; index < page->item_count; ++index) {
+        if (index == item_index) {
+            return line;
+        }
+        line = (uint8_t)(line + page->items[index].row_count);
+    }
+    return 0;
+}
+
+static void fr_bbs_find_line_item(
+    const fr_bbs_menu_page_t *page,
+    uint8_t logical_line,
+    uint8_t *item_index,
+    uint8_t *row_offset
+)
+{
+    uint8_t line = 0;
+    for (uint8_t index = 0; index < page->item_count; ++index) {
+        uint8_t row_count = page->items[index].row_count;
+        if (logical_line >= line && logical_line < (uint8_t)(line + row_count)) {
+            *item_index = index;
+            *row_offset = (uint8_t)(logical_line - line);
+            return;
+        }
+        line = (uint8_t)(line + row_count);
+    }
+    *item_index = UINT8_MAX;
+    *row_offset = 0;
+}
+
+static void fr_bbs_sync_menu_view(fr_menu_state_t *menu)
+{
+    const fr_bbs_menu_page_t *page = fr_bbs_menu_page(menu->page);
+    if (page->item_count == 0U) {
+        menu->selected_item = 0;
+        menu->selected_row = 0;
+        menu->viewport_top_line = 0;
+        return;
+    }
+    if (menu->selected_item >= page->item_count) {
+        menu->selected_item = 0;
+    }
+    uint8_t start_line = fr_bbs_item_start_line(page, menu->selected_item);
+    uint8_t selected_rows = page->items[menu->selected_item].row_count;
+    uint8_t max_top = page->line_count > FR_LCD_ROWS ?
+        (uint8_t)(page->line_count - FR_LCD_ROWS) : 0U;
+    if (menu->viewport_top_line > max_top) {
+        menu->viewport_top_line = max_top;
+    }
+    if (start_line < menu->viewport_top_line) {
+        menu->viewport_top_line = start_line;
+    } else if ((uint8_t)(start_line + selected_rows) >
+               (uint8_t)(menu->viewport_top_line + FR_LCD_ROWS)) {
+        menu->viewport_top_line = (uint8_t)(start_line + selected_rows - FR_LCD_ROWS);
+    }
+    if (menu->viewport_top_line > max_top) {
+        menu->viewport_top_line = max_top;
+    }
+    menu->selected_row = (uint8_t)(start_line - menu->viewport_top_line);
+    if (menu->selected_row >= FR_LCD_ROWS) {
+        menu->selected_row = FR_LCD_ROWS - 1U;
+    }
+}
+
+static const char *fr_bbs_item_row_text(const fr_bbs_menu_item_t *item, uint8_t row_offset)
+{
+    if (row_offset == 0U) {
+        return item->label;
+    }
+    if (row_offset <= 3U && item->rows[row_offset - 1U] != NULL) {
+        return item->rows[row_offset - 1U];
+    }
+    return "";
+}
+
+static uint8_t fr_bbs_marquee_offset(const char *text, uint32_t now_ms)
+{
+    size_t length = strlen(text);
+    if (length <= FR_BBS_MENU_CONTENT_COLUMNS || now_ms < FR_BBS_MENU_MARQUEE_HOLD_MS) {
+        return 0;
+    }
+    size_t cycle = length + FR_BBS_MENU_MARQUEE_GAP;
+    return (uint8_t)(((now_ms - FR_BBS_MENU_MARQUEE_HOLD_MS) /
+        FR_BBS_MENU_MARQUEE_STEP_MS) % cycle);
+}
+
+static void fr_bbs_copy_menu_content(
+    char *line,
+    char indicator,
+    const char *text,
+    bool selected,
+    uint32_t now_ms
+)
+{
+    size_t length = strlen(text);
+    uint8_t offset = selected ? fr_bbs_marquee_offset(text, now_ms) : 0U;
+    line[0] = indicator;
+    for (uint8_t column = 0; column < FR_BBS_MENU_CONTENT_COLUMNS; ++column) {
+        char character = ' ';
+        if (selected && length > FR_BBS_MENU_CONTENT_COLUMNS) {
+            size_t cycle = length + FR_BBS_MENU_MARQUEE_GAP;
+            size_t source = (offset + column) % cycle;
+            character = source < length ? text[source] : ' ';
+        } else if (column < length) {
+            character = text[column];
+        }
+        if (character < 32 || character > 126) {
+            character = '?';
+        }
+        line[column + 1U] = character;
+    }
+    line[FR_LCD_COLUMNS] = '\0';
+}
+
+static bool fr_bbs_render_generated_frame(
+    const fr_menu_state_t *menu,
+    uint32_t now_ms,
+    fr_lcd_frame_t *frame
+)
+{
+    const fr_bbs_menu_page_t *page = fr_bbs_menu_page(menu->page);
+    fr_lcd_frame_clear(frame);
+    frame->glyph_bank_index = page->glyph_bank_index;
+    frame->cursor_row = menu->selected_row;
+    frame->cursor_col = menu->mode == FR_MENU_MODE_EDIT_LAB ? 18U :
+        (menu->mode == FR_MENU_MODE_DETAIL ? 1U : 0U);
+    frame->focus = fr_menu_mode_name(menu->mode);
+
+    for (uint8_t row = 0; row < FR_LCD_ROWS; ++row) {
+        uint8_t logical_line = (uint8_t)(menu->viewport_top_line + row);
+        uint8_t item_index = UINT8_MAX;
+        uint8_t row_offset = 0;
+        char line[FR_LCD_COLUMNS + 1];
+
+        fr_bbs_find_line_item(page, logical_line, &item_index, &row_offset);
+        if (item_index == UINT8_MAX) {
+            fr_lcd_frame_set_line(frame, row, "");
+            continue;
+        }
+        const fr_bbs_menu_item_t *item = &page->items[item_index];
+        bool selected = item_index == menu->selected_item;
+        char indicator = selected && row_offset == 0U ? '>' :
+            (selected ? ':' : (row_offset == 0U ? ' ' : '|'));
+        fr_bbs_copy_menu_content(
+            line,
+            indicator,
+            fr_bbs_item_row_text(item, row_offset),
+            selected,
+            now_ms
+        );
+        fr_lcd_frame_set_line(frame, row, line);
+        if (page->glyph_bank_index == 5U) {
+            for (uint8_t column = 1; column < FR_LCD_COLUMNS; ++column) {
+                if (frame->log_lines[row][column] == '|') {
+                    fr_lcd_frame_set_glyph(frame, row, column, 0, '|');
+                }
+            }
+        }
+    }
+    if (page->glyph_bank_index == 0U && menu->mode != FR_MENU_MODE_PAGE_BROWSE) {
+        fr_lcd_frame_set_glyph(frame, menu->selected_row, 0, 7U, '>');
+    }
+    frame->cursor_ddram = fr_lcd_ddram_address(frame->cursor_row, frame->cursor_col);
+    return true;
+}
+
 static const char *fr_bbs_last_event(const fr_menu_state_t *menu, uint32_t now_ms)
 {
     if (menu->ack == FR_MENU_ACK_SELECT && now_ms < menu->ack_until_ms) {
@@ -1617,6 +1862,68 @@ static void fr_bbs_format_uptime(char *buffer, size_t buffer_size, uint32_t now_
     );
 }
 
+static bool fr_bbs_row_is_editable(uint8_t page, uint8_t row)
+{
+    return (page == 9U && row == 3U) || (page == 12U && row == 1U);
+}
+
+static const char *fr_bbs_row_action_label(uint8_t page, uint8_t row)
+{
+    if (fr_bbs_row_is_editable(page, row)) {
+        return "EDIT";
+    }
+    switch (page) {
+    case 6:
+    case 8:
+        return "LOCKED";
+    case 7:
+        return row == 0U ? "ERRORS" : "STATUS";
+    default:
+        return "DETAIL";
+    }
+}
+
+static void fr_bbs_format_context_line(
+    const fr_menu_state_t *menu,
+    char *buffer,
+    size_t buffer_size,
+    const char *last_event
+)
+{
+    if (menu->mode == FR_MENU_MODE_EDIT_LAB) {
+        snprintf(
+            buffer,
+            buffer_size,
+            "EDIT R%u VALUE %3u%%",
+            (unsigned int)menu->selected_row,
+            (unsigned int)menu->edit_value
+        );
+        return;
+    }
+    if (menu->mode == FR_MENU_MODE_DETAIL) {
+        snprintf(
+            buffer,
+            buffer_size,
+            "%s R%u %s",
+            fr_bbs_row_action_label(menu->page, menu->selected_row),
+            (unsigned int)menu->selected_row,
+            fr_bbs_page_name(menu->page)
+        );
+        return;
+    }
+    if (menu->mode == FR_MENU_MODE_ROW_BROWSE) {
+        snprintf(
+            buffer,
+            buffer_size,
+            "SELECT R%u %s",
+            (unsigned int)menu->selected_row,
+            fr_bbs_row_action_label(menu->page, menu->selected_row)
+        );
+        return;
+    }
+    snprintf(buffer, buffer_size, "Last:%s", last_event);
+}
+
 static void fr_bbs_render_frame(
     const fr_menu_state_t *menu,
     uint8_t lcd_address,
@@ -1630,6 +1937,11 @@ static void fr_bbs_render_frame(
     uint8_t glyph_bank_index = fr_bbs_page_glyph_bank_index(menu->page);
     uint8_t bar_value = menu->edit_value;
     uint8_t chart_values[8] = {1, 3, 2, 6, 4, 7, 5, 3};
+    char context_line[64];
+
+    if (fr_bbs_render_generated_frame(menu, now_ms, frame)) {
+        return;
+    }
 
     fr_lcd_frame_clear(frame);
     frame->glyph_bank_index = glyph_bank_index;
@@ -1640,53 +1952,54 @@ static void fr_bbs_render_frame(
     for (size_t row = 0; row < FR_LCD_ROWS; ++row) {
         raw[row][0] = '\0';
     }
+    fr_bbs_format_context_line(menu, context_line, sizeof(context_line), last_event);
 
     switch (menu->page) {
     case 0:
-        snprintf(raw[0], sizeof(raw[0]), " BBS FIELD UX READY");
-        snprintf(raw[1], sizeof(raw[1]), "Peers:3 Queue:2");
-        snprintf(raw[2], sizeof(raw[2]), "Cust:OPCON");
-        snprintf(raw[3], sizeof(raw[3]), "Last:%s", last_event);
+        snprintf(raw[0], sizeof(raw[0]), "BBS FIELD STATUS");
+        snprintf(raw[1], sizeof(raw[1]), "Link:OK Peers:03");
+        snprintf(raw[2], sizeof(raw[2]), "Queue:02 Err:00");
+        snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
         break;
     case 1:
-        snprintf(raw[0], sizeof(raw[0]), " MSG N:1 IN:12");
+        snprintf(raw[0], sizeof(raw[0]), "MSG NEW:01 IN:12");
         snprintf(raw[1], sizeof(raw[1]), "OUT:4 ACK:12");
         snprintf(raw[2], sizeof(raw[2]), "Custody:ACKED");
-        snprintf(raw[3], sizeof(raw[3]), "Last:%s", last_event);
+        snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
         break;
     case 2:
-        snprintf(raw[0], sizeof(raw[0]), "PEERS 2/3");
-        snprintf(raw[1], sizeof(raw[1]), "Link:OK RSSI:-67");
-        snprintf(raw[2], sizeof(raw[2]), "ACK:7 Dup:0");
-        snprintf(raw[3], sizeof(raw[3]), "Mesh:coord01");
+        snprintf(raw[0], sizeof(raw[0]), "PEERS ACTIVE 2/3");
+        snprintf(raw[1], sizeof(raw[1]), "RSSI:-67 ACK:07");
+        snprintf(raw[2], sizeof(raw[2]), "Dup:0 Root:coord");
+        snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
         break;
     case 3:
         snprintf(raw[0], sizeof(raw[0]), "QUEUE P:2 F:0");
         snprintf(raw[1], sizeof(raw[1]), "Retry:1");
         snprintf(raw[2], sizeof(raw[2]), "Cust:ACKED");
-        snprintf(raw[3], sizeof(raw[3]), "Control:CLOSED");
+        snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
         break;
     case 4:
         snprintf(raw[0], sizeof(raw[0]), "FILES Q:1 D:3");
         snprintf(raw[1], sizeof(raw[1]), "Bytes:4096");
         snprintf(raw[2], sizeof(raw[2]), "Names:CLOSED");
-        snprintf(raw[3], sizeof(raw[3]), "Transfer:CLOSED");
+        snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
         break;
     case 5:
         snprintf(raw[0], sizeof(raw[0]), "MESH sim");
         snprintf(raw[1], sizeof(raw[1]), "Root:coord01");
         snprintf(raw[2], sizeof(raw[2]), "Hops:2 Heal:1");
-        snprintf(raw[3], sizeof(raw[3]), "Live:CLOSED");
+        snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
         break;
     case 6:
-        snprintf(raw[0], sizeof(raw[0]), "XBEE CLOSED");
-        snprintf(raw[1], sizeof(raw[1]), "UART:CLOSED");
-        snprintf(raw[2], sizeof(raw[2]), "NP:?");
-        snprintf(raw[3], sizeof(raw[3]), "TX CLOSED");
+        snprintf(raw[0], sizeof(raw[0]), "BRIDGE LOCAL CLOSED");
+        snprintf(raw[1], sizeof(raw[1]), "Host:115200 USB0");
+        snprintf(raw[2], sizeof(raw[2]), "XBee:9600 UART2");
+        snprintf(raw[3], sizeof(raw[3]), "TX/RX:CLOSED");
         break;
     case 7:
         fr_bbs_format_uptime(uptime, sizeof(uptime), now_ms);
-        snprintf(raw[0], sizeof(raw[0]), "DIAG FIELD");
+        snprintf(raw[0], sizeof(raw[0]), "DIAG ERRORS:0");
         snprintf(raw[1], sizeof(raw[1]), "Up:%s", uptime);
         snprintf(raw[2], sizeof(raw[2]), "LCD:0x%02x C%cD%cS%c",
             lcd_address,
@@ -1694,7 +2007,10 @@ static void fr_bbs_render_frame(
             fr_menu_level_char(menu->stable_b),
             fr_menu_level_char(menu->stable_sw)
         );
-        snprintf(raw[3], sizeof(raw[3]), "Event:%s", last_event);
+        snprintf(raw[3], sizeof(raw[3]), "IRQ:%lu INV:%lu",
+            (unsigned long)fr_encoder_irq_drop_count,
+            (unsigned long)menu->invalid_transition_count
+        );
         break;
     case 8:
         snprintf(raw[0], sizeof(raw[0]), "LOCKS");
@@ -1706,7 +2022,7 @@ static void fr_bbs_render_frame(
         snprintf(raw[0], sizeof(raw[0]), "BARS LINK QUEUE");
         snprintf(raw[1], sizeof(raw[1]), "LNK");
         snprintf(raw[2], sizeof(raw[2]), "QUE");
-        snprintf(raw[3], sizeof(raw[3]), "EDIT %3u%%", (unsigned int)bar_value);
+        snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
         break;
     case 10:
         chart_values[0] = (uint8_t)(1U + (menu->spinner_frame % 3U));
@@ -1725,11 +2041,23 @@ static void fr_bbs_render_frame(
         );
         snprintf(raw[3], sizeof(raw[3]), "No clock writes");
         break;
-    default:
-        snprintf(raw[0], sizeof(raw[0]), "GAUGE DEMO");
+    case 12:
+        snprintf(raw[0], sizeof(raw[0]), "GAUGE STATUS");
         snprintf(raw[1], sizeof(raw[1]), "Signal local %3u%%", (unsigned int)bar_value);
         snprintf(raw[2], sizeof(raw[2]), "    SAFE LOAD OFF");
-        snprintf(raw[3], sizeof(raw[3]), "Relay/RF CLOSED");
+        snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
+        break;
+    case 13:
+        snprintf(raw[0], sizeof(raw[0]), "NODE |RSSI|Q");
+        snprintf(raw[1], sizeof(raw[1]), "coord01|-67 |2");
+        snprintf(raw[2], sizeof(raw[2]), "peer02 |-71 |0");
+        snprintf(raw[3], sizeof(raw[3]), "peer03 |-82 |1");
+        break;
+    default:
+        snprintf(raw[0], sizeof(raw[0]), "BBS MENU XML");
+        snprintf(raw[1], sizeof(raw[1]), "%s", FR_BBS_MENU_XML_SCHEMA);
+        snprintf(raw[2], sizeof(raw[2]), "%s", FR_BBS_MENU_RENDER_SCHEMA);
+        snprintf(raw[3], sizeof(raw[3]), "SAFE SURF CLOSED");
         break;
     }
 
@@ -1778,6 +2106,16 @@ static void fr_bbs_render_frame(
         fr_lcd_frame_set_glyph(frame, 2, 1, 1, '|');
         fr_lcd_frame_set_glyph(frame, 2, 2, 2, ']');
         fr_lcd_frame_set_glyph(frame, 2, 9, (uint8_t)(3U + menu->spinner_frame), '^');
+        break;
+    case 13:
+        fr_lcd_frame_set_glyph(frame, 0, 6, 0, '|');
+        fr_lcd_frame_set_glyph(frame, 0, 11, 0, '|');
+        fr_lcd_frame_set_glyph(frame, 1, 7, 0, '|');
+        fr_lcd_frame_set_glyph(frame, 1, 12, 0, '|');
+        fr_lcd_frame_set_glyph(frame, 2, 7, 0, '|');
+        fr_lcd_frame_set_glyph(frame, 2, 12, 0, '|');
+        fr_lcd_frame_set_glyph(frame, 3, 7, 0, '|');
+        fr_lcd_frame_set_glyph(frame, 3, 12, 0, '|');
         break;
     default:
         break;
@@ -1977,11 +2315,15 @@ static void fr_menu_init_state(fr_menu_state_t *menu)
     menu->auto_demo_enabled = true;
     menu->mode = FR_MENU_MODE_PAGE_BROWSE;
     menu->selected_row = 0;
+    menu->selected_item = 0;
+    menu->viewport_top_line = 0;
+    menu->page_stack_depth = 0;
     menu->edit_value = 50;
     menu->cursor_row = 0;
     menu->cursor_col = 0;
     menu->display_dirty = true;
     fr_menu_set_last_event(menu, "BOOT");
+    fr_bbs_sync_menu_view(menu);
     if (menu->switch_stable_pressed) {
         menu->switch_pressed_ms = menu->switch_changed_ms;
     }
@@ -2099,21 +2441,29 @@ static void fr_lcd_bbs_menu_task(void *context)
     printf("LCD_INIT_OK addr=0x%02x\r\n", lcd.address);
     printf(
         "%s BBS_LCD_READY gpio=13/14/32 pullups=on lcd=21/22 addr=0x%02x "
-        "pages=%u xbee=closed relay=closed input=split render=dirty "
-        "glyph_banks=%u cursor=software auto_demo_ms=%u\r\n",
+        "pages=%u items=%u xbee=closed relay=closed input=split render=dirty "
+        "glyph_banks=%u cursor=software auto_demo_ms=%u xml=%s render_schema=%s "
+        "scroll=list marquee=%u/%u table=ready\r\n",
         FR_DIAG_FIRMWARE_ID,
         lcd.address,
         (unsigned int)FR_MENU_PAGE_COUNT,
+        (unsigned int)FR_BBS_MENU_ITEM_COUNT,
         (unsigned int)FR_GLYPH_BANK_COUNT,
-        (unsigned int)FR_MENU_AUTO_DEMO_MS
+        (unsigned int)FR_MENU_AUTO_DEMO_MS,
+        FR_BBS_MENU_XML_SCHEMA,
+        FR_BBS_MENU_RENDER_SCHEMA,
+        (unsigned int)FR_BBS_MENU_MARQUEE_HOLD_MS,
+        (unsigned int)FR_BBS_MENU_MARQUEE_STEP_MS
     );
     printf(
         "%s BBS_INPUT_READY task=split poll_ms=%u render=dirty idle_ms=%u "
-        "irq=anyedge queue=%u modes=page,row,detail,edit\r\n",
+        "irq=anyedge queue=%u modes=scroll,detail,edit actions=page,detail,edit,back "
+        "source=%s\r\n",
         FR_DIAG_FIRMWARE_ID,
         (unsigned int)FR_MENU_POLL_MS,
         (unsigned int)FR_MENU_IDLE_REFRESH_MS,
-        (unsigned int)FR_ENCODER_EVENT_QUEUE_DEPTH
+        (unsigned int)FR_ENCODER_EVENT_QUEUE_DEPTH,
+        FR_BBS_MENU_SOURCE_ID
     );
 
     for (;;) {

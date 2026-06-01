@@ -17,11 +17,16 @@ from scaffold_audit_firmware import audit_encoder_menu_boundary  # noqa: E402
 
 
 MAIN_C = ROOT / "firmware/projects/four-relay-xbee-wifi/main/main.c"
+GENERATED_MENU_H = ROOT / "firmware/projects/four-relay-xbee-wifi/main/bbs_lcd_menu_generated.h"
+
+
+def firmware_source_text() -> str:
+    return MAIN_C.read_text(encoding="utf-8") + "\n" + GENERATED_MENU_H.read_text(encoding="utf-8")
 
 
 class FirmwareEncoderPullupBoundaryTests(unittest.TestCase):
     def test_pf0530f_devkitc_gpio_pull_policy_is_source_visible(self) -> None:
-        source = MAIN_C.read_text(encoding="utf-8")
+        source = firmware_source_text()
 
         self.assertIn("FR_ENCODER_CLK_GPIO GPIO_NUM_13", source)
         self.assertIn("FR_ENCODER_DT_GPIO GPIO_NUM_14", source)
@@ -40,10 +45,11 @@ class FirmwareEncoderPullupBoundaryTests(unittest.TestCase):
         self.assertNotIn("FR_ENCODER_SW_GPIO GPIO_NUM_13", source)
         self.assertNotIn("{FR_GPIO_SWEEP_GPIO32, \"32\", false}", source)
 
-    def test_pf0530l_bbs_menu_uses_lcd_init_diag_path(self) -> None:
-        source = MAIN_C.read_text(encoding="utf-8")
+    def test_pf0530n_bbs_menu_uses_lcd_init_diag_path(self) -> None:
+        source = firmware_source_text()
 
-        self.assertIn("FR_DIAG_FIRMWARE_ID \"PF0530L\"", source)
+        self.assertIn("FR_DIAG_FIRMWARE_ID FR_DIAG_FIRMWARE_ID_VALUE", source)
+        self.assertIn("FR_DIAG_FIRMWARE_ID_VALUE \"PF0530N\"", source)
         self.assertIn("LCD_DIAG_READY gpio=21/22 speed=%d pullups=external", source)
         self.assertIn("LCD_BUS result=ok", source)
         self.assertIn("LCD_PROBE addr=0x%02x result=ack", source)
@@ -56,13 +62,15 @@ class FirmwareEncoderPullupBoundaryTests(unittest.TestCase):
         self.assertIn("fr_lcd_bbs_menu_task", source)
         self.assertIn("xTaskCreate(\n        fr_lcd_bbs_menu_task", source)
         self.assertNotIn("xTaskCreate(\n        fr_lcd_diag_task", source)
-        self.assertIn("FR_MENU_PAGE_COUNT 13", source)
+        self.assertIn("FR_MENU_PAGE_COUNT FR_BBS_MENU_PAGE_COUNT", source)
+        self.assertIn("FR_BBS_MENU_PAGE_COUNT 14u", source)
         self.assertIn("FR_MENU_POLL_MS 10", source)
         self.assertIn("FR_MENU_RENDER_POLL_MS 20", source)
         self.assertIn("FR_MENU_IDLE_REFRESH_MS 60000", source)
         self.assertIn("FR_MENU_AUTO_DEMO_MS 7000", source)
         self.assertIn("FR_MENU_ANIMATION_MS 2000", source)
-        self.assertIn("FR_GLYPH_BANK_COUNT 5", source)
+        self.assertIn("FR_GLYPH_BANK_COUNT FR_BBS_GLYPH_BANK_COUNT", source)
+        self.assertIn("FR_BBS_GLYPH_BANK_COUNT 6u", source)
         self.assertIn("FR_GLYPH_SLOTS 8", source)
         self.assertIn("FR_GLYPH_ROWS 8", source)
         self.assertIn("FR_GLYPH_BANK_SWAP_MIN_MS 250", source)
@@ -101,35 +109,53 @@ class FirmwareEncoderPullupBoundaryTests(unittest.TestCase):
         self.assertIn("fr_menu_handle_switch_stable", source)
         self.assertIn("fr_menu_sample_inputs", source)
         self.assertIn("fr_menu_input_task", source)
+        self.assertIn("selected_item", source)
+        self.assertIn("viewport_top_line", source)
+        self.assertIn("page_stack", source)
+        self.assertIn("FR_MENU_PAGE_STACK_DEPTH 4", source)
+        self.assertIn("fr_bbs_generated_pages", source)
+        self.assertIn("fr_bbs_sync_menu_view", source)
+        self.assertIn("fr_bbs_render_generated_frame", source)
         self.assertIn("fr_lcd_render_cache_t", source)
         self.assertIn("render_cache.valid", source)
         self.assertIn("runtime.lcd_dirty", source)
         self.assertIn("fr_diag_short_display_count", source)
         self.assertIn("fr_diag_short_position_magnitude", source)
         self.assertIn("fr_bbs_page_name", source)
-        self.assertIn("BBS FIELD UX READY", source)
-        self.assertIn("MSG N:1 IN:12", source)
-        self.assertIn("PEERS 2/3", source)
+        self.assertIn("BBS FIELD STATUS", source)
+        self.assertIn("MSG NEW:01 IN:12", source)
+        self.assertIn("PEERS ACTIVE 2/3", source)
         self.assertIn("QUEUE P:2 F:0", source)
         self.assertIn("FILES Q:1 D:3", source)
         self.assertIn("MESH sim", source)
-        self.assertIn("XBEE CLOSED", source)
-        self.assertIn("DIAG FIELD", source)
+        self.assertIn("BRIDGE LOCAL CLOSED", source)
+        self.assertIn("DIAG ERRORS:0", source)
         self.assertIn("Flash:LOCK Ser:LOCK", source)
         self.assertIn("BARS LINK QUEUE", source)
         self.assertIn("VERT CHART HISTORY", source)
         self.assertIn("BIG DIGITS 12:34", source)
-        self.assertIn("GAUGE DEMO", source)
+        self.assertIn("GAUGE STATUS", source)
+        self.assertIn("fr_bbs_row_is_editable", source)
+        self.assertIn("fr_bbs_row_action_label", source)
+        self.assertIn("fr_bbs_format_context_line", source)
+        self.assertIn("actions=page,detail,edit,back", source)
         self.assertIn("fr_menu_level_char", source)
         self.assertIn("BBS_LCD_READY gpio=13/14/32 pullups=on lcd=21/22 addr=0x%02x", source)
         self.assertIn("BBS_INPUT_READY task=split poll_ms=%u render=dirty idle_ms=%u ", source)
         self.assertIn("irq=anyedge queue=%u", source)
-        self.assertIn("modes=page,row,detail,edit", source)
+        self.assertIn("modes=scroll,detail,edit", source)
+        self.assertIn("FR_BBS_MENU_XML_SCHEMA", source)
+        self.assertIn("FR_BBS_MENU_RENDER_SCHEMA", source)
+        self.assertIn("FR_BBS_MENU_MARQUEE_HOLD_MS 750u", source)
+        self.assertIn("FR_BBS_MENU_MARQUEE_STEP_MS 250u", source)
         self.assertIn(".name = \"core_status\"", source)
         self.assertIn(".name = \"horizontal_bar\"", source)
         self.assertIn(".name = \"vertical_chart\"", source)
         self.assertIn(".name = \"big_digits\"", source)
         self.assertIn(".name = \"gauge_demo\"", source)
+        self.assertIn(".name = \"table\"", source)
+        self.assertIn("NODE |RSSI|Q", source)
+        self.assertIn("ROUTES", source)
         self.assertIn("fr_lcd_load_glyph_bank", source)
         self.assertIn("BBS_GLYPH_BANK name=%s index=%u slots=%u rows=%u", source)
         self.assertIn("BBS_CURSOR row=%u col=%u ddram=0x%02x focus=%s mode=%s", source)
@@ -153,7 +179,7 @@ class FirmwareEncoderPullupBoundaryTests(unittest.TestCase):
         self.assertNotIn("    menu->page = 0;\n    if (menu->ack", source)
 
     def test_pf0530f_closes_xbee_bridge_and_keeps_inputs_only(self) -> None:
-        source = MAIN_C.read_text(encoding="utf-8")
+        source = firmware_source_text()
 
         self.assertIn("FR_DIAG_XBEE_BRIDGE_CLOSED 1", source)
         self.assertIn("#if !FR_DIAG_XBEE_BRIDGE_CLOSED", source)

@@ -25,6 +25,19 @@
         ]
       }
     ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/subagent_stop_agent_process.py\"",
+            "timeout": 30,
+            "statusMessage": "Checking ESP32 subagent lifecycle cleanup"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash|functions\\.exec_command|apply_patch|Edit|Write|mcp__.*",

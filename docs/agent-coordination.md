@@ -26,11 +26,30 @@
 Tier 2 and Tier 3 work needs at least coordinator, relevant owner, and QA
 perspectives before mutation. Project-local read-only subagents are
 default-authorized when available and safe. Use local role lenses only when
-subagents are unavailable or unsafe, and record that no subagents were spawned.
+subagents are unavailable or unsafe after lifecycle cleanup, and record that no
+subagents were spawned.
 
 A no-P1/P2 reviewer quorum may accept only the named gate and mutation
 boundary. Tier 3 acceptance also requires same-session evidence, explicit
 live-gate authority, recovery path, and closed-surface review.
+
+## Agent Lifecycle Cleanup
+
+Before spawning reviewers for Tier 2 or Tier 3 work, the coordinator checks any
+visible subagent lifecycle state and inspects completed agents before spawning
+new ones. The coordinator uses `wait_agent` to collect outstanding reviewer
+results when safe, captures the reviewer evidence, then closes completed/stale
+agents with `close_agent`.
+
+After quorum collection, close agents before fallback/final decisions and
+before spawning replacement reviewers. If the parent falls back to local role
+lenses, the task record must state that fallback only after cleanup attempt was
+made, or that lifecycle state was not visible or was unsafe to act on.
+
+This protocol reduces stuck reviewer slots, but it is not a hard runtime
+guarantee: project-local hooks can remind and audits can check text fixtures,
+while only the parent agent's actual `close_agent` calls release visible Codex
+runtime slots. In `bypassPermissions` launches, this remains advisory only.
 
 ## Weighted veto
 
@@ -80,8 +99,8 @@ No feature or factual document should be considered accepted unless it has:
 - continuation decision and authority limits.
 
 Project-local Codex hooks under `.codex/hooks.json` add model-visible reminders
-for triage, subagent boundaries, and mutating tool calls. They remain advisory
-runtime aids.
+for triage, subagent boundaries, agent lifecycle cleanup, and mutating tool
+calls. They remain advisory runtime aids.
 
 Agent instruction files are the default enforcement surface. `AGENTS.md` is
 canonical, and every `.codex/agents/*.toml` developer-instruction profile must

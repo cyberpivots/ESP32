@@ -26,12 +26,12 @@ configuration endpoints, release gating, commit, or push.
   Source IDs:
   `SRC-LOCAL-ESPNOW-BBS-LCD-MENU-GRAPHICS-BROWSER-AGENT-2026-05-31`,
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-SCROLLING-XML-2026-06-01`.
-- The current PF0530K live gate passed flash and verify-flash but captured zero
+- The PF0530K live gate passed flash and verify-flash but captured zero
   `ENC_RAW`, `ENC_EV`, `BBS_MENU_STEP`, and `BBS_MENU_SELECT`; it is not
   accepted as proven interactive. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530K-LIVE-2026-05-31`.
-- PF0530L is the current flashed image that ports the host-planned LCD menu UX
-  ideas into the four-relay firmware lane while keeping relay, XBee/RF,
+- PF0530L became the accepted flashed image that ports the host-planned LCD
+  menu UX ideas into the four-relay firmware lane while keeping relay, XBee/RF,
   ESP-NOW runtime, SoftAP/browser runtime, persistent configuration, wiring,
   load, mains, and erase lanes closed. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-2026-05-31`.
@@ -56,6 +56,12 @@ configuration endpoints, release gating, commit, or push.
   `bbs_lcd_render.v2`, render/cursor/heartbeat/auto-demo/glyph-bank proof, and
   no crash/unsafe markers. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`.
+- PF0530O is the current real-menu calibration image after the PF0530N live and
+  attended input evidence. PF0530O disables boot auto-cycle, reports
+  `cal=real-menu-v1`, and has COM6 write/verify/read-only LCD readiness,
+  render, and heartbeat proof with zero captured input events. Source IDs:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-REAL-MENU-CAL-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01`.
 - HD44780 CGRAM planning is limited to eight 5x8 custom-character types.
   Source ID: `SRC-HITACHI-HD44780U-DDRAM-CGRAM-2026-05-31`.
 - The local 20x4 cursor tracker uses row bases `0x00`, `0x40`, `0x14`, and

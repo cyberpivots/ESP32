@@ -82,7 +82,7 @@ class LcdBbsMenuTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('FR_DIAG_FIRMWARE_ID_VALUE "PF0530N"', FW_HEADER_PATH.read_text(encoding="utf-8"))
+        self.assertIn('FR_DIAG_FIRMWARE_ID_VALUE "PF0530O"', FW_HEADER_PATH.read_text(encoding="utf-8"))
 
     def test_xml_source_generates_pages_and_table_bank(self) -> None:
         pages = load_menu()
@@ -96,13 +96,13 @@ class LcdBbsMenuTests(unittest.TestCase):
 
     def test_xml_rejections_fail_closed(self) -> None:
         cases = {
-            "target_unknown": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="Bad" action="page" target="NOPE" /></page></menu>',
-            "duplicate_item": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="dup" label="A" action="detail" /><item id="dup" label="B" action="detail" /></page></menu>',
-            "bad_glyph": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="bad"><item id="i1" label="A" action="detail" /></page></menu>',
-            "wide_table": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="table"><item id="i1" label="12345678901234567890" action="detail" table="true" /></page></menu>',
-            "bad_token": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="{secret.value}" action="detail" /></page></menu>',
-            "secret_attr": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" pairing_token="x" /></page></menu>',
-            "doctype": '<!DOCTYPE menu [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><menu schema="bbs_lcd_menu.v1" sourceId="PF0530N"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" /></page></menu>',
+            "target_unknown": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="Bad" action="page" target="NOPE" /></page></menu>',
+            "duplicate_item": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="dup" label="A" action="detail" /><item id="dup" label="B" action="detail" /></page></menu>',
+            "bad_glyph": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="bad"><item id="i1" label="A" action="detail" /></page></menu>',
+            "wide_table": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="table"><item id="i1" label="12345678901234567890" action="detail" table="true" /></page></menu>',
+            "bad_token": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="{secret.value}" action="detail" /></page></menu>',
+            "secret_attr": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" pairing_token="x" /></page></menu>',
+            "doctype": '<!DOCTYPE menu [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" /></page></menu>',
         }
         for name, xml in cases.items():
             with self.subTest(name=name), tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as handle:
@@ -118,7 +118,7 @@ class LcdBbsMenuTests(unittest.TestCase):
         rendered = render(sample_state())
         self.assertEqual(rendered.glyph_bank_name, "core_status")
         self.assertEqual(rendered.glyph_bank, GLYPH_BANK)
-        self.assertEqual(set(GLYPH_BANKS), set(["core_status", "horizontal_bar", "vertical_chart", "big_digits", "gauge_demo", "table"]))
+        self.assertEqual(set(GLYPH_BANKS), set(["core_status", "horizontal_bar", "vertical_chart", "big_digits", "gauge", "table"]))
         for bank in GLYPH_BANKS.values():
             self.assertLessEqual(len(bank.glyphs), 8)
             for expected_slot, glyph in enumerate(bank.glyphs):
@@ -381,6 +381,81 @@ class LcdBbsMenuTests(unittest.TestCase):
         response = LcdBrowserMirror(state).handle_request("GET", API_STATE_PATH)
         self.assertEqual(response.status, 400)
         self.assertEqual(response.body["error"], "secret_field_rejected")
+
+    def test_browser_mirror_close_rejects_all_requests_without_side_effects(self) -> None:
+        mirror = LcdBrowserMirror(sample_state())
+        initial = mirror.handle_request("GET", API_STATE_PATH)
+        self.assertEqual(initial.status, 200)
+        previous_lines = mirror.previous_lines
+        view = mirror.view
+        mirror.now_ms = 1234
+
+        mirror.close()
+
+        cases = [
+            ("GET", API_STATE_PATH, None),
+            ("POST", API_INTENT_PATH, {"intent": "rotate_right"}),
+            ("POST", API_INTENT_PATH, "{"),
+            ("POST", API_INTENT_PATH, {"intent": "rotate_right", "pairing_token": "closed"}),
+            ("DELETE", API_STATE_PATH, None),
+            ("POST", "/api/relay/toggle", {"intent": "short_press"}),
+        ]
+        for method, path, body in cases:
+            with self.subTest(method=method, path=path):
+                response = mirror.handle_request(method, path, body)
+                self.assertEqual(response.status, 410)
+                self.assertEqual(dict(response.body), {"error": "interface_closed"})
+
+        self.assertTrue(mirror.closed)
+        self.assertIs(mirror.view, view)
+        self.assertEqual(mirror.previous_lines, previous_lines)
+        self.assertEqual(mirror.now_ms, 1234)
+
+    def test_browser_mirror_reopen_resets_dirty_view_and_time_state(self) -> None:
+        mirror = LcdBrowserMirror(sample_state())
+        self.assertEqual(mirror.handle_request("GET", API_STATE_PATH).status, 200)
+        self.assertEqual(
+            mirror.handle_request("POST", API_INTENT_PATH, {"intent": "rotate_right"}).status,
+            200,
+        )
+        mirror.now_ms = 2000
+        mirror.close()
+
+        returned = mirror.reopen(sample_state())
+        response = mirror.handle_request("GET", API_STATE_PATH)
+
+        self.assertIs(returned, mirror)
+        self.assertFalse(mirror.closed)
+        self.assertEqual(mirror.now_ms, 0)
+        self.assertEqual(mirror.view, MenuViewState())
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.body["view"], MenuViewState().to_dict())
+        self.assertEqual(response.body["cursor"]["dirty_rows"], [0, 1, 2, 3])
+        self.assertEqual(len(response.body["cursor"]["dirty_cells"]), LCD_ROWS * LCD_COLUMNS)
+
+    def test_browser_mirror_reopen_accepts_explicit_view_without_previous_leakage(self) -> None:
+        mirror = LcdBrowserMirror(sample_state())
+        self.assertEqual(mirror.handle_request("GET", API_STATE_PATH).status, 200)
+        mirror.reopen(sample_state(), MenuViewState(page="ROUTES"))
+
+        response = mirror.handle_request("GET", API_STATE_PATH)
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.body["page"], "ROUTES")
+        self.assertEqual(response.body["glyph_bank_name"], "table")
+        self.assertEqual(response.body["viewport"]["selected_item_id"], "routes-table")
+        self.assertEqual(response.body["cursor"]["dirty_rows"], [0, 1, 2, 3])
+
+    def test_browser_mirror_context_manager_closes_on_exit(self) -> None:
+        with LcdBrowserMirror(sample_state()) as mirror:
+            response = mirror.handle_request("GET", API_STATE_PATH)
+            self.assertEqual(response.status, 200)
+            self.assertFalse(mirror.closed)
+
+        response = mirror.handle_request("GET", API_STATE_PATH)
+        self.assertTrue(mirror.closed)
+        self.assertEqual(response.status, 410)
+        self.assertEqual(dict(response.body), {"error": "interface_closed"})
 
 
 if __name__ == "__main__":

@@ -25,6 +25,8 @@ import time
 from typing import Any
 import uuid
 
+import server_lifecycle
+
 
 SCHEMA_VERSION = "multi_window_coordination.v1"
 MAX_ACTIVE_WINDOWS = 5
@@ -33,6 +35,9 @@ CLAIM_LEASE_SECONDS = 900
 CLIENT_TIMEOUT_SECONDS = 2.0
 PRETOOL_TIMEOUT_SECONDS = 0.75
 STATE_ENV = "ESP32_SCHEDULER_STATE_HOME"
+DAEMON_TOOL_NAME = "esp32_agent_scheduler"
+DAEMON_COMMAND_MARKER = "agent_scheduler.py daemon run"
+_DAEMON_PROCESSES: list[subprocess.Popen[Any]] = []
 
 
 @dataclasses.dataclass(frozen=True)
@@ -991,12 +996,21 @@ def daemon_run(repo: str | Path) -> int:
     core = SchedulerCore(repo, capture_baseline=True)
     paths = core.paths
     paths.state_dir.mkdir(parents=True, exist_ok=True)
-    if paths.socket.exists():
-        paths.socket.unlink()
+    _prepare_daemon_endpoint(paths, replace_existing=False)
     server = SchedulerServer(str(paths.socket), core)
     with contextlib.suppress(OSError):
         paths.socket.chmod(0o600)
     paths.pid.write_text(str(os.getpid()), encoding="utf-8")
+    server_lifecycle.write_metadata(
+        tool_name=DAEMON_TOOL_NAME,
+        host="unix",
+        port=0,
+        endpoint="unix",
+        socket_path=paths.socket,
+        command_marker=DAEMON_COMMAND_MARKER,
+        cwd=paths.repo,
+        state_dir=_daemon_lifecycle_state_dir(paths),
+    )
 
     def _stop(signum: int, _frame: Any) -> None:
         threading.Thread(target=server.shutdown, daemon=True).start()
@@ -1011,24 +1025,77 @@ def daemon_run(repo: str | Path) -> int:
             paths.socket.unlink()
         with contextlib.suppress(OSError):
             paths.pid.unlink()
+        server_lifecycle.clear_metadata(
+            tool_name=DAEMON_TOOL_NAME,
+            host="unix",
+            port=0,
+            endpoint="unix",
+            socket_path=paths.socket,
+            cwd=paths.repo,
+            state_dir=_daemon_lifecycle_state_dir(paths),
+        )
     return 0
 
 
-def daemon_start(repo: str | Path) -> dict[str, Any]:
+def _reap_known_daemons() -> None:
+    for process in list(_DAEMON_PROCESSES):
+        if process.poll() is not None:
+            with contextlib.suppress(OSError):
+                process.wait(timeout=0)
+            _DAEMON_PROCESSES.remove(process)
+
+
+def _daemon_lifecycle_state_dir(paths: StatePaths) -> Path:
+    return paths.state_dir / "server-lifecycle"
+
+
+def _prepare_daemon_endpoint(paths: StatePaths, *, replace_existing: bool) -> dict[str, Any]:
+    try:
+        result = server_lifecycle.prepare_for_reopen(
+            tool_name=DAEMON_TOOL_NAME,
+            host="unix",
+            port=0,
+            endpoint="unix",
+            socket_path=paths.socket,
+            command_marker=DAEMON_COMMAND_MARKER,
+            cwd=paths.repo,
+            state_dir=_daemon_lifecycle_state_dir(paths),
+            replace_existing=replace_existing,
+        )
+    except server_lifecycle.LifecycleError as exc:
+        payload = exc.to_dict()
+        payload["status"] = "listener-cleanup-failed"
+        raise SchedulerError(_json(payload)) from exc
+    return result.to_dict()
+
+
+def daemon_start(repo: str | Path, *, replace_existing: bool = False) -> dict[str, Any]:
     paths = state_paths(repo)
     current = daemon_status(repo)
-    if current.get("running"):
+    if current.get("running") and not replace_existing:
         return {"ok": True, "running": True, "status": "already-running", "stateDir": str(paths.state_dir)}
+    try:
+        cleanup = _prepare_daemon_endpoint(paths, replace_existing=replace_existing)
+    except SchedulerError as exc:
+        return {
+            "ok": False,
+            "running": bool(current.get("running")),
+            "status": "listener-cleanup-failed",
+            "error": str(exc),
+            "stateDir": str(paths.state_dir),
+        }
     paths.state_dir.mkdir(parents=True, exist_ok=True)
     log_handle = paths.log.open("ab")
     try:
-        subprocess.Popen(
+        process = subprocess.Popen(
             [sys.executable, str(Path(__file__).resolve()), "daemon", "run", "--repo", str(paths.repo)],
             stdout=log_handle,
             stderr=log_handle,
             stdin=subprocess.DEVNULL,
+            cwd=str(paths.repo),
             start_new_session=True,
         )
+        _DAEMON_PROCESSES.append(process)
     finally:
         log_handle.close()
     deadline = _now() + 5
@@ -1037,8 +1104,34 @@ def daemon_start(repo: str | Path) -> dict[str, Any]:
         time.sleep(0.05)
         last = daemon_status(repo)
         if last.get("running"):
-            return {"ok": True, "running": True, "status": "started", "stateDir": str(paths.state_dir)}
+            return {
+                "ok": True,
+                "running": True,
+                "status": "started",
+                "stateDir": str(paths.state_dir),
+                "lifecycle": cleanup,
+            }
     return {"ok": False, "running": False, "status": "start-timeout", "lastStatus": last}
+
+
+def daemon_restart(repo: str | Path) -> dict[str, Any]:
+    paths = state_paths(repo)
+    try:
+        cleanup = _prepare_daemon_endpoint(paths, replace_existing=True)
+    except SchedulerError as exc:
+        return {
+            "ok": False,
+            "running": bool(daemon_status(repo).get("running")),
+            "status": "listener-cleanup-failed",
+            "error": str(exc),
+            "stateDir": str(paths.state_dir),
+        }
+    _reap_known_daemons()
+    started = daemon_start(repo, replace_existing=False)
+    started["restartLifecycle"] = cleanup
+    if started.get("ok"):
+        started["status"] = "restarted"
+    return started
 
 
 def daemon_stop(repo: str | Path) -> dict[str, Any]:
@@ -1053,6 +1146,7 @@ def daemon_stop(repo: str | Path) -> dict[str, Any]:
     while _now() < deadline and paths.socket.exists():
         time.sleep(0.05)
     response["running"] = paths.socket.exists()
+    _reap_known_daemons()
     return response
 
 
@@ -1237,9 +1331,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     daemon = sub.add_parser("daemon")
     daemon_sub = daemon.add_subparsers(dest="daemon_command", required=True)
-    for name in ["ensure", "start", "stop", "status", "run"]:
+    for name in ["ensure", "stop", "status", "run", "restart"]:
         item = daemon_sub.add_parser(name)
         item.add_argument("--repo", default=os.getcwd())
+    item = daemon_sub.add_parser("start")
+    item.add_argument("--repo", default=os.getcwd())
+    item.add_argument("--replace-existing", action="store_true")
 
     window = sub.add_parser("window")
     window_sub = window.add_subparsers(dest="window_command", required=True)
@@ -1309,9 +1406,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.daemon_command == "run":
                 return daemon_run(args.repo)
             if args.daemon_command == "start":
-                result = daemon_start(args.repo)
+                result = daemon_start(args.repo, replace_existing=args.replace_existing)
             elif args.daemon_command == "ensure":
-                result = daemon_start(args.repo)
+                result = daemon_start(args.repo, replace_existing=False)
+            elif args.daemon_command == "restart":
+                result = daemon_restart(args.repo)
             elif args.daemon_command == "stop":
                 result = daemon_stop(args.repo)
             else:

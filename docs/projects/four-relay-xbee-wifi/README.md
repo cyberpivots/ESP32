@@ -174,8 +174,8 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
   watchdog/backtrace/panic/LCD-init-failure markers, but no encoder/button
   input proof. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530K-LIVE-2026-05-31`.
-- PF0530L is the current flashed image for the live LCD menu UX test. It keeps
-  PF0530K interrupt input capture and adds local page/row/detail/edit modes,
+- PF0530L became the accepted flashed image for the live LCD menu UX test. It
+  keeps PF0530K interrupt input capture and adds local page/row/detail/edit modes,
   software cursor/DDRAM metadata, dirty-cell render metadata, five named
   eight-slot glyph banks, custom bar/chart/digit/gauge demo pages, and a
   seven-second auto-demo cycle. Source ID:
@@ -192,13 +192,13 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
   diagnostic/error rows, row action labels, editable widget rows, and host-side
   menu state tests. PF0530M has not been flashed. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530M-2026-06-01`.
-- PF0530N is the current LCD/menu scrolling/XML source/test continuation. It
-  keeps the closed bridge, GPIO13/GPIO14/GPIO32 input-only, GPIO21/GPIO22
-  display-only LCD, and HD44780 eight-slot glyph-bank boundaries while adding
-  build-time `bbs_lcd_menu.v1` XML, generated static firmware/simulator menu
-  definitions, `bbs_lcd_render.v2` host metadata, scroll-list item navigation,
-  grouped multi-row items, selected-row marquee timing, and a separate table
-  glyph bank. Source ID:
+- PF0530N is the LCD/menu scrolling/XML source/test continuation. It keeps the
+  closed bridge, GPIO13/GPIO14/GPIO32 input-only, GPIO21/GPIO22 display-only
+  LCD, and HD44780 eight-slot glyph-bank boundaries while adding build-time
+  `bbs_lcd_menu.v1` XML, generated static firmware/simulator menu definitions,
+  `bbs_lcd_render.v2` host metadata, scroll-list item navigation, grouped
+  multi-row items, selected-row marquee timing, and a separate table glyph bank.
+  Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-SCROLLING-XML-2026-06-01`.
 - PF0530N write-flash and separate verify-flash passed on COM6. Its read-only
   monitor showed `PF0530N BBS_LCD_READY`, `PF0530N BBS_INPUT_READY`,
@@ -208,6 +208,20 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
   scroll-list/table readability and physical encoder/button input remain
   unproven. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`.
+- PF0530O is the current real-menu calibration source/build continuation. It
+  keeps GPIO13/GPIO14/GPIO32 input-only, keeps GPIO21/GPIO22 display-only LCD
+  boundaries, changes the active firmware ID to `PF0530O`, decodes quadrature
+  on stable-level acceptance, uses one transition per menu step, two AB stable
+  samples, a 75 ms switch guard, a 650 ms long press, disables boot auto-cycle,
+  and reports `cal=real-menu-v1`. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-REAL-MENU-CAL-2026-06-01`.
+- PF0530O write-flash and separate verify-flash passed on COM6. Its reset and
+  attended read-only monitors showed `PF0530O BBS_LCD_READY`,
+  `PF0530O BBS_INPUT_READY`, `LCD_INIT_OK addr=0x27`, `auto_cycle=off`,
+  repeated `BBS_LCD_RENDER` and `BBS_MENU_HB` output, no crash/unsafe markers,
+  and zero `ENC_RAW`, `ENC_EV`, `BBS_MENU_STEP`, or `BBS_MENU_SELECT` lines.
+  User visual/input acceptance remains pending. Source ID:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01`.
 - Digi identifies the requested XBee model as `XBP9B-DPUT-001`, an
   XBee-PRO 900HP S3B Point2Multipoint 900 MHz, 250 mW, U.FL, 10 kbps part.
   Source ID: `SRC-DIGI-XBP9B-DPUT-001`.
@@ -338,9 +352,9 @@ telemetry/control over the photographed `XBP9B-DPUT-001 RevF` radio.
   fixed the watchdog symptom but did not capture input-transition proof;
   PF0530K captured no input events after clean flash/verify, PF0530L is the
   accepted LCD visual/electrical image, PF0530M added non-live operational LCD
-  menu behavior, and PF0530N is now the flashed scrolling/XML branch for user
-  visual testing. Physical PF0530N readability and input proof remain separate
-  evidence gates.
+  menu behavior, PF0530N added the flashed scrolling/XML branch, and PF0530O is
+  the current real-menu calibration image. Physical PF0530O readability and
+  input acceptance remain open evidence gates.
 
 ## Hard gate
 
@@ -372,8 +386,9 @@ COM6-only BBS LCD menu flash/verify/read-only-monitor proof, but user testing
 reported no encoder/button LCD effect. PF0530I then showed task-watchdog
 backtraces, PF0530J showed no input-transition proof, PF0530K captured no
 input events after clean flash/verify, PF0530L closed the LCD visual/electrical
-gate, PF0530M is historical source/test-only behavior work, and PF0530N is now
-written/verify-flashed/read-only-scanned on COM6 for user visual testing.
+gate, PF0530M is historical source/test-only behavior work, PF0530N was
+written/verify-flashed/read-only-scanned on COM6, and PF0530O is the current
+real-menu calibration image with user visual/input acceptance still pending.
 Further flash, monitor, RF/range/throughput, relay/load/mains work, hardware
 acceptance, or
 direct-stimulus continuity testing outside that named gate needs a separate

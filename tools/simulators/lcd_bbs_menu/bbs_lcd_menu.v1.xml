@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu schema="bbs_lcd_menu.v1" sourceId="PF0530N">
+<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O">
   <page id="HOME" title="BBS Field" glyphBank="core_status">
     <item id="home-status" label="BBS FIELD STATUS READY" action="detail" />
     <item id="home-messages" label="Messages queue and custody" action="page" target="MESSAGES" />
@@ -37,7 +37,7 @@
     <item id="files-back" label="Back queue" action="page" target="QUEUE" />
   </page>
   <page id="MESH" title="Mesh" glyphBank="core_status">
-    <item id="mesh-mode" label="Mesh simulator mode" action="detail" />
+    <item id="mesh-mode" label="Mesh runtime mode" action="detail" />
     <item id="mesh-root" label="Root coordinator coord01" action="detail" />
     <item id="mesh-heal" label="Heal events 01" action="detail" />
     <item id="mesh-routes" label="Open route table" action="page" target="ROUTES" />
@@ -66,7 +66,7 @@
   <page id="BARS" title="Bars" glyphBank="horizontal_bar">
     <item id="bars-link" label="Link level local bar" action="detail" />
     <item id="bars-queue" label="Queue level local bar" action="detail" />
-    <item id="bars-edit" label="Edit demo value" action="edit" editable="true" />
+    <item id="bars-edit" label="Adjust local value" action="edit" editable="true" />
     <item id="bars-chart" label="Open chart page" action="page" target="CHART" />
     <item id="bars-back" label="Back home" action="page" target="HOME" />
   </page>
@@ -82,7 +82,7 @@
     <item id="digits-gauge" label="Open gauge page" action="page" target="GAUGE" />
     <item id="digits-back" label="Back chart" action="page" target="CHART" />
   </page>
-  <page id="GAUGE" title="Gauge" glyphBank="gauge_demo">
+  <page id="GAUGE" title="Gauge" glyphBank="gauge">
     <item id="gauge-signal" label="Signal local gauge" action="edit" editable="true" />
     <item id="gauge-load" label="Safe load off" action="detail" />
     <item id="gauge-back" label="Back widgets" action="page" target="BARS" />

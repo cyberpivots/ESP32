@@ -31,9 +31,9 @@ Tier 3 gate. The `PF0530C` GPIO sweep contact tracer also has a same-session
   backtraces. `PF0530J` fixed the task-watchdog symptom but its first live
   monitor captured no input transitions. `PF0530K` added GPIO any-edge
   interrupt queueing and flashed cleanly but captured no physical input events.
-  `PF0530L` is the current flashed user-test image: it keeps the interrupt input
-  path and adds the LCD menu UX, glyph-bank, cursor, widget, and auto-demo
-  surfaces for renewed user testing.
+  `PF0530L` later accepted LCD visual/electrical behavior, `PF0530N` added
+  scrolling/XML behavior and COM6 render proof, and `PF0530O` is the current
+  real-menu calibration image with user visual/input acceptance still pending.
 
 ## Verified facts
 
@@ -325,8 +325,8 @@ First firmware proof:
   `BBS_MENU_STEP`, and zero `BBS_MENU_SELECT`, so interactive input acceptance
   remains blocked until physical actuation is captured. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530K-LIVE-2026-05-31`.
-- PF0530L is the current flashed image for renewed live LCD menu UX testing. It
-  keeps PF0530K interrupt input capture and adds page/row/detail/edit modes,
+- PF0530L became the accepted flashed image for renewed live LCD menu UX
+  testing. It keeps PF0530K interrupt input capture and adds page/row/detail/edit modes,
   cursor/DDRAM metadata, five named eight-slot glyph banks, widget demo pages,
   and auto-demo page cycling. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-2026-05-31`.
@@ -339,6 +339,14 @@ First firmware proof:
   `BBS_MENU_SELECT`, so physical input acceptance remains blocked until user
   actuation is captured. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31`.
+- PF0530N added XML-generated scroll-list/table behavior and was later
+  written, verify-flashed, and read-only monitored on COM6 with LCD
+  readiness/render proof but no accepted physical readability or input proof.
+  PF0530O is the current real-menu calibration image with COM6
+  write/verify/read-only monitor proof and zero captured input events. Source
+  IDs:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01`.
 - For the PF0530L attended interaction gate, confirm the serial monitor shows
   `PF0530L BBS_LCD_READY`, `BBS_INPUT_READY`, `LCD_INIT_OK addr=0x27`,
   `BBS_GLYPH_BANK`, `BBS_CURSOR`, `BBS_LCD_RENDER`, `BBS_MENU_AUTO`,

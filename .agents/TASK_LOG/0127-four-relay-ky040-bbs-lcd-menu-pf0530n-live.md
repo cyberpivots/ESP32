@@ -131,8 +131,8 @@ or push.
 
 ## Decision Footer
 
-Decision: `ready_for_user_visual_test`. PF0530N is now written and
-verify-flashed on COM6 with read-only boot evidence. Next useful gate is user
+Decision: `ready_for_user_visual_test`. PF0530N was written and
+verify-flashed on COM6 with read-only boot evidence in this gate. Next useful gate is user
 visual observation of the scroll-list/table page and, if requested, a separate
 attended encoder/button interaction proof. Live hardware surfaces remain
 closed behind fresh Tier 3 gates.

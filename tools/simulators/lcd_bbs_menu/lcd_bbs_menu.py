@@ -327,8 +327,8 @@ GLYPH_BANKS = {
             Glyph(7, "blank", (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
         ),
     ),
-    "gauge_demo": GlyphBank(
-        "gauge_demo",
+    "gauge": GlyphBank(
+        "gauge",
         (
             Glyph(0, "gauge_empty", (0x00, 0x0E, 0x11, 0x11, 0x11, 0x0E, 0x00, 0x00)),
             Glyph(1, "needle_left", (0x00, 0x0E, 0x11, 0x15, 0x19, 0x0E, 0x00, 0x00)),
@@ -678,6 +678,32 @@ class LcdBrowserMirror:
         self.view = view or MenuViewState()
         self.previous_lines: tuple[str, ...] | None = None
         self.now_ms = 0
+        self._closed = False
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    def close(self) -> None:
+        self._closed = True
+
+    def reopen(
+        self,
+        snapshot: Mapping[str, Any],
+        view: MenuViewState | None = None,
+    ) -> "LcdBrowserMirror":
+        self.snapshot = snapshot
+        self.view = view or MenuViewState()
+        self.previous_lines = None
+        self.now_ms = 0
+        self._closed = False
+        return self
+
+    def __enter__(self) -> "LcdBrowserMirror":
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
 
     def handle_request(
         self,
@@ -685,6 +711,8 @@ class LcdBrowserMirror:
         path: str,
         body: Mapping[str, Any] | str | bytes | None = None,
     ) -> BrowserApiResponse:
+        if self._closed:
+            return _api_response(410, {"error": "interface_closed"})
         method = method.upper()
         try:
             if method == "GET" and path == API_STATE_PATH:

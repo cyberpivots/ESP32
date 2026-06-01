@@ -46,13 +46,14 @@
 #define FR_MENU_POLL_MS 10
 #define FR_MENU_RENDER_POLL_MS 20
 #define FR_MENU_IDLE_REFRESH_MS 60000
-#define FR_MENU_AUTO_DEMO_MS 7000
+#define FR_MENU_AUTO_CYCLE_ENABLED 0U
+#define FR_MENU_AUTO_CYCLE_MS 7000
 #define FR_MENU_ANIMATION_MS 2000
 #define FR_MENU_ACK_MS 1500
 #define FR_MENU_PAGE_STACK_DEPTH 4
-#define FR_DIAG_FIRMWARE_ID FR_DIAG_FIRMWARE_ID_VALUE
-#define FR_ENCODER_AB_STABLE_SAMPLES 3
-#define FR_ENCODER_SW_GUARD_MS 150
+#define FR_DIAG_FIRMWARE_ID "PF0530O"
+#define FR_ENCODER_AB_STABLE_SAMPLES 2
+#define FR_ENCODER_SW_GUARD_MS 75
 #define FR_MENU_HEARTBEAT_MS 2000
 #define FR_MENU_LAST_EVENT_BYTES 20
 #define FR_LCD_DIAG_HEARTBEAT_MS 2000
@@ -72,9 +73,9 @@
 #define FR_ENCODER_CLK_GPIO GPIO_NUM_13
 #define FR_ENCODER_DT_GPIO GPIO_NUM_14
 #define FR_ENCODER_SW_GPIO GPIO_NUM_32
-#define FR_ENCODER_TRANSITIONS_PER_STEP 4
+#define FR_ENCODER_TRANSITIONS_PER_STEP 1
 #define FR_ENCODER_SW_DEBOUNCE_MS 30
-#define FR_ENCODER_LONG_PRESS_MS 800
+#define FR_ENCODER_LONG_PRESS_MS 650
 #define FR_GPIO_SWEEP_COUNT 3
 #define FR_ENCODER_EVENT_QUEUE_DEPTH 64
 #define FR_ENCODER_IRQ_DRAIN_LIMIT 32
@@ -174,11 +175,11 @@ typedef struct {
     uint32_t suppressed_transition_count;
     bool switch_stable_pressed;
     bool long_press_handled;
-    bool auto_demo_enabled;
+    bool auto_cycle_enabled;
     uint32_t switch_changed_ms;
     uint32_t switch_pressed_ms;
     uint32_t switch_guard_until_ms;
-    uint32_t last_auto_demo_ms;
+    uint32_t last_auto_cycle_ms;
     uint32_t last_animation_ms;
     uint32_t button_press_count;
     fr_menu_ack_t ack;
@@ -479,7 +480,7 @@ static void fr_menu_print_heartbeat(const fr_menu_state_t *menu, uint32_t now_ms
     printf(
         "BBS_MENU_HB page=%s index=%u pos=%ld levels=C%uD%uS%u steps=%lu/%lu "
         "buttons=%lu invalid=%lu suppressed=%lu irq_drop=%lu t=%lu "
-        "mode=%s row=%u item=%u top=%u value=%u auto_demo=%u\r\n",
+        "mode=%s row=%u item=%u top=%u value=%u auto_cycle=%u\r\n",
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
         (long)menu->position,
@@ -498,13 +499,13 @@ static void fr_menu_print_heartbeat(const fr_menu_state_t *menu, uint32_t now_ms
         (unsigned int)menu->selected_item,
         (unsigned int)menu->viewport_top_line,
         (unsigned int)menu->edit_value,
-        menu->auto_demo_enabled ? 1U : 0U
+        menu->auto_cycle_enabled ? 1U : 0U
     );
 }
 
 static void fr_menu_step(fr_menu_state_t *menu, int8_t direction, uint32_t now_ms)
 {
-    menu->auto_demo_enabled = false;
+    menu->auto_cycle_enabled = false;
     if (direction > 0) {
         menu->position += 1;
         menu->cw_step_count += 1U;
@@ -651,7 +652,7 @@ static bool fr_menu_sample_ab_channel(
 static void fr_menu_handle_switch_stable(fr_menu_state_t *menu, uint32_t now_ms)
 {
     bool pressed = menu->stable_sw == 0U;
-    menu->auto_demo_enabled = false;
+    menu->auto_cycle_enabled = false;
     menu->switch_guard_until_ms = now_ms + FR_ENCODER_SW_GUARD_MS;
     menu->switch_stable_pressed = pressed;
     menu->transition_accumulator = 0;
@@ -753,7 +754,7 @@ static void fr_menu_handle_long_press(fr_menu_state_t *menu, uint32_t now_ms)
     if ((now_ms - menu->switch_pressed_ms) < FR_ENCODER_LONG_PRESS_MS) {
         return;
     }
-    menu->auto_demo_enabled = false;
+    menu->auto_cycle_enabled = false;
     if (menu->mode == FR_MENU_MODE_EDIT_LAB) {
         menu->mode = FR_MENU_MODE_DETAIL;
         fr_menu_set_last_event(menu, "BACK DETAIL");
@@ -836,7 +837,6 @@ static void fr_menu_process_levels(
     menu->raw_sw = current_sw;
     if (raw_ab_changed) {
         fr_menu_print_raw_event(menu, "ab", now_ms);
-        fr_menu_handle_rotation(menu, now_ms);
     }
     if (raw_sw_changed) {
         fr_menu_print_raw_event(menu, "sw", now_ms);
@@ -861,7 +861,9 @@ static void fr_menu_process_levels(
         &menu->stable_b,
         now_ms
     );
-    (void)ab_changed;
+    if (ab_changed) {
+        fr_menu_handle_rotation(menu, now_ms);
+    }
 
     if (current_sw != menu->stable_sw &&
         (now_ms - menu->switch_changed_ms) >= FR_ENCODER_SW_DEBOUNCE_MS) {
@@ -910,23 +912,24 @@ static bool fr_menu_poll(fr_menu_state_t *menu)
     menu->display_dirty = false;
     fr_menu_sample_inputs(menu, now_ms);
     fr_menu_handle_long_press(menu, now_ms);
-    if (menu->auto_demo_enabled &&
-        (now_ms - menu->last_auto_demo_ms) >= FR_MENU_AUTO_DEMO_MS) {
+    if ((FR_MENU_AUTO_CYCLE_ENABLED != 0U) &&
+        menu->auto_cycle_enabled &&
+        (now_ms - menu->last_auto_cycle_ms) >= FR_MENU_AUTO_CYCLE_MS) {
         menu->page = (uint8_t)((menu->page + 1U) % FR_MENU_PAGE_COUNT);
         menu->mode = FR_MENU_MODE_PAGE_BROWSE;
         menu->selected_row = 0;
         menu->selected_item = 0;
         menu->viewport_top_line = 0;
         menu->position += 1;
-        menu->last_auto_demo_ms = now_ms;
+        menu->last_auto_cycle_ms = now_ms;
         fr_bbs_sync_menu_view(menu);
-        fr_menu_set_last_event(menu, "AUTO DEMO");
+        fr_menu_set_last_event(menu, "AUTO CYCLE");
         fr_menu_mark_display_dirty(menu);
         printf(
-            "BBS_MENU_AUTO page=%s index=%u interval_ms=%u t=%lu\r\n",
+            "BBS_MENU_AUTO_CYCLE page=%s index=%u interval_ms=%u t=%lu\r\n",
             fr_bbs_page_name(menu->page),
             (unsigned int)menu->page,
-            (unsigned int)FR_MENU_AUTO_DEMO_MS,
+            (unsigned int)FR_MENU_AUTO_CYCLE_MS,
             (unsigned long)now_ms
         );
     }
@@ -1493,7 +1496,7 @@ static const fr_lcd_glyph_bank_t fr_lcd_glyph_banks[FR_GLYPH_BANK_COUNT] = {
         },
     },
     {
-        .name = "gauge_demo",
+        .name = "gauge",
         .rows = {
             {0x00, 0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x00},
             {0x00, 0x04, 0x0e, 0x15, 0x04, 0x04, 0x04, 0x00},
@@ -1986,7 +1989,7 @@ static void fr_bbs_render_frame(
         snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
         break;
     case 5:
-        snprintf(raw[0], sizeof(raw[0]), "MESH sim");
+        snprintf(raw[0], sizeof(raw[0]), "MESH runtime");
         snprintf(raw[1], sizeof(raw[1]), "Root:coord01");
         snprintf(raw[2], sizeof(raw[2]), "Hops:2 Heal:1");
         snprintf(raw[3], sizeof(raw[3]), "%s", context_line);
@@ -2310,9 +2313,9 @@ static void fr_menu_init_state(fr_menu_state_t *menu)
     menu->switch_stable_pressed = menu->stable_sw == 0U;
     menu->switch_changed_ms = fr_menu_now_ms();
     menu->last_heartbeat_ms = menu->switch_changed_ms;
-    menu->last_auto_demo_ms = menu->switch_changed_ms;
+    menu->last_auto_cycle_ms = menu->switch_changed_ms;
     menu->last_animation_ms = menu->switch_changed_ms;
-    menu->auto_demo_enabled = true;
+    menu->auto_cycle_enabled = FR_MENU_AUTO_CYCLE_ENABLED != 0U;
     menu->mode = FR_MENU_MODE_PAGE_BROWSE;
     menu->selected_row = 0;
     menu->selected_item = 0;
@@ -2442,14 +2445,14 @@ static void fr_lcd_bbs_menu_task(void *context)
     printf(
         "%s BBS_LCD_READY gpio=13/14/32 pullups=on lcd=21/22 addr=0x%02x "
         "pages=%u items=%u xbee=closed relay=closed input=split render=dirty "
-        "glyph_banks=%u cursor=software auto_demo_ms=%u xml=%s render_schema=%s "
-        "scroll=list marquee=%u/%u table=ready\r\n",
+        "glyph_banks=%u cursor=software auto_cycle=%s xml=%s render_schema=%s "
+        "scroll=list marquee=%u/%u table=ready cal=real-menu-v1\r\n",
         FR_DIAG_FIRMWARE_ID,
         lcd.address,
         (unsigned int)FR_MENU_PAGE_COUNT,
         (unsigned int)FR_BBS_MENU_ITEM_COUNT,
         (unsigned int)FR_GLYPH_BANK_COUNT,
-        (unsigned int)FR_MENU_AUTO_DEMO_MS,
+        FR_MENU_AUTO_CYCLE_ENABLED != 0U ? "on" : "off",
         FR_BBS_MENU_XML_SCHEMA,
         FR_BBS_MENU_RENDER_SCHEMA,
         (unsigned int)FR_BBS_MENU_MARQUEE_HOLD_MS,
@@ -2458,11 +2461,18 @@ static void fr_lcd_bbs_menu_task(void *context)
     printf(
         "%s BBS_INPUT_READY task=split poll_ms=%u render=dirty idle_ms=%u "
         "irq=anyedge queue=%u modes=scroll,detail,edit actions=page,detail,edit,back "
+        "step=%u stable=%u sw_debounce_ms=%u sw_guard_ms=%u long_ms=%u drain=%u "
         "source=%s\r\n",
         FR_DIAG_FIRMWARE_ID,
         (unsigned int)FR_MENU_POLL_MS,
         (unsigned int)FR_MENU_IDLE_REFRESH_MS,
         (unsigned int)FR_ENCODER_EVENT_QUEUE_DEPTH,
+        (unsigned int)FR_ENCODER_TRANSITIONS_PER_STEP,
+        (unsigned int)FR_ENCODER_AB_STABLE_SAMPLES,
+        (unsigned int)FR_ENCODER_SW_DEBOUNCE_MS,
+        (unsigned int)FR_ENCODER_SW_GUARD_MS,
+        (unsigned int)FR_ENCODER_LONG_PRESS_MS,
+        (unsigned int)FR_ENCODER_IRQ_DRAIN_LIMIT,
         FR_BBS_MENU_SOURCE_ID
     );
 

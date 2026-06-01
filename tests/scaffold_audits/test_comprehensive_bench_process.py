@@ -18,6 +18,7 @@ class ComprehensiveBenchProcessTests(unittest.TestCase):
         for marker in [
             "bench_state_packet.v1",
             "PF0530L",
+            "PF0530O",
             "COM6",
             "serial/menu physical interaction accepted on retry",
             "`ENC_RAW`",
@@ -27,6 +28,7 @@ class ComprehensiveBenchProcessTests(unittest.TestCase):
             "LCD visual/glyph readability",
             "hardware/electrical acceptance",
             "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530L-LIVE-2026-05-31",
+            "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01",
             "XBee",
             "relay",
             "ESP-NOW/BBS/CBBS",
@@ -41,6 +43,8 @@ class ComprehensiveBenchProcessTests(unittest.TestCase):
         ]:
             with self.subTest(marker=marker):
                 self.assertIn(marker, text)
+        self.assertNotIn("PF0530N has not been flashed", text)
+        self.assertNotIn("PF0530N is current source/test-only", text)
 
     def test_registry_index_and_source_records_are_linked(self) -> None:
         registry = (ROOT / "knowledge-base/prompt-registry.md").read_text(

@@ -70,8 +70,8 @@ UI intents only.
   monitor captured ready/render/heartbeat proof and no watchdog/backtrace/
   panic/LCD-init-failure markers, but no encoder/button input proof. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530K-LIVE-2026-05-31`.
-- PF0530L is the current flashed image for renewed live LCD menu UX testing. It
-  keeps the PF0530K interrupt input path and adds local page/row/detail/edit
+- PF0530L became the accepted flashed image for renewed live LCD menu UX
+  testing. It keeps the PF0530K interrupt input path and adds local page/row/detail/edit
   modes, software cursor/DDRAM tracking, dirty-cell metadata, five named
   eight-slot glyph banks, custom bar/chart/digit/gauge demo pages, and an
   auto-demo cycle. Source ID:
@@ -99,6 +99,16 @@ UI intents only.
   `bbs_lcd_menu.v1`, `bbs_lcd_render.v2`, render/cursor/heartbeat/auto-demo/
   glyph-bank proof, and no crash/unsafe markers. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`.
+- PF0530O is the current real-menu calibration image. It keeps the closed
+  bridge and input-only/display-only boundaries, changes the active firmware ID
+  to `PF0530O`, uses one transition per menu step, two AB stable samples, a
+  75 ms switch guard, a 650 ms long press, disables boot auto-cycle, and reports
+  `cal=real-menu-v1`. PF0530O write-flash and separate verify-flash passed on
+  COM6; reset and attended read-only monitors proved LCD readiness/render/
+  heartbeat output with zero crash/unsafe markers, but captured zero input
+  events. Source IDs:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-REAL-MENU-CAL-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01`.
 - Earlier encoder-menu lineage source IDs:
   `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30`,
   `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-LIVE-2026-05-30`.
@@ -121,9 +131,10 @@ UI intents only.
 - PF0530N keeps `bbs_lcd_state.v1` as renderer input and emits
   `bbs_lcd_render.v2` as host-render output.
 - Missing values render as `?`; closed surfaces render as `CLOSED`.
-- The current renewed live-tested firmware source image name is `PF0530N`,
-  combining the PF0530L/PF0530M LCD/menu lineage with XML-generated
-  scroll-list, marquee, grouped-row, and table menu behavior.
+- The current real-menu calibration firmware source image name is `PF0530O`,
+  combining the PF0530L/PF0530M LCD/menu lineage, PF0530N XML-generated
+  scroll-list/table behavior, and PF0530O operator-controlled input
+  calibration.
 
 ## Unknowns
 
@@ -339,8 +350,9 @@ accepted as proven physically interactive. Source ID:
 
 ## PF0530M Non-Live Menu Behavior Gate
 
-PF0530M source work supersedes PF0530L as the current non-live development
-branch. Required source/test markers are:
+PF0530M source work superseded PF0530L as the historical non-live development
+branch before the PF0530N and PF0530O follow-up gates. Required source/test
+markers are:
 
 - `PF0530M BBS_LCD_READY`
 - `BBS FIELD STATUS`
@@ -357,8 +369,9 @@ wiring mutation, persistent config, or publication.
 
 ## PF0530N Scrolling/XML Gate
 
-PF0530N source work supersedes PF0530M as the current non-live development
-branch. Required source/test markers are:
+PF0530N source work superseded PF0530M as the scrolling/XML development
+branch before the PF0530O real-menu calibration image. Required source/test
+markers are:
 
 - `PF0530N BBS_LCD_READY`
 - `bbs_lcd_menu.v1`

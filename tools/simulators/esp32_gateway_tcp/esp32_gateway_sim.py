@@ -5,17 +5,29 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 import socketserver
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
 
+ROOT = Path(__file__).resolve().parents[3]
+SCRIPTS_DIR = ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+import server_lifecycle  # noqa: E402
+
+
 PROTOCOL_PORT = 31331
 MAX_LINE_BYTES = 512
 DEVICE_ID = "bench-four-relay-01"
 CONTROL_DISABLED_REASON = "control_disabled"
+LIFECYCLE_TOOL_NAME = "esp32_gateway_tcp"
+LIFECYCLE_COMMAND_MARKER = "esp32_gateway_sim.py"
 
 
 @dataclass
@@ -150,22 +162,104 @@ class GatewayServer(socketserver.ThreadingTCPServer):
         self,
         server_address: tuple[str, int],
         state: SimulatorState,
+        *,
+        register_lifecycle: bool = True,
     ) -> None:
         self.state = state
+        self._thread: threading.Thread | None = None
+        self._serving = False
+        self._closed = False
+        self._lifecycle: server_lifecycle.LifecycleRegistration | None = None
         super().__init__(server_address, GatewayHandler)
+        if register_lifecycle:
+            host, port = self.server_address
+            self._lifecycle = server_lifecycle.register_instance(
+                tool_name=LIFECYCLE_TOOL_NAME,
+                host=str(host),
+                port=int(port),
+                command_marker=LIFECYCLE_COMMAND_MARKER,
+                cwd=ROOT,
+                close_callback=self.close,
+            )
+
+    def serve_forever(self, poll_interval: float = 0.5) -> None:
+        self._serving = True
+        try:
+            super().serve_forever(poll_interval=poll_interval)
+        finally:
+            self._serving = False
+
+    def start_background(self) -> None:
+        if self._thread and self._thread.is_alive():
+            return
+        self._thread = threading.Thread(target=self.serve_forever, daemon=True)
+        self._thread.start()
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        try:
+            if self._serving:
+                self.shutdown()
+            self.server_close()
+            if (
+                self._thread is not None
+                and self._thread.is_alive()
+                and threading.current_thread() is not self._thread
+            ):
+                self._thread.join(timeout=2.0)
+        finally:
+            if self._lifecycle is not None:
+                registration = self._lifecycle
+                self._lifecycle = None
+                registration.unregister()
+
+    def server_close(self) -> None:
+        super().server_close()
+        if self._lifecycle is not None:
+            registration = self._lifecycle
+            self._lifecycle = None
+            registration.unregister()
+
+    def __enter__(self) -> "GatewayServer":
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
 
 
-def serve(host: str, port: int) -> None:
+def _prepare_gateway_for_reopen(host: str, port: int) -> server_lifecycle.LifecycleResult | None:
+    if port <= 0:
+        return None
+    return server_lifecycle.prepare_for_reopen(
+        tool_name=LIFECYCLE_TOOL_NAME,
+        host=host,
+        port=port,
+        command_marker=LIFECYCLE_COMMAND_MARKER,
+        cwd=ROOT,
+    )
+
+
+def serve(host: str, port: int, *, keep_existing: bool = False) -> None:
+    if not keep_existing:
+        _prepare_gateway_for_reopen(host, port)
     state = SimulatorState()
     with GatewayServer((host, port), state) as server:
         print(f"ESP32 gateway simulator listening on {host}:{port}", flush=True)
         server.serve_forever()
 
 
-def start_background_server(host: str = "127.0.0.1", port: int = 0) -> GatewayServer:
+def start_background_server(
+    host: str = "127.0.0.1",
+    port: int = 0,
+    *,
+    keep_existing: bool = False,
+) -> GatewayServer:
+    if not keep_existing:
+        _prepare_gateway_for_reopen(host, port)
     server = GatewayServer((host, port), SimulatorState())
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
+    server.start_background()
     return server
 
 
@@ -173,8 +267,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=PROTOCOL_PORT)
+    parser.add_argument(
+        "--keep-existing",
+        action="store_true",
+        help="Do not close a recorded same-tool listener before binding.",
+    )
     args = parser.parse_args()
-    serve(args.host, args.port)
+    serve(args.host, args.port, keep_existing=args.keep_existing)
     return 0
 
 

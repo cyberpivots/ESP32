@@ -165,8 +165,8 @@ Source IDs: `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`,
 
 The rotary encoder menu implementation keeps the accepted LCD path on
 GPIO21/GPIO22, the accepted XBee bridge on GPIO17/GPIO16, and the relay
-candidates GPIO25/GPIO26/GPIO27/GPIO33 reserved. The current PF0530F
-menu-proof branch maps module `CLK` to GPIO13, `DT` to GPIO14, `SW` to GPIO32,
+candidates GPIO25/GPIO26/GPIO27/GPIO33 reserved. The historical PF0530F
+menu-proof branch mapped module `CLK` to GPIO13, `DT` to GPIO14, `SW` to GPIO32,
 `+` to ESP32 3V3 only, and `GND` to ESP32 GND. GPIO13/GPIO14/GPIO32 use
 internal pullups in this diagnostic. GPIO32 remains a provisional MicroSD CS
 investigation pin outside this encoder proof and cannot be accepted for both

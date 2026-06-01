@@ -79,8 +79,48 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual(response["type"], "state")
             self.assertEqual(response["relays"][3]["channel"], 4)
         finally:
-            server.shutdown()
-            server.server_close()
+            server.close()
+
+    def test_second_background_server_replaces_recorded_same_port_server(self) -> None:
+        first = start_background_server()
+        host, port = first.server_address
+        second = start_background_server(str(host), int(port))
+        try:
+            self.assertTrue(first._closed)
+            with socket.create_connection((host, port), timeout=2) as sock:
+                sock.sendall(payload({"type": "ping"}) + b"\n")
+                data = sock.recv(2048)
+            response = json.loads(data.decode("ascii"))
+            self.assertEqual(response["type"], "ack")
+            self.assertEqual(response["message"], "ping")
+        finally:
+            second.close()
+
+    def test_keep_existing_preserves_occupied_port_failure(self) -> None:
+        server = start_background_server()
+        try:
+            host, port = server.server_address
+            with self.assertRaises(OSError):
+                start_background_server(str(host), int(port), keep_existing=True)
+        finally:
+            server.close()
+
+    def test_context_manager_closes_thread_and_releases_port(self) -> None:
+        with start_background_server() as server:
+            host, port = server.server_address
+            thread = server._thread
+            self.assertIsNotNone(thread)
+            with socket.create_connection((host, port), timeout=2) as sock:
+                sock.sendall(payload({"type": "hello"}) + b"\n")
+                data = sock.recv(2048)
+            response = json.loads(data.decode("ascii"))
+            self.assertEqual(response["message"], "hello")
+
+        self.assertTrue(server._closed)
+        self.assertIsNotNone(thread)
+        self.assertFalse(thread.is_alive())
+        rebound = start_background_server(str(host), int(port), keep_existing=True)
+        rebound.close()
 
 
 if __name__ == "__main__":

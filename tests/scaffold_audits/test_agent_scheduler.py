@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -19,10 +21,47 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import agent_scheduler as scheduler  # noqa: E402
+import server_lifecycle  # noqa: E402
 
 
 HOOK = ROOT / ".codex" / "hooks" / "pre_tool_use_agent_process.py"
 SCHEDULER = ROOT / "scripts" / "agent_scheduler.py"
+
+
+def free_tcp_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+def wait_for_tcp(host: str, port: int, *, present: bool, timeout: float = 5.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.2):
+                is_present = True
+        except OSError:
+            is_present = False
+        if is_present == present:
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def pid_alive(pid: int) -> bool:
+    try:
+        fields = (Path("/proc") / str(pid) / "stat").read_text(encoding="utf-8").split()
+        if len(fields) > 2 and fields[2] == "Z":
+            return False
+    except OSError:
+        pass
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 class SchedulerFixture:
@@ -44,6 +83,152 @@ class SchedulerFixture:
         self.temp.cleanup()
 
 
+class ServerLifecycleTests(unittest.TestCase):
+    def make_paths(self) -> tuple[tempfile.TemporaryDirectory[str], Path, Path]:
+        temp = tempfile.TemporaryDirectory(prefix="esp32-lifecycle-test-")
+        root = Path(temp.name)
+        repo = root / "repo"
+        state = root / "state"
+        repo.mkdir()
+        state.mkdir()
+        self.addCleanup(temp.cleanup)
+        return temp, repo, state
+
+    def test_lifecycle_metadata_lives_outside_repo(self) -> None:
+        _, repo, state = self.make_paths()
+
+        path = server_lifecycle.metadata_path(
+            tool_name="unit-tool",
+            host="127.0.0.1",
+            port=31331,
+            cwd=repo,
+            state_dir=state,
+        )
+
+        self.assertTrue(str(path).startswith(str(state)))
+        with self.assertRaises(ValueError):
+            path.relative_to(repo)
+
+    def test_stale_metadata_is_removed_when_pid_is_gone(self) -> None:
+        _, repo, state = self.make_paths()
+        path = server_lifecycle.write_metadata(
+            tool_name="unit-tool",
+            host="127.0.0.1",
+            port=free_tcp_port(),
+            command_marker="unit-marker",
+            cwd=repo,
+            state_dir=state,
+            pid=99999999,
+        )
+        self.assertTrue(path.exists())
+
+        result = server_lifecycle.prepare_for_reopen(
+            tool_name="unit-tool",
+            host="127.0.0.1",
+            port=int(json.loads(path.read_text(encoding="utf-8"))["port"]),
+            command_marker="unit-marker",
+            cwd=repo,
+            state_dir=state,
+        )
+
+        self.assertTrue(result.ok)
+        self.assertIn("stale_metadata_removed", result.actions)
+        self.assertFalse(path.exists())
+
+    def test_recorded_same_tool_process_is_gracefully_stopped(self) -> None:
+        _, repo, state = self.make_paths()
+        port = free_tcp_port()
+        script = repo / "owned_listener.py"
+        marker = "owned-lifecycle-marker"
+        script.write_text(
+            "\n".join(
+                [
+                    "import signal",
+                    "import socket",
+                    "import sys",
+                    "import time",
+                    "stop = False",
+                    "def handle(_signum, _frame):",
+                    "    global stop",
+                    "    stop = True",
+                    "signal.signal(signal.SIGTERM, handle)",
+                    "sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)",
+                    "sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)",
+                    "sock.bind(('127.0.0.1', int(sys.argv[1])))",
+                    "sock.listen()",
+                    "print('ready', flush=True)",
+                    "while not stop:",
+                    "    time.sleep(0.05)",
+                    "sock.close()",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        proc = subprocess.Popen(
+            [sys.executable, str(script), str(port), marker],
+            cwd=repo,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.addCleanup(lambda: proc.poll() is None and proc.kill())
+        assert proc.stdout is not None
+        self.assertEqual("ready", proc.stdout.readline().strip())
+        self.assertTrue(wait_for_tcp("127.0.0.1", port, present=True))
+        metadata = server_lifecycle.write_metadata(
+            tool_name="unit-owned",
+            host="127.0.0.1",
+            port=port,
+            command_marker=marker,
+            cwd=repo,
+            state_dir=state,
+            pid=proc.pid,
+        )
+
+        result = server_lifecycle.prepare_for_reopen(
+            tool_name="unit-owned",
+            host="127.0.0.1",
+            port=port,
+            command_marker=marker,
+            cwd=repo,
+            state_dir=state,
+            graceful_timeout=2.0,
+        )
+
+        proc.wait(timeout=3)
+        if proc.stdout is not None:
+            proc.stdout.close()
+        if proc.stderr is not None:
+            proc.stderr.close()
+        self.assertTrue(result.ok)
+        self.assertIn("process_sigterm", result.actions)
+        self.assertIn("process_stopped", result.actions)
+        self.assertFalse(metadata.exists())
+        self.assertTrue(wait_for_tcp("127.0.0.1", port, present=False))
+
+    def test_unrecorded_listener_fails_closed_and_is_not_killed(self) -> None:
+        _, repo, state = self.make_paths()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(("127.0.0.1", 0))
+            listener.listen()
+            port = int(listener.getsockname()[1])
+
+            with self.assertRaises(server_lifecycle.LifecycleError) as raised:
+                server_lifecycle.prepare_for_reopen(
+                    tool_name="unit-unowned",
+                    host="127.0.0.1",
+                    port=port,
+                    command_marker="unit-marker",
+                    cwd=repo,
+                    state_dir=state,
+                )
+
+            self.assertEqual("listener_in_use_unowned", raised.exception.reason)
+            self.assertTrue(wait_for_tcp("127.0.0.1", port, present=True))
+
+
 class AgentSchedulerTests(unittest.TestCase):
     def make_fixture(self, baseline_dirty: list[str] | None = None) -> SchedulerFixture:
         fixture = SchedulerFixture(baseline_dirty)
@@ -59,6 +244,14 @@ class AgentSchedulerTests(unittest.TestCase):
         server = object.__new__(scheduler.SchedulerServer)
         server.core = core
         return server
+
+    def start_daemon(self, fixture: SchedulerFixture) -> scheduler.StatePaths:
+        result = scheduler.daemon_start(fixture.repo)
+        self.assertTrue(result["ok"], result)
+        paths = scheduler.state_paths(fixture.repo)
+        self.assertTrue(paths.pid.exists(), result)
+        self.addCleanup(lambda: scheduler.daemon_stop(fixture.repo))
+        return paths
 
     def acquire_write(
         self,
@@ -301,6 +494,69 @@ class AgentSchedulerTests(unittest.TestCase):
             by_kind[str(result["kind"])].append(int(result["ordinal"]))
         self.assertEqual([1, 2], sorted(by_kind["task-log"]))
         self.assertEqual([1, 2], sorted(by_kind["handoff"]))
+
+    def test_daemon_restart_stops_running_daemon_and_starts_fresh(self) -> None:
+        fixture = self.make_fixture()
+        paths = self.start_daemon(fixture)
+        old_pid = int(paths.pid.read_text(encoding="utf-8"))
+
+        restarted = scheduler.daemon_restart(fixture.repo)
+
+        self.assertTrue(restarted["ok"], restarted)
+        self.assertEqual("restarted", restarted["status"])
+        new_pid = int(paths.pid.read_text(encoding="utf-8"))
+        self.assertNotEqual(old_pid, new_pid)
+        self.assertFalse(pid_alive(old_pid))
+
+    def test_daemon_start_replace_existing_replaces_recorded_daemon(self) -> None:
+        fixture = self.make_fixture()
+        paths = self.start_daemon(fixture)
+        old_pid = int(paths.pid.read_text(encoding="utf-8"))
+
+        replaced = scheduler.daemon_start(fixture.repo, replace_existing=True)
+
+        self.assertTrue(replaced["ok"], replaced)
+        self.assertEqual("started", replaced["status"])
+        new_pid = int(paths.pid.read_text(encoding="utf-8"))
+        self.assertNotEqual(old_pid, new_pid)
+        self.assertFalse(pid_alive(old_pid))
+
+    def test_stale_socket_and_pid_files_do_not_block_restart(self) -> None:
+        fixture = self.make_fixture()
+        paths = scheduler.state_paths(fixture.repo)
+        paths.state_dir.mkdir(parents=True, exist_ok=True)
+        paths.socket.write_text("stale socket", encoding="utf-8")
+        paths.pid.write_text("99999999", encoding="utf-8")
+        server_lifecycle.write_metadata(
+            tool_name=scheduler.DAEMON_TOOL_NAME,
+            host="unix",
+            port=0,
+            endpoint="unix",
+            socket_path=paths.socket,
+            command_marker=scheduler.DAEMON_COMMAND_MARKER,
+            cwd=paths.repo,
+            state_dir=paths.state_dir / "server-lifecycle",
+            pid=99999999,
+        )
+        self.addCleanup(lambda: scheduler.daemon_stop(fixture.repo))
+
+        restarted = scheduler.daemon_restart(fixture.repo)
+
+        self.assertTrue(restarted["ok"], restarted)
+        self.assertEqual("restarted", restarted["status"])
+        self.assertTrue(scheduler.daemon_status(fixture.repo).get("running"))
+
+    def test_default_daemon_ensure_remains_non_destructive(self) -> None:
+        fixture = self.make_fixture()
+        paths = self.start_daemon(fixture)
+        old_pid = int(paths.pid.read_text(encoding="utf-8"))
+
+        ensured = scheduler.daemon_start(fixture.repo)
+
+        self.assertTrue(ensured["ok"], ensured)
+        self.assertEqual("already-running", ensured["status"])
+        self.assertEqual(old_pid, int(paths.pid.read_text(encoding="utf-8")))
+        self.assertTrue(pid_alive(old_pid))
 
     def test_bypass_permissions_hook_path_is_advisory_only(self) -> None:
         with tempfile.TemporaryDirectory(prefix="esp32-scheduler-hook-") as tmp:

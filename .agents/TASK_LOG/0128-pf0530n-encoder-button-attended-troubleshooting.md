@@ -136,13 +136,23 @@ short button selections. Long press remains unproven in the retry: either the
 long-press cue/hold did not complete before monitor end, or long-press
 classification needs follow-up.
 
+## Follow-Up
+
+The user then rejected simulator/mock acceptance and requested real-menu
+calibration for the programmed LCD review path. PF0530O source/build follow-up
+is recorded in
+`.agents/TASK_LOG/0129-four-relay-ky040-bbs-lcd-menu-pf0530o-real-menu-calibration.md`.
+That follow-up was later authorized for COM6 write/verify/read-only monitor
+proof and remains open only for user visual/input acceptance.
+
 ## Decision Footer
 
-Decision: `ask_user`. Next gate: user visual report for the retry and, if
-needed, a narrow long-press-only read-only retry. Owner: Firmware live-gate
-owner with LCD UX and Hardware QA lenses. Evidence: first and retry read-only
-COM6 transcripts, scans, cleanup, and task record. Approved mutation boundary:
-evidence records only. Validation: transcript marker scans and cleanup proof
-complete; visual and long-press classification pending. Authority limits: no
-flash, erase, serial writes, XBee/RF, relay/load/mains, wiring, DMM/current,
-persistent configuration, commit, or push.
+Decision: `superseded_by_pf0530o_live_calibration`. Next gate: user
+visual/input report for PF0530O, then a COM6 read-only physical/input capture
+gate if the user confirms actuation occurred without LCD/menu response. Owner:
+Firmware live-gate owner with LCD UX and Hardware QA lenses. Evidence: first
+and retry read-only COM6 transcripts, scans, cleanup, this task record, and
+PF0530O source/live records. Approved mutation boundary: evidence records only
+for this task; PF0530O source/build/live work is tracked separately. Authority
+limits: no flash, erase, serial writes, XBee/RF, relay/load/mains, wiring,
+DMM/current, persistent configuration, commit, or push.

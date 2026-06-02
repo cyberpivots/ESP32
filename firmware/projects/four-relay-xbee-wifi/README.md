@@ -321,12 +321,15 @@ ESP-IDF build or bench step.
   continuation. It preserves the PF0530V PCNT encoder path, input-only
   GPIO13/GPIO14/GPIO32 policy, display-only GPIO21/GPIO22 LCD policy, and
   closed bridge/relay/load/mains boundaries while adding a generated `ART`
-  page, seventh `art_panel` glyph bank, and fixed 4x20 custom-character tile
-  map. COM6 identity, rollback, write-flash, separate verify-flash, read-only
-  PF0530W readiness monitor, transcript scan, and cleanup proof passed; physical
-  ART page visual acceptance remains pending. Source IDs:
+  page, seventh `art_panel` glyph bank, and five source/build-validated
+  custom-character art panels selected by rotary movement on the ART page.
+  COM6 identity, rollback, write-flash, separate verify-flash, read-only
+  PF0530W readiness monitor, transcript scan, and cleanup proof passed for the
+  earlier written image; physical ART page visual acceptance for the carousel
+  remains pending. Source IDs:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-VISUAL-ART-2026-06-02`,
-  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-LIVE-2026-06-02`.
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-LIVE-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-ART-CAROUSEL-2026-06-02`.
 
 ## Assumptions
 
@@ -488,6 +491,7 @@ ESP-IDF build or bench step.
   PF0530W BBS LCD menu source closes that bridge loop, preserves the PF0530V
   PCNT encoder baseline on GPIO13/GPIO14/GPIO32, runs LCD output on
   GPIO21/GPIO22, adds the generated `ART` page plus the `art_panel` glyph bank,
+  cycles five ART panel variants with the rotary control on that ART page,
   renders XML-generated local BBS status, bridge, error, widget, route table,
   and visual-art pages with dirty-cell LCD updates, loads named HD44780 glyph
   banks, tracks cursor/DDRAM metadata, supports scroll-list/detail/edit local

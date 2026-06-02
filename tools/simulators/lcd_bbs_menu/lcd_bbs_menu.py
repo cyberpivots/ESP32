@@ -188,6 +188,7 @@ class MenuViewState:
     selected_item: int = 0
     viewport_top_line: int = 0
     selected_row: int = 0
+    art_index: int = 0
     detail: bool = False
     notification_ack: bool = False
     last_intent: str = "home"
@@ -201,6 +202,7 @@ class MenuViewState:
             "selected_item": self.selected_item,
             "viewport_top_line": self.viewport_top_line,
             "selected_row": self.selected_row,
+            "art_index": self.art_index,
             "detail": self.detail,
             "notification_ack": self.notification_ack,
             "last_intent": self.last_intent,
@@ -457,9 +459,17 @@ def apply_input(view: MenuViewState, event: str) -> MenuViewState:
                     page_stack=view.page_stack[:-1],
                     last_intent="back_page",
                     edit_value=view.edit_value,
+                    art_index=view.art_index,
                 )
             )
-        return _normalized_view(MenuViewState(page="HOME", last_intent="home", edit_value=view.edit_value))
+        return _normalized_view(
+            MenuViewState(
+                page="HOME",
+                last_intent="home",
+                edit_value=view.edit_value,
+                art_index=view.art_index,
+            )
+        )
 
     if event == "short_press":
         if mode == "edit_lab":
@@ -483,6 +493,7 @@ def apply_input(view: MenuViewState, event: str) -> MenuViewState:
                     page_stack=stack,
                     last_intent=f"page:{target}",
                     edit_value=view.edit_value,
+                    art_index=view.art_index,
                 )
             )
         if action == "edit":
@@ -502,6 +513,16 @@ def apply_input(view: MenuViewState, event: str) -> MenuViewState:
         )
 
     delta = 1 if event == "rotate_right" else -1
+    if view.page == "ART":
+        next_index = _art_index(view.art_index + delta)
+        return _normalized_view(
+            replace(
+                view,
+                art_index=next_index,
+                notification_ack=False,
+                last_intent="art_next" if delta > 0 else "art_previous",
+            )
+        )
     if mode == "edit_lab":
         value = (view.edit_value + (5 if delta > 0 else -5)) % 105
         return _normalized_view(
@@ -640,11 +661,13 @@ def lcd_art_catalog() -> dict[str, CompiledLcdArt]:
     return {panel.name: panel for panel in panels}
 
 
-def lcd_art_catalog_payload() -> dict[str, Any]:
+def lcd_art_catalog_payload(active: str = "bbs_badge") -> dict[str, Any]:
     catalog = lcd_art_catalog()
+    if active not in catalog:
+        raise LcdMenuError("art_panel_unknown", active)
     return {
         "schema": LCD_ART_CATALOG_SCHEMA,
-        "active": "bbs_badge",
+        "active": active,
         "names": list(catalog),
         "panels": {name: panel.to_dict() for name, panel in catalog.items()},
     }
@@ -740,6 +763,12 @@ def compile_lcd_art_tile_map(
 
 def sample_art_panel() -> CompiledLcdArt:
     return lcd_art_catalog()["bbs_badge"]
+
+
+def art_panel_for_index(index: int) -> CompiledLcdArt:
+    catalog = lcd_art_catalog()
+    names = tuple(catalog)
+    return catalog[names[_art_index(index)]]
 
 
 def _bbs_badge_art() -> CompiledLcdArt:
@@ -843,8 +872,12 @@ def _render_art_page_lines(
     page: Mapping[str, Any],
     view: MenuViewState,
 ) -> tuple[tuple[str, ...], dict[str, Any]]:
-    art = sample_art_panel()
-    catalog = lcd_art_catalog_payload()
+    catalog_map = lcd_art_catalog()
+    names = tuple(catalog_map)
+    active_index = _art_index(view.art_index)
+    active_name = names[active_index]
+    art = catalog_map[active_name]
+    catalog = lcd_art_catalog_payload(active_name)
     selected_id = str(page["items"][view.selected_item]["id"])
     viewport = {
         "source_xml_version": MENU_SCHEMA,
@@ -862,6 +895,9 @@ def _render_art_page_lines(
         "marquee_gap": MARQUEE_GAP,
         "logical_line_count": int(page["line_count"]),
         "page_item_count": len(page["items"]),
+        "art_active_index": active_index,
+        "art_active_name": active_name,
+        "art_panel_count": len(names),
         "art_panel": art.to_dict(),
         "art_catalog": catalog,
     }
@@ -1220,6 +1256,7 @@ def _normalized_view(view: MenuViewState) -> MenuViewState:
     page = _page_by_id(view.page)
     mode = _canonical_mode(_effective_mode(view))
     selected_item = _selected_item(page, view.selected_item)
+    art_index = _art_index(view.art_index)
     line_start = _item_start_line(page, selected_item)
     selected_rows = int(page["items"][selected_item]["rows"].__len__()) + 1
     max_top = max(0, int(page["line_count"]) - LCD_ROWS)
@@ -1236,9 +1273,15 @@ def _normalized_view(view: MenuViewState) -> MenuViewState:
         selected_item=selected_item,
         viewport_top_line=top,
         selected_row=selected_row,
+        art_index=art_index,
         mode=mode,
         detail=mode in {"detail", "edit_lab"},
     )
+
+
+def _art_index(index: int) -> int:
+    count = max(1, len(lcd_art_catalog()))
+    return index % count
 
 
 def _page_by_id(page_id: str) -> Mapping[str, Any]:

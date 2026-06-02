@@ -169,7 +169,38 @@ class LcdBbsMenuTests(unittest.TestCase):
         self.assertEqual(rendered.viewport["art_panel"]["pixel_preview"]["schema"], LCD_PIXEL_PREVIEW_SCHEMA)
         self.assertEqual(rendered.viewport["art_catalog"]["schema"], LCD_ART_CATALOG_SCHEMA)
         self.assertEqual(rendered.viewport["art_catalog"]["active"], "bbs_badge")
+        self.assertEqual(rendered.viewport["art_active_name"], "bbs_badge")
+        self.assertEqual(rendered.viewport["art_active_index"], 0)
+        self.assertEqual(rendered.view.art_index, 0)
         self.assertIn("packet_flow", rendered.viewport["art_catalog"]["names"])
+
+    def test_art_page_rotation_cycles_catalog_panels(self) -> None:
+        catalog = lcd_art_catalog()
+        names = tuple(catalog)
+        view = MenuViewState(page="ART")
+
+        for expected_index, expected_name in enumerate(names):
+            rendered = render(sample_state(), view)
+            with self.subTest(expected_name=expected_name):
+                self.assertEqual(rendered.lines, catalog[expected_name].preview_lines)
+                self.assertEqual(rendered.viewport["art_active_name"], expected_name)
+                self.assertEqual(rendered.viewport["art_active_index"], expected_index)
+                self.assertEqual(rendered.viewport["art_catalog"]["active"], expected_name)
+                self.assertEqual(rendered.viewport["art_panel"]["name"], expected_name)
+                self.assertEqual(rendered.viewport["art_panel_count"], len(names))
+                self.assertEqual(rendered.cursor.focus, "art_panel")
+                self.assertEqual(rendered.cursor.ddram_address, 0)
+                self.assertEqual(rendered.view.selected_item, 0)
+            view = apply_input(view, "rotate_right")
+
+        self.assertEqual(view.art_index, 0)
+        wrapped_left = apply_input(MenuViewState(page="ART"), "rotate_left")
+        self.assertEqual(wrapped_left.art_index, len(names) - 1)
+        self.assertEqual(wrapped_left.last_intent, "art_previous")
+
+        back = apply_input(MenuViewState(page="ART", page_stack=("HOME",), art_index=2), "short_press")
+        self.assertEqual(back.page, "HOME")
+        self.assertEqual(back.art_index, 2)
 
     def test_more_than_four_options_scroll_vertically(self) -> None:
         view = MenuViewState(page="HOME")
@@ -501,6 +532,18 @@ class LcdBbsMenuTests(unittest.TestCase):
             "relay_toggle",
         ):
             self.assertNotIn(forbidden, art_html)
+
+        art_mirror = LcdBrowserMirror(sample_state(), MenuViewState(page="ART"))
+        rotated_art = art_mirror.handle_request(
+            "POST",
+            API_INTENT_PATH,
+            {"intent": "rotate_right"},
+        )
+        self.assertEqual(rotated_art.status, 200)
+        self.assertEqual(rotated_art.body["view"]["art_index"], 1)
+        self.assertEqual(rotated_art.body["view"]["last_intent"], "art_next")
+        self.assertEqual(rotated_art.body["viewport"]["art_active_name"], "mesh_radar")
+        self.assertEqual(rotated_art.body["viewport"]["art_panel"]["name"], "mesh_radar")
 
     def test_browser_mirror_accepts_only_v2_intents(self) -> None:
         for intent in sorted(INPUT_EVENTS):

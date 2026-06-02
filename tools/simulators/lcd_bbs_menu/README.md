@@ -90,8 +90,10 @@ python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page ART --browser-html
 
 The sample render output includes an `art_panel` widget with
 `bbs_lcd_art.v1` metadata. It is suitable for host tests and browser mirror
-inspection only. The `ART` page output includes `art_catalog` and
+inspection only. The `ART` page output includes `art_catalog`,
+`art_active_name`, `art_active_index`, `art_panel_count`, and
 `bbs_lcd_pixel_preview.v1` metadata for five host candidate panels:
 `bbs_badge`, `mesh_radar`, `packet_flow`, `signal_skyline`, and `link_heat`.
-A future physical LCD acceptance gate must collect same-session visual evidence
-before claiming any art panel is readable.
+Rotary events on the ART page cycle those panels locally without changing the
+selected menu item. A future physical LCD acceptance gate must collect
+same-session visual evidence before claiming any art panel is readable.

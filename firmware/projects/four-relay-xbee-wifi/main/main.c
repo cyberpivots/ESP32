@@ -72,6 +72,7 @@
 #define FR_GLYPH_ROWS 8
 #define FR_GLYPH_BANK_SWAP_MIN_MS 250
 #define FR_BBS_ART_GLYPH_BANK_INDEX 6U
+#define FR_BBS_ART_PANEL_COUNT 5U
 #define FR_BBS_ART_BLANK_SLOT 0xffU
 
 #define FR_LCD_PCF_RS 0x01
@@ -108,6 +109,7 @@ typedef struct {
     uint8_t cells[FR_LCD_ROWS][FR_LCD_COLUMNS];
     bool glyph_valid;
     uint8_t glyph_bank_index;
+    uint8_t art_panel_index;
     uint32_t last_glyph_swap_ms;
 } fr_lcd_render_cache_t;
 
@@ -164,6 +166,7 @@ typedef struct {
     uint8_t selected_row;
     uint8_t selected_item;
     uint8_t viewport_top_line;
+    uint8_t art_index;
     uint8_t page_stack[FR_MENU_PAGE_STACK_DEPTH];
     uint8_t page_stack_depth;
     uint8_t edit_value;
@@ -243,6 +246,7 @@ typedef struct {
     uint8_t cells[FR_LCD_ROWS][FR_LCD_COLUMNS];
     char log_lines[FR_LCD_ROWS][FR_LCD_COLUMNS + 1];
     uint8_t glyph_bank_index;
+    uint8_t art_panel_index;
     uint8_t cursor_row;
     uint8_t cursor_col;
     uint8_t cursor_ddram;
@@ -253,6 +257,12 @@ typedef struct {
     const char *name;
     uint8_t rows[FR_GLYPH_SLOTS][FR_GLYPH_ROWS];
 } fr_lcd_glyph_bank_t;
+
+typedef struct {
+    const char *name;
+    uint8_t rows[FR_GLYPH_SLOTS][FR_GLYPH_ROWS];
+    uint8_t slots[FR_LCD_ROWS][FR_LCD_COLUMNS];
+} fr_bbs_art_panel_t;
 
 typedef struct {
     SemaphoreHandle_t lock;
@@ -278,6 +288,9 @@ static pcnt_channel_handle_t fr_encoder_pcnt_chan_b;
 static const fr_bbs_menu_page_t *fr_bbs_menu_page(uint8_t page);
 static const fr_bbs_menu_item_t *fr_bbs_menu_selected_item(const fr_menu_state_t *menu);
 static void fr_bbs_sync_menu_view(fr_menu_state_t *menu);
+static bool fr_bbs_menu_page_is_art(const fr_bbs_menu_page_t *page);
+static uint8_t fr_bbs_art_panel_index(uint8_t index);
+static const fr_bbs_art_panel_t *fr_bbs_selected_art_panel(const fr_menu_state_t *menu);
 
 static void fr_bridge_init_safe_defaults(void)
 {
@@ -819,6 +832,20 @@ static void fr_menu_step(fr_menu_state_t *menu, int8_t direction, uint32_t now_m
     case FR_MENU_MODE_DETAIL:
     case FR_MENU_MODE_PAGE_BROWSE: {
         const fr_bbs_menu_page_t *page = fr_bbs_menu_page(menu->page);
+        if (fr_bbs_menu_page_is_art(page)) {
+            if (direction > 0) {
+                menu->art_index = fr_bbs_art_panel_index(menu->art_index + 1U);
+                fr_menu_set_last_event(menu, "ART NEXT");
+            } else {
+                menu->art_index = (uint8_t)(
+                    menu->art_index == 0U ?
+                    FR_BBS_ART_PANEL_COUNT - 1U : menu->art_index - 1U
+                );
+                fr_menu_set_last_event(menu, "ART PREV");
+            }
+            fr_bbs_sync_menu_view(menu);
+            break;
+        }
         if (page->item_count > 0U) {
             if (direction > 0) {
                 menu->selected_item = (uint8_t)((menu->selected_item + 1U) % page->item_count);
@@ -2061,18 +2088,185 @@ static const fr_lcd_glyph_bank_t fr_lcd_glyph_banks[FR_GLYPH_BANK_COUNT] = {
     },
 };
 
-static const uint8_t fr_bbs_art_panel_slots[FR_LCD_ROWS][FR_LCD_COLUMNS] = {
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
-        FR_BBS_ART_BLANK_SLOT, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
-        FR_BBS_ART_BLANK_SLOT, 0},
-    {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
-        FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
-        2, 2, 2, 2, 2, 2, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
-        FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
-        FR_BBS_ART_BLANK_SLOT, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+static const fr_bbs_art_panel_t fr_bbs_art_panels[FR_BBS_ART_PANEL_COUNT] = {
+    {
+        .name = "bbs_badge",
+        .rows = {
+            {0x1f, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1f, 0x00},
+            {0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f},
+            {0x10, 0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        },
+        .slots = {
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 0},
+            {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                2, 2, 2, 2, 2, 2, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        },
+    },
+    {
+        .name = "mesh_radar",
+        .rows = {
+            {0x04, 0x04, 0x04, 0x1f, 0x04, 0x04, 0x04, 0x00},
+            {0x00, 0x04, 0x0e, 0x04, 0x00, 0x04, 0x00, 0x00},
+            {0x10, 0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08},
+            {0x0e, 0x11, 0x15, 0x11, 0x15, 0x11, 0x0e, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        },
+        .slots = {
+            {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 1, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 1, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 0},
+            {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 2, 3, 2, 2, 3, 2,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 0},
+            {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 2, 3, 3, 3, 3, 2,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 0},
+            {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 1,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 0},
+        },
+    },
+    {
+        .name = "packet_flow",
+        .rows = {
+            {0x0e, 0x11, 0x15, 0x15, 0x15, 0x11, 0x0e, 0x00},
+            {0x00, 0x00, 0x1f, 0x04, 0x1f, 0x00, 0x00, 0x00},
+            {0x04, 0x06, 0x1f, 0x06, 0x04, 0x00, 0x1f, 0x00},
+            {0x04, 0x0e, 0x1f, 0x0e, 0x04, 0x00, 0x04, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        },
+        .slots = {
+            {FR_BBS_ART_BLANK_SLOT, 0, FR_BBS_ART_BLANK_SLOT, 1, 1, 1, 1, 1,
+                1, 1, 2, 1, 1, 1, 1, 1, 1, FR_BBS_ART_BLANK_SLOT, 0,
+                FR_BBS_ART_BLANK_SLOT},
+            {FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 3, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 3, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 3, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 3, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT},
+            {FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 2,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 2,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 2, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 2, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT},
+            {FR_BBS_ART_BLANK_SLOT, 0, FR_BBS_ART_BLANK_SLOT, 1, 1, 1, 1, 1,
+                1, 1, 2, 1, 1, 1, 1, 1, 1, FR_BBS_ART_BLANK_SLOT, 0,
+                FR_BBS_ART_BLANK_SLOT},
+        },
+    },
+    {
+        .name = "signal_skyline",
+        .rows = {
+            {0x04, 0x0e, 0x15, 0x0e, 0x04, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x08, 0x18, 0x18, 0x18, 0x18},
+            {0x00, 0x00, 0x00, 0x00, 0x10, 0x10, 0x10, 0x10},
+            {0x00, 0x00, 0x04, 0x0c, 0x1c, 0x1c, 0x1c, 0x1c},
+            {0x00, 0x02, 0x06, 0x0e, 0x1e, 0x1e, 0x1e, 0x1e},
+            {0x01, 0x03, 0x07, 0x0f, 0x1f, 0x1f, 0x1f, 0x1f},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        },
+        .slots = {
+            {FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 0,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 0,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 0, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT},
+            {FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 1, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, 1, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, 1,
+                FR_BBS_ART_BLANK_SLOT},
+            {FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+                FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT},
+            {2, 1, 3, 4, 5, 4, 3, 5, 1, 4, 5, 3, 1, 2, 3, 4, 5, 3, 1, 2},
+        },
+    },
+    {
+        .name = "link_heat",
+        .rows = {
+            {0x1f, 0x10, 0x17, 0x14, 0x17, 0x10, 0x1f, 0x00},
+            {0x00, 0x00, 0x0e, 0x11, 0x11, 0x0e, 0x00, 0x00},
+            {0x00, 0x0e, 0x1f, 0x15, 0x15, 0x1f, 0x0e, 0x00},
+            {0x1f, 0x1f, 0x1b, 0x15, 0x15, 0x1b, 0x1f, 0x1f},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        },
+        .slots = {
+            {0, 1, 1, 1, FR_BBS_ART_BLANK_SLOT, 1, 1, 1,
+                FR_BBS_ART_BLANK_SLOT, 2, 2, 2, FR_BBS_ART_BLANK_SLOT, 2, 2, 2,
+                FR_BBS_ART_BLANK_SLOT, 3, 3, 3},
+            {FR_BBS_ART_BLANK_SLOT, 1, 1, 1, FR_BBS_ART_BLANK_SLOT, 2, 2, 2,
+                FR_BBS_ART_BLANK_SLOT, 3, 3, 3, FR_BBS_ART_BLANK_SLOT, 2, 2, 2,
+                FR_BBS_ART_BLANK_SLOT, 1, 1, 1},
+            {FR_BBS_ART_BLANK_SLOT, 2, 2, 2, FR_BBS_ART_BLANK_SLOT, 3, 3, 3,
+                FR_BBS_ART_BLANK_SLOT, 3, 3, 3, FR_BBS_ART_BLANK_SLOT, 2, 2, 2,
+                FR_BBS_ART_BLANK_SLOT, 1, 1, 1},
+            {FR_BBS_ART_BLANK_SLOT, 0, 0, 0, FR_BBS_ART_BLANK_SLOT, 1, 1, 1,
+                FR_BBS_ART_BLANK_SLOT, 2, 2, 2, FR_BBS_ART_BLANK_SLOT, 3, 3, 3,
+                FR_BBS_ART_BLANK_SLOT, 0, 0, 0},
+        },
+    },
 };
 
 static const char *fr_bbs_page_name(uint8_t page)
@@ -2081,6 +2275,23 @@ static const char *fr_bbs_page_name(uint8_t page)
         return "HOME";
     }
     return fr_bbs_generated_pages[page].id;
+}
+
+static bool fr_bbs_menu_page_is_art(const fr_bbs_menu_page_t *page)
+{
+    return page != NULL &&
+        page->glyph_bank_index == FR_BBS_ART_GLYPH_BANK_INDEX &&
+        strcmp(page->id, "ART") == 0;
+}
+
+static uint8_t fr_bbs_art_panel_index(uint8_t index)
+{
+    return (uint8_t)(index % FR_BBS_ART_PANEL_COUNT);
+}
+
+static const fr_bbs_art_panel_t *fr_bbs_selected_art_panel(const fr_menu_state_t *menu)
+{
+    return &fr_bbs_art_panels[fr_bbs_art_panel_index(menu->art_index)];
 }
 
 static uint8_t fr_bbs_page_glyph_bank_index(uint8_t page)
@@ -2352,14 +2563,15 @@ static bool fr_bbs_render_generated_frame(
 
     if (page->glyph_bank_index == FR_BBS_ART_GLYPH_BANK_INDEX &&
         strcmp(page->id, "ART") == 0) {
-        static const char fallback[3] = {'0', '1', '2'};
+        const fr_bbs_art_panel_t *art = fr_bbs_selected_art_panel(menu);
+        frame->art_panel_index = fr_bbs_art_panel_index(menu->art_index);
         for (uint8_t row = 0; row < FR_LCD_ROWS; ++row) {
             for (uint8_t column = 0; column < FR_LCD_COLUMNS; ++column) {
-                uint8_t slot = fr_bbs_art_panel_slots[row][column];
+                uint8_t slot = art->slots[row][column];
                 if (slot == FR_BBS_ART_BLANK_SLOT) {
                     continue;
                 }
-                fr_lcd_frame_set_glyph(frame, row, column, slot, fallback[slot]);
+                fr_lcd_frame_set_glyph(frame, row, column, slot, (char)('0' + slot));
             }
         }
         frame->cursor_row = 0;
@@ -2724,13 +2936,21 @@ static bool fr_lcd_load_glyph_bank(
     fr_lcd_context_t *lcd,
     fr_lcd_render_cache_t *cache,
     uint8_t bank_index,
+    uint8_t art_panel_index,
     uint32_t now_ms
 )
 {
     if (bank_index >= FR_GLYPH_BANK_COUNT) {
         bank_index = 0;
     }
-    if (cache->glyph_valid && cache->glyph_bank_index == bank_index) {
+    uint8_t selected_art_index = fr_bbs_art_panel_index(art_panel_index);
+    bool is_art_bank = bank_index == FR_BBS_ART_GLYPH_BANK_INDEX;
+    if (!is_art_bank) {
+        selected_art_index = 0;
+    }
+    if (cache->glyph_valid &&
+        cache->glyph_bank_index == bank_index &&
+        (!is_art_bank || cache->art_panel_index == selected_art_index)) {
         return true;
     }
     if (cache->glyph_valid &&
@@ -2742,12 +2962,19 @@ static bool fr_lcd_load_glyph_bank(
     }
 
     const fr_lcd_glyph_bank_t *bank = &fr_lcd_glyph_banks[bank_index];
+    const char *bank_name = bank->name;
+    const uint8_t (*rows)[FR_GLYPH_ROWS] = bank->rows;
+    if (is_art_bank) {
+        const fr_bbs_art_panel_t *art = &fr_bbs_art_panels[selected_art_index];
+        bank_name = art->name;
+        rows = art->rows;
+    }
     for (uint8_t slot = 0; slot < FR_GLYPH_SLOTS; ++slot) {
         if (!fr_lcd_command(lcd, (uint8_t)(0x40U | (slot << 3)))) {
             return false;
         }
         for (uint8_t row = 0; row < FR_GLYPH_ROWS; ++row) {
-            if (!fr_lcd_write_byte(lcd, bank->rows[slot][row], true)) {
+            if (!fr_lcd_write_byte(lcd, rows[slot][row], true)) {
                 return false;
             }
         }
@@ -2755,11 +2982,12 @@ static bool fr_lcd_load_glyph_bank(
 
     cache->glyph_valid = true;
     cache->glyph_bank_index = bank_index;
+    cache->art_panel_index = selected_art_index;
     cache->last_glyph_swap_ms = now_ms;
     cache->valid = false;
     printf(
         "BBS_GLYPH_BANK name=%s index=%u slots=%u rows=%u min_swap_ms=%u t=%lu\r\n",
-        bank->name,
+        bank_name,
         (unsigned int)bank_index,
         (unsigned int)FR_GLYPH_SLOTS,
         (unsigned int)FR_GLYPH_ROWS,
@@ -2801,7 +3029,13 @@ static bool fr_lcd_render_bbs_page(
     uint8_t dirty_row_mask = 0;
     uint16_t dirty_cells = 0;
 
-    if (!fr_lcd_load_glyph_bank(lcd, cache, frame.glyph_bank_index, start_ms)) {
+    if (!fr_lcd_load_glyph_bank(
+        lcd,
+        cache,
+        frame.glyph_bank_index,
+        frame.art_panel_index,
+        start_ms
+    )) {
         return false;
     }
 
@@ -2844,7 +3078,7 @@ static bool fr_lcd_render_bbs_page(
     printf(
         "BBS_LCD_RENDER page=%s index=%u row0=\"%s\" row1=\"%s\" "
         "row2=\"%s\" row3=\"%s\" rows=%u seq=%lu dur_ms=%lu reason=%s "
-        "mode=%s focus=%s bank=%s cursor=%u,%u ddram=0x%02x "
+        "mode=%s focus=%s bank=%s art=%u cursor=%u,%u ddram=0x%02x "
         "dirty_rows=0x%02x dirty_cells=%u\r\n",
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
@@ -2859,6 +3093,7 @@ static bool fr_lcd_render_bbs_page(
         fr_menu_mode_name(menu->mode),
         frame.focus,
         fr_lcd_glyph_bank_name(frame.glyph_bank_index),
+        (unsigned int)frame.art_panel_index,
         (unsigned int)frame.cursor_row,
         (unsigned int)frame.cursor_col,
         (unsigned int)frame.cursor_ddram,

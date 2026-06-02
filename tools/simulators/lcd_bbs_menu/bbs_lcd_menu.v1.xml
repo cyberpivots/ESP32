@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O">
+<menu schema="bbs_lcd_menu.v1" sourceId="PF0530W">
   <page id="HOME" title="BBS Field" glyphBank="core_status">
     <item id="home-status" label="BBS FIELD STATUS READY" action="detail" />
     <item id="home-messages" label="Messages queue and custody" action="page" target="MESSAGES" />
@@ -8,6 +8,7 @@
     <item id="home-mesh" label="Mesh routes table" action="page" target="ROUTES" />
     <item id="home-diag" label="Diagnostics and locks" action="page" target="DIAG" />
     <item id="home-widgets" label="Local widget pages" action="page" target="BARS" />
+    <item id="home-art" label="LCD art badge panel" action="page" target="ART" />
   </page>
   <page id="MESSAGES" title="Messages" glyphBank="core_status">
     <item id="msg-new" label="New inbox messages" action="detail" />
@@ -94,5 +95,8 @@
       <row>peer03 |-82 |1</row>
     </item>
     <item id="routes-back" label="Back mesh" action="page" target="MESH" />
+  </page>
+  <page id="ART" title="Art Panel" glyphBank="art_panel">
+    <item id="art-back" label="Back home" action="back" />
   </page>
 </menu>

@@ -5,13 +5,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define FR_DIAG_FIRMWARE_ID_VALUE "PF0530O"
+#define FR_DIAG_FIRMWARE_ID_VALUE "PF0530W"
 #define FR_BBS_MENU_XML_SCHEMA "bbs_lcd_menu.v1"
 #define FR_BBS_MENU_RENDER_SCHEMA "bbs_lcd_render.v2"
-#define FR_BBS_MENU_SOURCE_ID "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-REAL-MENU-CAL-2026-06-01"
-#define FR_BBS_MENU_PAGE_COUNT 14u
-#define FR_BBS_MENU_ITEM_COUNT 63u
-#define FR_BBS_GLYPH_BANK_COUNT 6u
+#define FR_BBS_MENU_SOURCE_ID "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-VISUAL-ART-2026-06-02"
+#define FR_BBS_MENU_PAGE_COUNT 15u
+#define FR_BBS_MENU_ITEM_COUNT 65u
+#define FR_BBS_GLYPH_BANK_COUNT 7u
 #define FR_BBS_MENU_CONTENT_COLUMNS 19u
 #define FR_BBS_MENU_MARQUEE_HOLD_MS 750u
 #define FR_BBS_MENU_MARQUEE_STEP_MS 250u
@@ -52,6 +52,7 @@ static const fr_bbs_menu_item_t fr_bbs_menu_items_home[] = {
     {"home-mesh", "Mesh routes table", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 13u, false, false},
     {"home-diag", "Diagnostics and locks", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 7u, false, false},
     {"home-widgets", "Local widget pages", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 9u, false, false},
+    {"home-art", "LCD art badge panel", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 14u, false, false},
 };
 
 static const fr_bbs_menu_item_t fr_bbs_menu_items_messages[] = {
@@ -149,8 +150,12 @@ static const fr_bbs_menu_item_t fr_bbs_menu_items_routes[] = {
     {"routes-back", "Back mesh", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 5u, false, false},
 };
 
+static const fr_bbs_menu_item_t fr_bbs_menu_items_art[] = {
+    {"art-back", "Back home", {"", "", ""}, 1u, FR_BBS_ACTION_BACK, 0u, false, false},
+};
+
 static const fr_bbs_menu_page_t fr_bbs_generated_pages[FR_BBS_MENU_PAGE_COUNT] = {
-    {"HOME", "BBS Field", 0u, 7u, 7u, fr_bbs_menu_items_home},
+    {"HOME", "BBS Field", 0u, 8u, 8u, fr_bbs_menu_items_home},
     {"MESSAGES", "Messages", 0u, 5u, 5u, fr_bbs_menu_items_messages},
     {"PEERS", "Peers", 0u, 5u, 5u, fr_bbs_menu_items_peers},
     {"QUEUE", "Queue", 0u, 5u, 5u, fr_bbs_menu_items_queue},
@@ -164,6 +169,7 @@ static const fr_bbs_menu_page_t fr_bbs_generated_pages[FR_BBS_MENU_PAGE_COUNT] =
     {"DIGITS", "Digits", 3u, 4u, 4u, fr_bbs_menu_items_digits},
     {"GAUGE", "Gauge", 4u, 3u, 3u, fr_bbs_menu_items_gauge},
     {"ROUTES", "Routes", 5u, 2u, 5u, fr_bbs_menu_items_routes},
+    {"ART", "Art Panel", 6u, 1u, 1u, fr_bbs_menu_items_art},
 };
 
 #endif /* BBS_LCD_MENU_GENERATED_H */

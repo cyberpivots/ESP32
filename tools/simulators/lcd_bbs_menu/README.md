@@ -11,12 +11,21 @@ glyph bank, host-rendered widget previews, selected-item/viewport metadata,
 visible item IDs, physical indicator row, horizontal marquee offsets, and the
 source XML version.
 
+The host art compiler emits `bbs_lcd_art.v1` metadata for image-like LCD
+panels. It compiles deterministic 100x32 ASCII PBM `P1` bitmaps or direct
+4x20 tile maps into 5x8 HD44780 glyph rows, reuses identical nonblank tiles,
+and fails closed when a panel needs more than eight custom glyphs. The normal
+`lines` field stays ASCII-safe; compiled art exposes `preview_lines`,
+`cell_slots`, and its own eight-slot glyph bank as metadata only.
+
 ## Boundaries
 
 - No hardware access.
 - No serial commands.
 - No firmware build, flash, erase, monitor, XBee/RF, ESP-NOW runtime, relay,
   TFT, MicroSD, load, mains, or wiring action.
+- The art compiler is host-only metadata. It does not write raw CGRAM control
+  codes into `lines` and does not prove physical LCD readability or flicker.
 - Rotary events produce local UI intents only: scroll-list item movement,
   XML-defined page navigation, detail view, local edit value changes, local
   acknowledgement, back, or home.
@@ -70,3 +79,8 @@ python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page GAUGE
 python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page MESSAGES --now-ms 1000
 python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page HOME --browser-html
 ```
+
+The sample render output includes an `art_panel` widget with
+`bbs_lcd_art.v1` metadata. It is suitable for host tests and browser mirror
+inspection only; a future physical LCD acceptance gate must collect
+same-session visual evidence before claiming a new art panel is readable.

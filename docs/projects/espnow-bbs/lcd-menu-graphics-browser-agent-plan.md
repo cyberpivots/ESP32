@@ -56,12 +56,21 @@ configuration endpoints, release gating, commit, or push.
   `bbs_lcd_render.v2`, render/cursor/heartbeat/auto-demo/glyph-bank proof, and
   no crash/unsafe markers. Source ID:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`.
-- PF0530O is the current real-menu calibration image after the PF0530N live and
+- PF0530O is the recorded real-menu calibration image after the PF0530N live and
   attended input evidence. PF0530O disables boot auto-cycle, reports
   `cal=real-menu-v1`, and has COM6 write/verify/read-only LCD readiness,
   render, and heartbeat proof with zero captured input events. Source IDs:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-REAL-MENU-CAL-2026-06-01`,
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01`.
+- PF0530W is the active written/verify-flashed firmware-visible LCD visual-art
+  continuation after the host-only `bbs_lcd_art.v1` compiler. It adds a
+  generated `ART` page, seventh `art_panel` glyph bank, and fixed 4x20
+  custom-character tile map while preserving the PF0530V PCNT input and closed
+  safety surfaces. COM6 identity, rollback, write/verify, read-only PF0530W
+  readiness monitor, transcript scan, and cleanup proof passed; physical ART
+  page visual acceptance remains pending. Source IDs:
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-VISUAL-ART-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-LIVE-2026-06-02`.
 - HD44780 CGRAM planning is limited to eight 5x8 custom-character types.
   Source ID: `SRC-HITACHI-HD44780U-DDRAM-CGRAM-2026-05-31`.
 - The local 20x4 cursor tracker uses row bases `0x00`, `0x40`, `0x14`, and
@@ -157,13 +166,33 @@ The host `GlyphBankManager` defines these named banks:
 - `horizontal_bar`
 - `vertical_chart`
 - `big_digits`
-- `gauge_demo`
+- `gauge`
 - `table`
 
 Each bank is capped at eight slots, each glyph has eight rows, and each row
 byte must stay in `0x00..0x1F`. Bank swaps are guarded at 250 ms minimum in the
 host manager. The `table` bank is page-level and must not be mixed with
 bar/chart/big-digit/gauge pages.
+
+## Visual Art Compiler
+
+Task 0141 adds `bbs_lcd_art.v1` as a host-only metadata surface for
+image-like LCD panels. The compiler accepts deterministic 100x32 ASCII PBM
+`P1` fixtures or direct 4x20 tile maps, splits them into 5x8 HD44780 cells,
+deduplicates exact nonblank tiles, assigns stable custom-glyph slots, and
+fails closed if more than eight unique nonblank tiles are required.
+
+Compiled art is metadata only:
+
+- `bbs_lcd_render.v2` display `lines` remain four ASCII-safe 20-character
+  strings.
+- `bbs_lcd_art.v1` exposes safe `preview_lines`, a 4x20 `cell_slots` matrix,
+  and the compiled glyph bank for host/browser inspection.
+- Blank tiles consume no CGRAM slot; repeated nonblank tiles reuse the same
+  slot.
+- The compiler does not run the XML generator, does not update firmware static
+  menu headers, and does not prove physical LCD readability, contrast, or
+  flicker behavior.
 
 ## Browser Mirror
 

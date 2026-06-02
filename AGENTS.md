@@ -26,11 +26,14 @@ still use the same classification.
 - Tier 0: trivial or read-only lookup. Use coordinator triage plus a local role
   lens. Subagents are not required.
 - Tier 1: normal docs, tests, or bounded code. Use coordinator triage plus the
-  relevant owner and QA lens. Subagents are optional when they reduce risk.
+  relevant owner and QA lens. Attempt project-local read-only subagents for
+  non-trivial Tier 1 mutation when the tools are available and safe; record any
+  unavailable, unsafe, or higher-priority tool-policy fallback.
 - Tier 2: governance, protocol, firmware, evidence, hook/config, or broad code
   work. Run a read-only reviewer quorum before mutation. Project-local
-  read-only subagents are default-authorized when available and safe; use local
-  role perspectives only when subagents are unavailable or unsafe.
+  read-only subagents are mandatory to attempt when available and safe; use
+  local role perspectives only when subagents are unavailable, unsafe, or
+  blocked by a higher-priority tool policy, and record the fallback reason.
 - Tier 3: live bench, flashing, wiring, radio configuration, serial writes,
   relay/load/mains work, release gates, or other risky hardware-adjacent work.
   Require same-session evidence, explicit gate authority, recovery path, and
@@ -96,8 +99,10 @@ write scope is explicit. A no-P1/P2 reviewer quorum may accept only the named
 gate and mutation boundary; Tier 3 acceptance still requires same-session
 evidence, explicit live-gate authority, recovery path, and closed-surface
 review. If read-only subagents are unavailable or unsafe after agent lifecycle
-cleanup, run the same role lenses locally and record that no subagents were
-spawned.
+cleanup, or if subagent spawning is blocked by a higher-priority tool policy,
+run the same role lenses locally and record that no subagents were spawned,
+why the mandatory subagent attempt could not be completed, and whether cleanup
+was attempted or lifecycle state was not visible.
 
 ## Required reading before edits
 

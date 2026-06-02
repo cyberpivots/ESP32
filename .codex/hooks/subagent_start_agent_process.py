@@ -25,10 +25,10 @@ def main() -> int:
     message = f"""ESP32 subagent boundary for {agent_type}:
 - Re-read AGENTS.md and the required governance files before making claims.
 - Keep verified facts, assumptions, and unknowns separate.
-- Project-local read-only subagents are default-authorized for safe Tier 2 and Tier 3 reviewer quorum.
+- Project-local read-only subagents are mandatory to attempt for safe non-trivial Tier 1 mutation and Tier 2/Tier 3 reviewer quorum when available and safe.
 - Stay read-only unless the parent gave an explicit disjoint write scope.
 - Reviewer outputs must include role, weight, evidence reviewed, P1/P2 findings, vote, conditions, and confidence.
-- agent lifecycle cleanup is a parent-agent duty: after this reviewer output is captured, the parent must close completed/stale agents with close_agent, close agents before fallback/final, and use fallback only after cleanup attempt.
+- agent lifecycle cleanup is a parent-agent duty: after this reviewer output is captured, the parent must close completed/stale agents with close_agent, close agents before fallback/final, and use fallback only after cleanup attempt plus the reason any mandatory subagent attempt could not be completed.
 - Missing evidence should become a next safe evidence action when automatable, not a premature stop.
 - Preserve dirty work and never revert user or other-agent changes.
 - Do not select a firmware framework unless an accepted ADR authorizes it.

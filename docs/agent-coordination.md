@@ -15,9 +15,11 @@
 
 - Tier 0: trivial or read-only. Coordinator triage plus local role lens.
 - Tier 1: normal docs, tests, or bounded code. Coordinator plus owner and QA
-  lens; subagents optional.
+  lens; attempt project-local read-only subagents for non-trivial mutation when
+  available and safe.
 - Tier 2: governance, protocol, firmware, evidence, hook/config, or broad code.
-  Read-only reviewer quorum before mutation.
+  Read-only reviewer quorum before mutation with mandatory subagent attempt
+  when tools are available and safe.
 - Tier 3: live bench, flashing, wiring, radio, serial writes, relay/load/mains,
   or release gates. Same-session evidence and explicit gate authority required.
 
@@ -25,9 +27,10 @@
 
 Tier 2 and Tier 3 work needs at least coordinator, relevant owner, and QA
 perspectives before mutation. Project-local read-only subagents are
-default-authorized when available and safe. Use local role lenses only when
-subagents are unavailable or unsafe after lifecycle cleanup, and record that no
-subagents were spawned.
+mandatory to attempt when available and safe. Use local role lenses only when
+subagents are unavailable, unsafe, or blocked by higher-priority tool policy
+after lifecycle cleanup, and record that no subagents were spawned and why the
+mandatory subagent attempt could not be completed.
 
 A no-P1/P2 reviewer quorum may accept only the named gate and mutation
 boundary. Tier 3 acceptance also requires same-session evidence, explicit

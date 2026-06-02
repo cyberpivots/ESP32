@@ -27,6 +27,11 @@ LCD_ROWS = 4
 LCD_CONTENT_COLUMNS = 19
 LCD_DDRAM_ROW_BASES = (0x00, 0x40, 0x14, 0x54)
 SNAPSHOT_SCHEMA = "bbs_lcd_state.v1"
+LCD_ART_SCHEMA = "bbs_lcd_art.v1"
+LCD_ART_TILE_WIDTH = 5
+LCD_ART_TILE_HEIGHT = 8
+LCD_ART_PIXEL_WIDTH = LCD_COLUMNS * LCD_ART_TILE_WIDTH
+LCD_ART_PIXEL_HEIGHT = LCD_ROWS * LCD_ART_TILE_HEIGHT
 GLYPH_SWAP_MIN_MS = 250
 MARQUEE_HOLD_MS = 750
 MARQUEE_STEP_MS = 250
@@ -112,6 +117,34 @@ class GlyphBank:
                 raise LcdMenuError("glyph_rows_invalid", glyph.name)
             if any(row < 0 or row > 0x1F for row in glyph.rows):
                 raise LcdMenuError("glyph_row_byte_invalid", glyph.name)
+
+
+@dataclass(frozen=True)
+class CompiledLcdArt:
+    name: str
+    preview_lines: tuple[str, ...]
+    glyph_bank: GlyphBank
+    cell_slots: tuple[tuple[int | None, ...], ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema": LCD_ART_SCHEMA,
+            "name": self.name,
+            "pixel_width": LCD_ART_PIXEL_WIDTH,
+            "pixel_height": LCD_ART_PIXEL_HEIGHT,
+            "tile_width": LCD_ART_TILE_WIDTH,
+            "tile_height": LCD_ART_TILE_HEIGHT,
+            "columns": LCD_COLUMNS,
+            "rows": LCD_ROWS,
+            "slot_count": len(self.glyph_bank.glyphs),
+            "preview_lines": list(self.preview_lines),
+            "cell_slots": [list(row) for row in self.cell_slots],
+            "glyph_bank_name": self.glyph_bank.name,
+            "glyph_bank": [
+                {"slot": glyph.slot, "name": glyph.name, "rows": list(glyph.rows)}
+                for glyph in self.glyph_bank.glyphs
+            ],
+        }
 
 
 class GlyphBankManager:
@@ -353,9 +386,23 @@ GLYPH_BANKS = {
             Glyph(7, "continuation", (0x04, 0x0E, 0x15, 0x04, 0x04, 0x04, 0x04, 0x00)),
         ),
     ),
+    "art_panel": GlyphBank(
+        "art_panel",
+        (
+            Glyph(0, "art_frame", (0x1F, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F, 0x00)),
+            Glyph(1, "art_fill", (0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F)),
+            Glyph(2, "art_diag", (0x10, 0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08)),
+            Glyph(3, "art_blank_3", (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+            Glyph(4, "art_blank_4", (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+            Glyph(5, "art_blank_5", (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+            Glyph(6, "art_blank_6", (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+            Glyph(7, "art_blank_7", (0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+        ),
+    ),
 }
 GLYPH_BANK = GLYPH_BANKS["core_status"].glyphs
 SPINNER_FRAMES = ("-", "\\", "|", "/")
+ART_BLANK_TILE = (0x00,) * LCD_ART_TILE_HEIGHT
 
 
 def assert_no_secret_fields(payload: Any, path: tuple[str, ...] = ()) -> None:
@@ -486,7 +533,10 @@ def render(
         raise LcdMenuError("glyph_bank_unknown", glyph_bank_name)
     if glyph_bank_name == "table" and str(page["glyph_bank"]) != "table":
         raise LcdMenuError("table_bank_page_mismatch", str(page["id"]))
-    lines, viewport = _render_page_lines(snapshot, page, view, now_ms)
+    if str(page["id"]) == "ART":
+        lines, viewport = _render_art_page_lines(page, view)
+    else:
+        lines, viewport = _render_page_lines(snapshot, page, view, now_ms)
     lines = tuple(_fit(line) for line in lines)
     if len(lines) != LCD_ROWS or any(len(line) != LCD_COLUMNS for line in lines):
         raise LcdMenuError("render_shape_invalid", str(page["id"]))
@@ -554,7 +604,141 @@ def render_widgets(snapshot: Mapping[str, Any]) -> dict[str, Any]:
         "spinner": spinner_frame(_safe_int(_get(snapshot, "uptime_ms"), default=0) // 250),
         "big_digits": list(big_digits(_safe_int(_get(snapshot, "messages", "new"), default=0))),
         "gauge": gauge_demo(level, 100),
+        "art_panel": sample_art_panel().to_dict(),
     }
+
+
+def compile_lcd_art_from_pbm(name: str, pbm_text: str) -> CompiledLcdArt:
+    tokens = _pbm_tokens(pbm_text)
+    if not tokens or tokens[0] != "P1":
+        raise LcdMenuError("pbm_magic_invalid", name)
+    if len(tokens) < 3:
+        raise LcdMenuError("pbm_header_invalid", name)
+    try:
+        width = int(tokens[1])
+        height = int(tokens[2])
+    except ValueError as exc:
+        raise LcdMenuError("pbm_dimensions_invalid", name) from exc
+    if width != LCD_ART_PIXEL_WIDTH or height != LCD_ART_PIXEL_HEIGHT:
+        raise LcdMenuError("pbm_dimensions_invalid", f"{width}x{height}")
+    pixels = tokens[3:]
+    expected = LCD_ART_PIXEL_WIDTH * LCD_ART_PIXEL_HEIGHT
+    if len(pixels) != expected:
+        raise LcdMenuError("pbm_pixel_count_invalid", f"{len(pixels)}:{expected}")
+    if any(pixel not in {"0", "1"} for pixel in pixels):
+        raise LcdMenuError("pbm_pixel_invalid", name)
+
+    pixel_rows = [
+        [1 if pixel == "1" else 0 for pixel in pixels[row * width : (row + 1) * width]]
+        for row in range(height)
+    ]
+    tile_map: list[list[tuple[int, ...]]] = []
+    for cell_row in range(LCD_ROWS):
+        tile_row = []
+        for cell_column in range(LCD_COLUMNS):
+            rows = []
+            for tile_y in range(LCD_ART_TILE_HEIGHT):
+                row_byte = 0
+                for tile_x in range(LCD_ART_TILE_WIDTH):
+                    if pixel_rows[cell_row * LCD_ART_TILE_HEIGHT + tile_y][
+                        cell_column * LCD_ART_TILE_WIDTH + tile_x
+                    ]:
+                        row_byte |= 1 << (LCD_ART_TILE_WIDTH - 1 - tile_x)
+                rows.append(row_byte)
+            tile_row.append(tuple(rows))
+        tile_map.append(tile_row)
+    return compile_lcd_art_tile_map(name, tile_map)
+
+
+def compile_lcd_art_tile_map(
+    name: str,
+    tile_map: Sequence[Sequence[Sequence[int] | None]],
+) -> CompiledLcdArt:
+    safe_name = _art_name(name)
+    if len(tile_map) != LCD_ROWS:
+        raise LcdMenuError("art_tile_rows_invalid", str(len(tile_map)))
+    slot_by_tile: dict[tuple[int, ...], int] = {}
+    tiles_by_slot: list[tuple[int, ...]] = []
+    cell_slots: list[tuple[int | None, ...]] = []
+    preview_lines: list[str] = []
+
+    for row in tile_map:
+        if len(row) != LCD_COLUMNS:
+            raise LcdMenuError("art_tile_columns_invalid", str(len(row)))
+        row_slots: list[int | None] = []
+        preview_cells: list[str] = []
+        for cell in row:
+            tile = _normalize_art_tile(cell)
+            if tile == ART_BLANK_TILE:
+                row_slots.append(None)
+                preview_cells.append(" ")
+                continue
+            if tile not in slot_by_tile:
+                if len(slot_by_tile) >= 8:
+                    raise LcdMenuError("art_glyph_overflow", safe_name)
+                slot_by_tile[tile] = len(slot_by_tile)
+                tiles_by_slot.append(tile)
+            slot = slot_by_tile[tile]
+            row_slots.append(slot)
+            preview_cells.append(str(slot))
+        cell_slots.append(tuple(row_slots))
+        preview_lines.append("".join(preview_cells))
+
+    glyphs = tuple(
+        Glyph(slot, f"{safe_name}_{slot}", tile)
+        for slot, tile in enumerate(tiles_by_slot)
+    )
+    return CompiledLcdArt(
+        name=safe_name,
+        preview_lines=tuple(preview_lines),
+        glyph_bank=GlyphBank(safe_name, glyphs),
+        cell_slots=tuple(cell_slots),
+    )
+
+
+def sample_art_panel() -> CompiledLcdArt:
+    frame = (0x1F, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F, 0x00)
+    fill = (0x1F,) * LCD_ART_TILE_HEIGHT
+    diag = (0x10, 0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08)
+    tile_map = [[None for _ in range(LCD_COLUMNS)] for _ in range(LCD_ROWS)]
+    for column in range(LCD_COLUMNS):
+        tile_map[0][column] = frame
+        tile_map[LCD_ROWS - 1][column] = frame
+    for row in range(1, LCD_ROWS - 1):
+        tile_map[row][0] = frame
+        tile_map[row][LCD_COLUMNS - 1] = frame
+    for column in range(5, 15):
+        tile_map[1][column] = fill
+    for column in range(7, 13):
+        tile_map[2][column] = diag
+    return compile_lcd_art_tile_map("bbs_badge", tile_map)
+
+
+def _render_art_page_lines(
+    page: Mapping[str, Any],
+    view: MenuViewState,
+) -> tuple[tuple[str, ...], dict[str, Any]]:
+    art = sample_art_panel()
+    selected_id = str(page["items"][view.selected_item]["id"])
+    viewport = {
+        "source_xml_version": MENU_SCHEMA,
+        "source_xml_file": SOURCE_XML,
+        "selected_item_id": selected_id,
+        "selected_item_index": view.selected_item,
+        "visible_item_ids": [selected_id] * LCD_ROWS,
+        "physical_indicator_row": 0,
+        "viewport_top_line": 0,
+        "viewport_top_item": str(page["items"][0]["id"]),
+        "viewport_top_item_line": 0,
+        "horizontal_scroll_offsets": [0] * LCD_ROWS,
+        "marquee_hold_ms": MARQUEE_HOLD_MS,
+        "marquee_step_ms": MARQUEE_STEP_MS,
+        "marquee_gap": MARQUEE_GAP,
+        "logical_line_count": int(page["line_count"]),
+        "page_item_count": len(page["items"]),
+        "art_panel": art.to_dict(),
+    }
+    return art.preview_lines, viewport
 
 
 def horizontal_bar(value: int, maximum: int, width: int = 10) -> str:
@@ -1075,6 +1259,32 @@ def _parse_body(body: Mapping[str, Any] | str | bytes | None) -> Mapping[str, An
     if not isinstance(parsed, Mapping):
         raise LcdMenuError("json_object_required")
     return parsed
+
+
+def _pbm_tokens(pbm_text: str) -> list[str]:
+    tokens: list[str] = []
+    for line in str(pbm_text).splitlines():
+        tokens.extend(line.split("#", 1)[0].split())
+    return tokens
+
+
+def _normalize_art_tile(cell: Sequence[int] | None) -> tuple[int, ...]:
+    if cell is None:
+        return ART_BLANK_TILE
+    tile = tuple(int(row) for row in cell)
+    if len(tile) != LCD_ART_TILE_HEIGHT:
+        raise LcdMenuError("art_tile_pattern_invalid", str(len(tile)))
+    if any(row < 0 or row > 0x1F for row in tile):
+        raise LcdMenuError("art_tile_row_byte_invalid")
+    return tile
+
+
+def _art_name(name: str) -> str:
+    clean = "".join(char if char.isalnum() or char in {"_", "-"} else "_" for char in str(name))
+    clean = clean.strip("_-").lower()
+    if not clean:
+        raise LcdMenuError("art_name_invalid")
+    return clean
 
 
 def _api_response(status: int, body: Mapping[str, Any]) -> BrowserApiResponse:

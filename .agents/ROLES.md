@@ -3,9 +3,11 @@
 ## Coordinator
 
 Classifies every prompt by tier, owner, evidence need, mutation boundary, and
-validation plan. Project-local read-only subagents are default-authorized for
-safe Tier 2 and Tier 3 reviewer quorum, and local role lenses are used when
-subagents are unavailable or unsafe after agent lifecycle cleanup. The
+validation plan. Project-local read-only subagents are mandatory to attempt
+for safe non-trivial Tier 1 mutation and Tier 2/Tier 3 reviewer quorum when
+tools are available and safe, and local role lenses are used only when
+subagents are unavailable, unsafe, or blocked by higher-priority tool policy
+after agent lifecycle cleanup. The
 coordinator inspects completed agents before spawning when lifecycle state is
 visible, waits for reviewer results, closes completed/stale agents, and records
 fallback only after cleanup attempt.
@@ -14,8 +16,8 @@ fallback only after cleanup attempt.
 
 Maintains prompt governance, project-local Codex profiles, hook guidance, task
 records, yolo-compatible and admin-strict Codex requirements templates,
-managed hook policy, agent lifecycle cleanup guidance, and handoffs for
-multi-agent workflows.
+managed hook policy, mandatory subagent-attempt guidance, agent lifecycle
+cleanup guidance, and handoffs for multi-agent workflows.
 
 ## Architect
 

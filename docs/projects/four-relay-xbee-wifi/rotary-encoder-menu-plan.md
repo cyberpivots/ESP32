@@ -32,8 +32,19 @@ Tier 3 gate. The `PF0530C` GPIO sweep contact tracer also has a same-session
   monitor captured no input transitions. `PF0530K` added GPIO any-edge
   interrupt queueing and flashed cleanly but captured no physical input events.
   `PF0530L` later accepted LCD visual/electrical behavior, `PF0530N` added
-  scrolling/XML behavior and COM6 render proof, and `PF0530O` is the current
-  real-menu calibration image with user visual/input acceptance still pending.
+  scrolling/XML behavior and COM6 render proof, `PF0530O` flashed the
+  real-menu calibration image but captured zero input events, `PF0530P`
+  flashed the debounce calibration image but captured zero input events, and
+  `PF0530Q` later flashed the quiet-window image but remained unstable by user
+  report. `PF0530R` is the prior written/verify-flashed detent image with
+  readiness proof but zero captured input events. `PF0530S` is the accepted
+  written/verify-flashed raw-liveness image with live input/menu/select proof,
+  `PF0530U` is a previous written/verify-flashed responsive-v7 image with
+  post-flash actuation proof still open, `PF0530V` is the accepted PCNT encoder
+  baseline with readiness proof passed and user-confirmed encoder/LCD menu
+  functionality accepted, and `PF0530W` is the current visual-art image pending
+  physical ART-page acceptance. Transcript-count characterization remains open
+  unless a future read-only proof captures PF0530V step/select/PCNT counts.
 
 ## Verified facts
 
@@ -342,11 +353,53 @@ First firmware proof:
 - PF0530N added XML-generated scroll-list/table behavior and was later
   written, verify-flashed, and read-only monitored on COM6 with LCD
   readiness/render proof but no accepted physical readability or input proof.
-  PF0530O is the current real-menu calibration image with COM6
-  write/verify/read-only monitor proof and zero captured input events. Source
-  IDs:
+  PF0530O is a prior flashed real-menu calibration image with COM6
+  write/verify/read-only monitor proof and zero captured input events. PF0530P
+  is a recorded flashed debounce calibration image with a 5 ms A/B candidate
+  hold, 40 ms step lockout, COM6 write/verify/read-only monitor proof, and zero
+  captured input events, but the user later clarified they did not rotate
+  during that monitor. PF0530Q is the previous written/verify-flashed
+  quiet-window image with a combined A/B pair filter, 10 ms quiet window,
+  60 ms step lockout, COM6 write/verify/read-only monitor proof, and a later
+  user report that it works but is not stable. PF0530R is a recorded
+  written/verify-flashed detent-gated calibration image with 8 ms A/B hold,
+  15 ms quiet window, two accepted transitions per step, 90 ms step lockout,
+  one emitted step only when accepted A/B returns to detent `3`, readiness/
+  render proof, and zero captured input events. PF0530S is the accepted
+  written/verify-flashed raw-liveness image with 3 ms A/B debounce, 0 ms quiet
+  time, one transition per step, 45 ms step lockout, no detent-return
+  requirement before step emission, `ENC_BASE`, `ENC_GPIO_CONFIG`,
+  one-second `ENC_LEVEL_HB`, raw/ISR/queue/poll counters, and live proof of
+  raw input/menu/select response. PF0530U is the last written and
+  verify-flashed responsive-v7 image, but post-flash monitors captured no
+  physical input events. PF0530V is the accepted written/verify-flashed PCNT
+  encoder baseline with `esp_driver_pcnt`, `cal=pcnt-v1`, `decoder=pcnt`,
+  `irq=pcnt`, and
+  `poll_decoder=0`; redacted COM6 identity, rollback, write-flash, separate
+  verify-flash, reset/read-only readiness monitor, idle read-only monitor, scan,
+  and cleanup proof passed. The user later stated `ENCODER FUNCTIONALITY
+  CONFIRMED AND APPROVED BY USER`, accepting PF0530V real LCD menu encoder
+  functionality. PF0530W is the later active written/verify-flashed visual-art
+  image that preserves the PF0530V PCNT baseline while ART-page physical visual
+  acceptance remains open. Transcript-count characterization remains open.
+  Source IDs:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`,
-  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01`.
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530P-DEBOUNCE-CAL-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530P-LIVE-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530Q-QUIET-CAL-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530Q-LIVE-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530R-DETENT-CAL-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530R-LIVE-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530S-RAW-LIVENESS-CAL-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530S-LIVE-2026-06-01`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530U-RESPONSIVE-V7-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530U-LIVE-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530V-PCNT-SOURCE-BUILD-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530V-LIVE-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530V-USER-ACCEPTANCE-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-VISUAL-ART-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-LIVE-2026-06-02`.
 - For the PF0530L attended interaction gate, confirm the serial monitor shows
   `PF0530L BBS_LCD_READY`, `BBS_INPUT_READY`, `LCD_INIT_OK addr=0x27`,
   `BBS_GLYPH_BANK`, `BBS_CURSOR`, `BBS_LCD_RENDER`, `BBS_MENU_AUTO`,

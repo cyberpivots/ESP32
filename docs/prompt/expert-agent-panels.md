@@ -23,14 +23,16 @@ gaps, perform source-backed research, choose a bounded next action, validate
 the result, and update durable records.
 
 This workspace now uses the same role-lens discipline for every prompt.
-Project-local read-only subagents are default-authorized for safe Tier 2 and
-Tier 3 reviewer quorum, while mutating workers still require explicit disjoint
+Project-local read-only subagents are mandatory to attempt for safe
+non-trivial Tier 1 mutation and Tier 2/Tier 3 reviewer quorum when tools are
+available and safe, while mutating workers still require explicit disjoint
 write scopes. Every non-trivial prompt is classified by tier, owner, evidence
 need, mutation boundary, and validation plan before mutation.
 Agent lifecycle cleanup is part of the panel contract: inspect completed agents
 before spawning, close completed/stale agents after capturing their output,
 close agents before fallback/final decisions, and record fallback only after
-cleanup attempt. This is an operational parent-agent duty; hooks can remind but
+cleanup attempt with the reason the mandatory subagent attempt could not be
+completed. This is an operational parent-agent duty; hooks can remind but
 cannot guarantee Codex runtime slot release.
 Managed-hook profiles from `.codex/admin/` can cover supported Codex hook
 events on this machine, while the project-local hooks remain advisory aids.

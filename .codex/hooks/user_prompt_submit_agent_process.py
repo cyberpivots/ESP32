@@ -10,10 +10,10 @@ import sys
 CHECKLIST = """ESP32 workspace default-multi-agentic-process:
 - Classify this prompt as Tier 0, Tier 1, Tier 2, or Tier 3 before non-trivial mutation.
 - Emit a routing packet with verified facts, assumptions, unknowns, selected tier, owner role, evidence need, mutation boundary, reviewer quorum, gate authority, validation plan, and trust boundary before Tier 1+ mutation.
-- Tier 2 work needs a read-only reviewer quorum before mutation; project-local read-only subagents are default-authorized when available and safe.
+- Tier 1+ non-trivial mutation and Tier 2/Tier 3 quorum require a mandatory attempt to use project-local read-only subagents when available and safe; record unavailable, unsafe, or higher-priority tool-policy fallback.
 - Tier 3 work needs same-session evidence, explicit gate authority, recovery path, and reviewer quorum before live bench, flashing, wiring, radio, serial-write, relay/load/mains, or release-gate mutation.
 - Weighted vote is the default: coordinator/architecture-risk weight 5, high specialists 3, medium specialists 2, helpers 1; pass requires required roles, at least 70 percent weighted approval, and no P1/P2 blockers.
-- agent lifecycle cleanup is required for Tier 2/Tier 3 quorum: inspect completed agents before spawning, use wait_agent to collect reviewers, close completed/stale agents with close_agent after preserving output, close agents before fallback/final, and record fallback only after cleanup attempt.
+- agent lifecycle cleanup is required for Tier 2/Tier 3 quorum: inspect completed agents before spawning, use wait_agent to collect reviewers, close completed/stale agents with close_agent after preserving output, close agents before fallback/final, and record fallback only after cleanup attempt plus the reason the mandatory subagent attempt could not be completed.
 - Missing evidence is not a final answer when safe evidence acquisition remains: continue automatable evidence steps, ask the user only for one irreducible physical fact, and block only at a hard safety or authority boundary.
 - Mutating workers require explicit disjoint write scopes; preserve dirty work and never revert user or other-agent changes.
 - End non-trivial work with a decision footer: continue, ask_user, blocked, ready_for_mutation, or handoff; next gate; owner; evidence; approved mutation boundary; validation; durable records; and authority limits.

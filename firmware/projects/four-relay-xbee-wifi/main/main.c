@@ -2,12 +2,12 @@
 
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
+#include "driver/pulse_cnt.h"
 #include "driver/uart.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_rom_sys.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "soc/gpio_num.h"
@@ -43,7 +43,7 @@
 #define FR_LCD_COLUMNS 20
 #define FR_LCD_ROWS 4
 #define FR_MENU_PAGE_COUNT FR_BBS_MENU_PAGE_COUNT
-#define FR_MENU_POLL_MS 10
+#define FR_MENU_POLL_MS 2
 #define FR_MENU_RENDER_POLL_MS 20
 #define FR_MENU_IDLE_REFRESH_MS 60000
 #define FR_MENU_AUTO_CYCLE_ENABLED 0U
@@ -51,10 +51,17 @@
 #define FR_MENU_ANIMATION_MS 2000
 #define FR_MENU_ACK_MS 1500
 #define FR_MENU_PAGE_STACK_DEPTH 4
-#define FR_DIAG_FIRMWARE_ID "PF0530O"
-#define FR_ENCODER_AB_STABLE_SAMPLES 2
-#define FR_ENCODER_SW_GUARD_MS 75
+#define FR_DIAG_FIRMWARE_ID "PF0530W"
+#define FR_ENCODER_AB_STABLE_SAMPLES 1
+#define FR_ENCODER_AB_DEBOUNCE_MS 1
+#define FR_ENCODER_AB_QUIET_MS 0
+#define FR_ENCODER_DETENT_AB 3U
+#define FR_ENCODER_SW_GUARD_MS 40
 #define FR_MENU_HEARTBEAT_MS 2000
+#define FR_ENCODER_RAW_HEARTBEAT_MS 1000
+#define FR_ENCODER_RAW_EVENT_LOG_ENABLED 0U
+#define FR_ENCODER_INTERRUPT_TELEMETRY 0U
+#define FR_ENCODER_DETENT_GATED 1U
 #define FR_MENU_LAST_EVENT_BYTES 20
 #define FR_LCD_DIAG_HEARTBEAT_MS 2000
 #define FR_MENU_INPUT_TASK_STACK_BYTES 4096
@@ -64,6 +71,8 @@
 #define FR_GLYPH_SLOTS 8
 #define FR_GLYPH_ROWS 8
 #define FR_GLYPH_BANK_SWAP_MIN_MS 250
+#define FR_BBS_ART_GLYPH_BANK_INDEX 6U
+#define FR_BBS_ART_BLANK_SLOT 0xffU
 
 #define FR_LCD_PCF_RS 0x01
 #define FR_LCD_PCF_RW 0x02
@@ -74,11 +83,19 @@
 #define FR_ENCODER_DT_GPIO GPIO_NUM_14
 #define FR_ENCODER_SW_GPIO GPIO_NUM_32
 #define FR_ENCODER_TRANSITIONS_PER_STEP 1
+#define FR_ENCODER_STEP_LOCKOUT_MS 25
+#define FR_ENCODER_PCNT_LOW_LIMIT -32767
+#define FR_ENCODER_PCNT_HIGH_LIMIT 32767
+#define FR_ENCODER_PCNT_RECENTER_LIMIT 30000
+#define FR_ENCODER_PCNT_GLITCH_NS 1000
+#define FR_ENCODER_PCNT_COUNTS_PER_STEP 4
+#define FR_ENCODER_PCNT_MAX_STEPS_PER_POLL 4
+#define FR_ENCODER_PCNT_DIR_SIGN 1
 #define FR_ENCODER_SW_DEBOUNCE_MS 30
 #define FR_ENCODER_LONG_PRESS_MS 650
 #define FR_GPIO_SWEEP_COUNT 3
-#define FR_ENCODER_EVENT_QUEUE_DEPTH 64
-#define FR_ENCODER_IRQ_DRAIN_LIMIT 32
+#define FR_ENCODER_EVENT_QUEUE_DEPTH 0
+#define FR_ENCODER_IRQ_DRAIN_LIMIT 0
 
 typedef struct {
     i2c_master_bus_handle_t bus;
@@ -164,13 +181,41 @@ typedef struct {
     uint8_t stable_sw;
     uint8_t candidate_a;
     uint8_t candidate_b;
+    uint8_t candidate_ab;
     uint8_t stable_samples_a;
     uint8_t stable_samples_b;
+    uint8_t stable_samples_ab;
+    uint32_t candidate_changed_ms_a;
+    uint32_t candidate_changed_ms_b;
+    uint32_t candidate_changed_ms_ab;
+    uint32_t last_raw_ab_ms;
+    uint32_t last_raw_ab_gap_ms;
+    uint32_t last_ab_held_ms;
+    uint32_t last_ab_quiet_ms;
     uint32_t raw_ab_transition_count;
     uint32_t raw_sw_transition_count;
+    uint32_t raw_ab_burst_count;
     uint32_t signal_change_count[FR_GPIO_SWEEP_COUNT];
     uint32_t cw_step_count;
     uint32_t ccw_step_count;
+    int32_t pcnt_last_count;
+    int32_t pcnt_last_delta;
+    int32_t pcnt_residual;
+    uint32_t pcnt_read_count;
+    uint32_t pcnt_read_error_count;
+    uint32_t pcnt_step_count;
+    uint32_t pcnt_capped_poll_count;
+    uint32_t pcnt_direction_flip_count;
+    uint32_t pcnt_guard_reset_count;
+    uint32_t pcnt_suppressed_delta_count;
+    uint32_t pcnt_recenter_count;
+    uint32_t ab_debounce_hold_count;
+    uint32_t ab_quiet_hold_count;
+    uint32_t accepted_stable_ab_transition_count;
+    uint32_t detent_return_count;
+    uint32_t detent_step_count;
+    uint32_t detent_partial_count;
+    uint32_t step_lockout_count;
     uint32_t invalid_transition_count;
     uint32_t suppressed_transition_count;
     bool switch_stable_pressed;
@@ -179,12 +224,17 @@ typedef struct {
     uint32_t switch_changed_ms;
     uint32_t switch_pressed_ms;
     uint32_t switch_guard_until_ms;
+    uint32_t last_step_ms;
     uint32_t last_auto_cycle_ms;
     uint32_t last_animation_ms;
     uint32_t button_press_count;
+    bool step_lockout_armed;
     fr_menu_ack_t ack;
     uint32_t ack_until_ms;
     uint32_t last_heartbeat_ms;
+    uint32_t last_level_heartbeat_ms;
+    uint32_t poll_count;
+    uint32_t queue_receive_count;
     bool display_dirty;
     char last_event[FR_MENU_LAST_EVENT_BYTES];
 } fr_menu_state_t;
@@ -213,13 +263,17 @@ typedef struct {
 } fr_menu_runtime_t;
 
 typedef struct {
-    uint8_t index;
-    uint8_t level;
-    TickType_t tick;
-} fr_encoder_irq_event_t;
+    int8_t steps;
+    int32_t residual;
+    bool capped;
+    bool direction_flipped;
+} fr_encoder_pcnt_step_result_t;
 
-static QueueHandle_t fr_encoder_event_queue;
 static volatile uint32_t fr_encoder_irq_drop_count;
+static volatile uint32_t fr_encoder_irq_count[FR_GPIO_SWEEP_COUNT];
+static pcnt_unit_handle_t fr_encoder_pcnt_unit;
+static pcnt_channel_handle_t fr_encoder_pcnt_chan_a;
+static pcnt_channel_handle_t fr_encoder_pcnt_chan_b;
 
 static const fr_bbs_menu_page_t *fr_bbs_menu_page(uint8_t page);
 static const fr_bbs_menu_item_t *fr_bbs_menu_selected_item(const fr_menu_state_t *menu);
@@ -319,87 +373,189 @@ static uint32_t fr_menu_now_ms(void)
     return (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
 }
 
+static uint32_t fr_encoder_ab_quiet_window_ms(void)
+{
+    return (uint32_t)FR_ENCODER_AB_QUIET_MS;
+}
+
 static uint8_t fr_pin_finder_read_level(size_t index)
 {
     return gpio_get_level(fr_gpio_sweep_pins[index].pin) ? 1U : 0U;
 }
 
-static void fr_encoder_isr_handler(void *arg)
+static uint64_t fr_encoder_pin_mask(void)
 {
-    size_t index = (size_t)(uintptr_t)arg;
-    fr_encoder_irq_event_t event = {
-        .index = (uint8_t)index,
-        .level = fr_pin_finder_read_level(index),
-        .tick = xTaskGetTickCountFromISR(),
-    };
-    BaseType_t higher_priority_task_woken = pdFALSE;
-
-    if (fr_encoder_event_queue == NULL ||
-        xQueueSendFromISR(
-            fr_encoder_event_queue,
-            &event,
-            &higher_priority_task_woken
-        ) != pdTRUE) {
-        fr_encoder_irq_drop_count += 1U;
-        return;
+    uint64_t mask = 0;
+    for (size_t index = 0; index < FR_GPIO_SWEEP_COUNT; ++index) {
+        mask |= 1ULL << fr_gpio_sweep_pins[index].pin;
     }
-    if (higher_priority_task_woken == pdTRUE) {
-        portYIELD_FROM_ISR();
-    }
+    return mask;
 }
 
-static bool fr_encoder_configure_input(gpio_num_t pin, bool enable_pullup)
+static bool fr_encoder_configure_input(size_t index)
 {
+    const fr_gpio_sweep_pin_t *pin = &fr_gpio_sweep_pins[index];
+    bool enable_pullup = fr_gpio_sweep_pins[index].enable_pullup;
     const gpio_config_t config = {
-        .pin_bit_mask = 1ULL << pin,
+        .pin_bit_mask = 1ULL << pin->pin,
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = enable_pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_ANYEDGE,
+        .intr_type = FR_ENCODER_INTERRUPT_TELEMETRY != 0U
+            ? GPIO_INTR_ANYEDGE
+            : GPIO_INTR_DISABLE,
     };
-    return gpio_config(&config) == ESP_OK;
+    esp_err_t result = gpio_config(&config);
+    printf(
+        "ENC_GPIO_CONFIG pin=%d label=%s mode=input pullup=%s "
+        "pulldown=off intr=%s result=%s err=%s\r\n",
+        (int)pin->pin,
+        pin->label,
+        enable_pullup ? "on" : "off",
+        FR_ENCODER_INTERRUPT_TELEMETRY != 0U ? "anyedge" : "poll",
+        result == ESP_OK ? "ok" : "fail",
+        esp_err_to_name(result)
+    );
+    return result == ESP_OK;
+}
+
+static bool fr_encoder_log_pcnt_error(const char *stage, esp_err_t result)
+{
+    printf(
+        "%s ENC_PCNT_READY result=fail stage=%s err=%s\r\n",
+        FR_DIAG_FIRMWARE_ID,
+        stage,
+        esp_err_to_name(result)
+    );
+    return false;
+}
+
+static bool fr_encoder_init_pcnt(void)
+{
+    fr_encoder_pcnt_unit = NULL;
+    fr_encoder_pcnt_chan_a = NULL;
+    fr_encoder_pcnt_chan_b = NULL;
+
+    const pcnt_unit_config_t unit_config = {
+        .low_limit = FR_ENCODER_PCNT_LOW_LIMIT,
+        .high_limit = FR_ENCODER_PCNT_HIGH_LIMIT,
+    };
+    esp_err_t result = pcnt_new_unit(&unit_config, &fr_encoder_pcnt_unit);
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("new_unit", result);
+    }
+
+    const pcnt_glitch_filter_config_t filter_config = {
+        .max_glitch_ns = FR_ENCODER_PCNT_GLITCH_NS,
+    };
+    result = pcnt_unit_set_glitch_filter(fr_encoder_pcnt_unit, &filter_config);
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("glitch_filter", result);
+    }
+
+    const pcnt_chan_config_t chan_a_config = {
+        .edge_gpio_num = FR_ENCODER_CLK_GPIO,
+        .level_gpio_num = FR_ENCODER_DT_GPIO,
+    };
+    result = pcnt_new_channel(fr_encoder_pcnt_unit, &chan_a_config, &fr_encoder_pcnt_chan_a);
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("channel_clk", result);
+    }
+
+    const pcnt_chan_config_t chan_b_config = {
+        .edge_gpio_num = FR_ENCODER_DT_GPIO,
+        .level_gpio_num = FR_ENCODER_CLK_GPIO,
+    };
+    result = pcnt_new_channel(fr_encoder_pcnt_unit, &chan_b_config, &fr_encoder_pcnt_chan_b);
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("channel_dt", result);
+    }
+
+    result = pcnt_channel_set_edge_action(
+        fr_encoder_pcnt_chan_a,
+        PCNT_CHANNEL_EDGE_ACTION_DECREASE,
+        PCNT_CHANNEL_EDGE_ACTION_INCREASE
+    );
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("edge_clk", result);
+    }
+    result = pcnt_channel_set_level_action(
+        fr_encoder_pcnt_chan_a,
+        PCNT_CHANNEL_LEVEL_ACTION_KEEP,
+        PCNT_CHANNEL_LEVEL_ACTION_INVERSE
+    );
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("level_clk", result);
+    }
+    result = pcnt_channel_set_edge_action(
+        fr_encoder_pcnt_chan_b,
+        PCNT_CHANNEL_EDGE_ACTION_INCREASE,
+        PCNT_CHANNEL_EDGE_ACTION_DECREASE
+    );
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("edge_dt", result);
+    }
+    result = pcnt_channel_set_level_action(
+        fr_encoder_pcnt_chan_b,
+        PCNT_CHANNEL_LEVEL_ACTION_KEEP,
+        PCNT_CHANNEL_LEVEL_ACTION_INVERSE
+    );
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("level_dt", result);
+    }
+
+    result = pcnt_unit_enable(fr_encoder_pcnt_unit);
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("enable", result);
+    }
+    result = pcnt_unit_clear_count(fr_encoder_pcnt_unit);
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("clear", result);
+    }
+    result = pcnt_unit_start(fr_encoder_pcnt_unit);
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("start", result);
+    }
+
+    int pulse_count = 0;
+    result = pcnt_unit_get_count(fr_encoder_pcnt_unit, &pulse_count);
+    if (result != ESP_OK) {
+        return fr_encoder_log_pcnt_error("read", result);
+    }
+    printf(
+        "%s ENC_PCNT_READY result=ok clk=%d dt=%d sw=%d "
+        "low=%d high=%d glitch_ns=%u counts_per_step=%u max_steps=%u "
+        "dir=%d sw_decoder=poll count=%d\r\n",
+        FR_DIAG_FIRMWARE_ID,
+        (int)FR_ENCODER_CLK_GPIO,
+        (int)FR_ENCODER_DT_GPIO,
+        (int)FR_ENCODER_SW_GPIO,
+        (int)FR_ENCODER_PCNT_LOW_LIMIT,
+        (int)FR_ENCODER_PCNT_HIGH_LIMIT,
+        (unsigned int)FR_ENCODER_PCNT_GLITCH_NS,
+        (unsigned int)FR_ENCODER_PCNT_COUNTS_PER_STEP,
+        (unsigned int)FR_ENCODER_PCNT_MAX_STEPS_PER_POLL,
+        (int)FR_ENCODER_PCNT_DIR_SIGN,
+        pulse_count
+    );
+    return true;
 }
 
 static bool fr_encoder_init(void)
 {
-    if (fr_encoder_event_queue == NULL) {
-        fr_encoder_event_queue = xQueueCreate(
-            FR_ENCODER_EVENT_QUEUE_DEPTH,
-            sizeof(fr_encoder_irq_event_t)
-        );
-        if (fr_encoder_event_queue == NULL) {
-            return false;
-        }
-    } else {
-        xQueueReset(fr_encoder_event_queue);
-    }
     fr_encoder_irq_drop_count = 0;
+    for (size_t index = 0; index < FR_GPIO_SWEEP_COUNT; ++index) {
+        fr_encoder_irq_count[index] = 0;
+    }
 
     for (size_t index = 0; index < FR_GPIO_SWEEP_COUNT; ++index) {
-        if (!fr_encoder_configure_input(
-                fr_gpio_sweep_pins[index].pin,
-                fr_gpio_sweep_pins[index].enable_pullup
-            )) {
+        if (!fr_encoder_configure_input(index)) {
             return false;
         }
     }
+    gpio_dump_io_configuration(stdout, fr_encoder_pin_mask());
 
-    esp_err_t isr_service_result = gpio_install_isr_service(0);
-    if (isr_service_result != ESP_OK &&
-        isr_service_result != ESP_ERR_INVALID_STATE) {
-        return false;
-    }
-    for (size_t index = 0; index < FR_GPIO_SWEEP_COUNT; ++index) {
-        if (gpio_isr_handler_add(
-                fr_gpio_sweep_pins[index].pin,
-                fr_encoder_isr_handler,
-                (void *)(uintptr_t)index
-            ) != ESP_OK) {
-            return false;
-        }
-    }
-
-    return true;
+    return fr_encoder_init_pcnt();
 }
 
 static uint8_t fr_menu_stable_ab(const fr_menu_state_t *menu)
@@ -410,6 +566,16 @@ static uint8_t fr_menu_stable_ab(const fr_menu_state_t *menu)
 static uint8_t fr_menu_raw_ab(const fr_menu_state_t *menu)
 {
     return (uint8_t)((menu->raw_a << 1) | menu->raw_b);
+}
+
+static uint8_t fr_menu_ab_a(uint8_t ab)
+{
+    return (uint8_t)((ab >> 1) & 0x01U);
+}
+
+static uint8_t fr_menu_ab_b(uint8_t ab)
+{
+    return (uint8_t)(ab & 0x01U);
 }
 
 static const char *fr_menu_mode_name(fr_menu_mode_t mode)
@@ -463,14 +629,56 @@ static void fr_menu_print_raw_event(
     uint32_t now_ms
 )
 {
+    if (FR_ENCODER_RAW_EVENT_LOG_ENABLED == 0U) {
+        return;
+    }
     printf(
-        "ENC_RAW kind=%s levels=C%uD%uS%u raw_ab=%lu raw_sw=%lu t=%lu\r\n",
+        "ENC_RAW kind=%s levels=C%uD%uS%u raw_ab=%lu raw_sw=%lu "
+        "gap_ms=%lu burst=%lu t=%lu\r\n",
         kind,
         (unsigned int)menu->raw_a,
         (unsigned int)menu->raw_b,
         (unsigned int)menu->raw_sw,
         (unsigned long)menu->raw_ab_transition_count,
         (unsigned long)menu->raw_sw_transition_count,
+        (unsigned long)menu->last_raw_ab_gap_ms,
+        (unsigned long)menu->raw_ab_burst_count,
+        (unsigned long)now_ms
+    );
+}
+
+static void fr_menu_print_filter(
+    const fr_menu_state_t *menu,
+    const char *reason,
+    uint32_t now_ms,
+    uint8_t previous_ab,
+    uint8_t current_ab
+)
+{
+    printf(
+        "ENC_FILTER reason=%s prev=%u curr=%u levels=C%uD%uS%u "
+        "ab_hold=%lu ab_quiet=%lu stable_ab=%lu detent=%lu detent_step=%lu partial=%lu "
+        "step_lockout=%lu invalid=%lu suppressed=%lu queue_drop=%lu "
+        "held_ms=%lu quiet_ms=%lu accum=%d t=%lu\r\n",
+        reason,
+        (unsigned int)previous_ab,
+        (unsigned int)current_ab,
+        (unsigned int)menu->stable_a,
+        (unsigned int)menu->stable_b,
+        (unsigned int)menu->stable_sw,
+        (unsigned long)menu->ab_debounce_hold_count,
+        (unsigned long)menu->ab_quiet_hold_count,
+        (unsigned long)menu->accepted_stable_ab_transition_count,
+        (unsigned long)menu->detent_return_count,
+        (unsigned long)menu->detent_step_count,
+        (unsigned long)menu->detent_partial_count,
+        (unsigned long)menu->step_lockout_count,
+        (unsigned long)menu->invalid_transition_count,
+        (unsigned long)menu->suppressed_transition_count,
+        (unsigned long)fr_encoder_irq_drop_count,
+        (unsigned long)menu->last_ab_held_ms,
+        (unsigned long)menu->last_ab_quiet_ms,
+        (int)menu->transition_accumulator,
         (unsigned long)now_ms
     );
 }
@@ -479,8 +687,15 @@ static void fr_menu_print_heartbeat(const fr_menu_state_t *menu, uint32_t now_ms
 {
     printf(
         "BBS_MENU_HB page=%s index=%u pos=%ld levels=C%uD%uS%u steps=%lu/%lu "
-        "buttons=%lu invalid=%lu suppressed=%lu irq_drop=%lu t=%lu "
-        "mode=%s row=%u item=%u top=%u value=%u auto_cycle=%u\r\n",
+        "buttons=%lu ab_hold=%lu ab_quiet=%lu stable_ab=%lu detent=%lu detent_step=%lu partial=%lu "
+        "step_lockout=%lu invalid=%lu suppressed=%lu raw_burst=%lu gap_ms=%lu "
+        "accum=%d irq_drop=%lu queue_drop=%lu "
+        "pcnt_count=%ld pcnt_delta=%ld pcnt_resid=%ld pcnt_steps=%lu pcnt_cap=%lu "
+        "pcnt_flip=%lu pcnt_guard=%lu pcnt_suppress=%lu pcnt_read=%lu pcnt_err=%lu "
+        "pcnt_recenter=%lu decoder=pcnt sw=poll t=%lu "
+        "mode=%s row=%u item=%u top=%u value=%u auto_cycle=%u "
+        "raw_levels=C%uD%uS%u raw_ab=%u candidate=C%uD%u candidate_ab=%u "
+        "raw_count=%lu/%lu isr=C%luD%luS%lu queue_rx=%lu poll=%lu\r\n",
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
         (long)menu->position,
@@ -490,16 +705,101 @@ static void fr_menu_print_heartbeat(const fr_menu_state_t *menu, uint32_t now_ms
         (unsigned long)menu->cw_step_count,
         (unsigned long)menu->ccw_step_count,
         (unsigned long)menu->button_press_count,
+        (unsigned long)menu->ab_debounce_hold_count,
+        (unsigned long)menu->ab_quiet_hold_count,
+        (unsigned long)menu->accepted_stable_ab_transition_count,
+        (unsigned long)menu->detent_return_count,
+        (unsigned long)menu->detent_step_count,
+        (unsigned long)menu->detent_partial_count,
+        (unsigned long)menu->step_lockout_count,
         (unsigned long)menu->invalid_transition_count,
         (unsigned long)menu->suppressed_transition_count,
+        (unsigned long)menu->raw_ab_burst_count,
+        (unsigned long)menu->last_raw_ab_gap_ms,
+        (int)menu->transition_accumulator,
         (unsigned long)fr_encoder_irq_drop_count,
+        (unsigned long)fr_encoder_irq_drop_count,
+        (long)menu->pcnt_last_count,
+        (long)menu->pcnt_last_delta,
+        (long)menu->pcnt_residual,
+        (unsigned long)menu->pcnt_step_count,
+        (unsigned long)menu->pcnt_capped_poll_count,
+        (unsigned long)menu->pcnt_direction_flip_count,
+        (unsigned long)menu->pcnt_guard_reset_count,
+        (unsigned long)menu->pcnt_suppressed_delta_count,
+        (unsigned long)menu->pcnt_read_count,
+        (unsigned long)menu->pcnt_read_error_count,
+        (unsigned long)menu->pcnt_recenter_count,
         (unsigned long)now_ms,
         fr_menu_mode_name(menu->mode),
         (unsigned int)menu->selected_row,
         (unsigned int)menu->selected_item,
         (unsigned int)menu->viewport_top_line,
         (unsigned int)menu->edit_value,
-        menu->auto_cycle_enabled ? 1U : 0U
+        menu->auto_cycle_enabled ? 1U : 0U,
+        (unsigned int)menu->raw_a,
+        (unsigned int)menu->raw_b,
+        (unsigned int)menu->raw_sw,
+        (unsigned int)fr_menu_raw_ab(menu),
+        (unsigned int)fr_menu_ab_a(menu->candidate_ab),
+        (unsigned int)fr_menu_ab_b(menu->candidate_ab),
+        (unsigned int)menu->candidate_ab,
+        (unsigned long)menu->raw_ab_transition_count,
+        (unsigned long)menu->raw_sw_transition_count,
+        (unsigned long)fr_encoder_irq_count[0],
+        (unsigned long)fr_encoder_irq_count[1],
+        (unsigned long)fr_encoder_irq_count[2],
+        (unsigned long)menu->queue_receive_count,
+        (unsigned long)menu->poll_count
+    );
+}
+
+static void fr_menu_print_level_heartbeat(const fr_menu_state_t *menu, uint32_t now_ms)
+{
+    printf(
+        "ENC_LEVEL_HB levels=C%uD%uS%u raw_ab=%u stable=C%uD%u stable_ab=%u "
+        "candidate=C%uD%u candidate_ab=%u raw_count=%lu/%lu "
+        "isr=C%luD%luS%lu queue_rx=%lu queue_drop=%lu poll=%lu t=%lu\r\n",
+        (unsigned int)menu->raw_a,
+        (unsigned int)menu->raw_b,
+        (unsigned int)menu->raw_sw,
+        (unsigned int)fr_menu_raw_ab(menu),
+        (unsigned int)menu->stable_a,
+        (unsigned int)menu->stable_b,
+        (unsigned int)fr_menu_stable_ab(menu),
+        (unsigned int)fr_menu_ab_a(menu->candidate_ab),
+        (unsigned int)fr_menu_ab_b(menu->candidate_ab),
+        (unsigned int)menu->candidate_ab,
+        (unsigned long)menu->raw_ab_transition_count,
+        (unsigned long)menu->raw_sw_transition_count,
+        (unsigned long)fr_encoder_irq_count[0],
+        (unsigned long)fr_encoder_irq_count[1],
+        (unsigned long)fr_encoder_irq_count[2],
+        (unsigned long)menu->queue_receive_count,
+        (unsigned long)fr_encoder_irq_drop_count,
+        (unsigned long)menu->poll_count,
+        (unsigned long)now_ms
+    );
+    printf(
+        "ENC_PCNT_HB count=%ld delta=%ld residual=%ld steps=%lu cap=%lu "
+        "flip=%lu guard_reset=%lu suppressed=%lu read=%lu err=%lu "
+        "recenter=%lu counts_per_step=%u max_steps=%u glitch_ns=%u dir=%d t=%lu\r\n",
+        (long)menu->pcnt_last_count,
+        (long)menu->pcnt_last_delta,
+        (long)menu->pcnt_residual,
+        (unsigned long)menu->pcnt_step_count,
+        (unsigned long)menu->pcnt_capped_poll_count,
+        (unsigned long)menu->pcnt_direction_flip_count,
+        (unsigned long)menu->pcnt_guard_reset_count,
+        (unsigned long)menu->pcnt_suppressed_delta_count,
+        (unsigned long)menu->pcnt_read_count,
+        (unsigned long)menu->pcnt_read_error_count,
+        (unsigned long)menu->pcnt_recenter_count,
+        (unsigned int)FR_ENCODER_PCNT_COUNTS_PER_STEP,
+        (unsigned int)FR_ENCODER_PCNT_MAX_STEPS_PER_POLL,
+        (unsigned int)FR_ENCODER_PCNT_GLITCH_NS,
+        (int)FR_ENCODER_PCNT_DIR_SIGN,
+        (unsigned long)now_ms
     );
 }
 
@@ -571,6 +871,187 @@ static void fr_menu_step(fr_menu_state_t *menu, int8_t direction, uint32_t now_m
     );
 }
 
+static fr_encoder_pcnt_step_result_t fr_encoder_pcnt_accumulate_steps(
+    int32_t residual,
+    int32_t delta
+)
+{
+    fr_encoder_pcnt_step_result_t result = {
+        .steps = 0,
+        .residual = residual,
+        .capped = false,
+        .direction_flipped = false,
+    };
+    if (delta == 0) {
+        return result;
+    }
+
+    int32_t combined = residual + delta;
+    if (residual != 0 &&
+        ((residual > 0 && delta < 0) || (residual < 0 && delta > 0))) {
+        combined = delta;
+        result.direction_flipped = true;
+    }
+
+    int32_t steps = combined / FR_ENCODER_PCNT_COUNTS_PER_STEP;
+    result.residual = combined % FR_ENCODER_PCNT_COUNTS_PER_STEP;
+    if (steps > (int32_t)FR_ENCODER_PCNT_MAX_STEPS_PER_POLL) {
+        steps = (int32_t)FR_ENCODER_PCNT_MAX_STEPS_PER_POLL;
+        result.residual = 0;
+        result.capped = true;
+    } else if (steps < -(int32_t)FR_ENCODER_PCNT_MAX_STEPS_PER_POLL) {
+        steps = -(int32_t)FR_ENCODER_PCNT_MAX_STEPS_PER_POLL;
+        result.residual = 0;
+        result.capped = true;
+    }
+    result.steps = (int8_t)steps;
+    return result;
+}
+
+static void fr_menu_resync_pcnt(fr_menu_state_t *menu, uint32_t now_ms, const char *reason)
+{
+    int pulse_count = 0;
+    esp_err_t result = pcnt_unit_get_count(fr_encoder_pcnt_unit, &pulse_count);
+    menu->pcnt_read_count += 1U;
+    if (result != ESP_OK) {
+        menu->pcnt_read_error_count += 1U;
+        printf(
+            "ENC_PCNT_READ_FAIL reason=%s err=%s errors=%lu t=%lu\r\n",
+            reason,
+            esp_err_to_name(result),
+            (unsigned long)menu->pcnt_read_error_count,
+            (unsigned long)now_ms
+        );
+        return;
+    }
+    menu->pcnt_last_count = pulse_count;
+    menu->pcnt_last_delta = 0;
+    menu->pcnt_residual = 0;
+    menu->pcnt_guard_reset_count += 1U;
+}
+
+static void fr_menu_process_pcnt(fr_menu_state_t *menu, uint32_t now_ms)
+{
+    int pulse_count = 0;
+    esp_err_t result = pcnt_unit_get_count(fr_encoder_pcnt_unit, &pulse_count);
+    menu->pcnt_read_count += 1U;
+    if (result != ESP_OK) {
+        menu->pcnt_read_error_count += 1U;
+        printf(
+            "ENC_PCNT_READ_FAIL reason=poll err=%s errors=%lu t=%lu\r\n",
+            esp_err_to_name(result),
+            (unsigned long)menu->pcnt_read_error_count,
+            (unsigned long)now_ms
+        );
+        return;
+    }
+
+    int32_t raw_delta = (int32_t)pulse_count - menu->pcnt_last_count;
+    menu->pcnt_last_count = pulse_count;
+    int32_t delta = raw_delta * (int32_t)FR_ENCODER_PCNT_DIR_SIGN;
+    menu->pcnt_last_delta = delta;
+    if (delta == 0) {
+        return;
+    }
+
+    if (now_ms < menu->switch_guard_until_ms) {
+        menu->suppressed_transition_count += 1U;
+        menu->pcnt_suppressed_delta_count += 1U;
+        menu->pcnt_residual = 0;
+        fr_menu_set_last_event(menu, "PCNT GUARD");
+        fr_menu_mark_display_dirty(menu);
+        printf(
+            "ENC_PCNT_SUPPRESS delta=%ld count=%ld suppressed=%lu t=%lu\r\n",
+            (long)delta,
+            (long)pulse_count,
+            (unsigned long)menu->pcnt_suppressed_delta_count,
+            (unsigned long)now_ms
+        );
+        return;
+    }
+
+    fr_encoder_pcnt_step_result_t step_result =
+        fr_encoder_pcnt_accumulate_steps(menu->pcnt_residual, delta);
+    menu->pcnt_residual = step_result.residual;
+    if (step_result.direction_flipped) {
+        menu->pcnt_direction_flip_count += 1U;
+    }
+    if (step_result.capped) {
+        menu->pcnt_capped_poll_count += 1U;
+        fr_menu_set_last_event(menu, "PCNT CAP");
+        fr_menu_mark_display_dirty(menu);
+        printf(
+            "ENC_PCNT_CAP delta=%ld residual=%ld caps=%lu t=%lu\r\n",
+            (long)delta,
+            (long)menu->pcnt_residual,
+            (unsigned long)menu->pcnt_capped_poll_count,
+            (unsigned long)now_ms
+        );
+    }
+
+    int8_t steps = step_result.steps;
+    while (steps > 0) {
+        menu->pcnt_step_count += 1U;
+        menu->detent_step_count += 1U;
+        fr_menu_step(menu, 1, now_ms);
+        steps -= 1;
+    }
+    while (steps < 0) {
+        menu->pcnt_step_count += 1U;
+        menu->detent_step_count += 1U;
+        fr_menu_step(menu, -1, now_ms);
+        steps += 1;
+    }
+
+    if (pulse_count >= FR_ENCODER_PCNT_RECENTER_LIMIT ||
+        pulse_count <= -FR_ENCODER_PCNT_RECENTER_LIMIT) {
+        result = pcnt_unit_clear_count(fr_encoder_pcnt_unit);
+        if (result == ESP_OK) {
+            menu->pcnt_last_count = 0;
+            menu->pcnt_recenter_count += 1U;
+            printf(
+                "ENC_PCNT_RECENTER count=%ld recenter=%lu t=%lu\r\n",
+                (long)pulse_count,
+                (unsigned long)menu->pcnt_recenter_count,
+                (unsigned long)now_ms
+            );
+        } else {
+            menu->pcnt_read_error_count += 1U;
+            printf(
+                "ENC_PCNT_READ_FAIL reason=recenter err=%s errors=%lu t=%lu\r\n",
+                esp_err_to_name(result),
+                (unsigned long)menu->pcnt_read_error_count,
+                (unsigned long)now_ms
+            );
+        }
+    }
+}
+
+static bool fr_menu_emit_rotation_step(
+    fr_menu_state_t *menu,
+    int8_t direction,
+    uint32_t now_ms,
+    uint8_t previous_ab,
+    uint8_t current_ab
+)
+{
+    if (menu->step_lockout_armed &&
+        (now_ms - menu->last_step_ms) < FR_ENCODER_STEP_LOCKOUT_MS) {
+        menu->step_lockout_count += 1U;
+        fr_menu_set_last_event(menu, "STEP LOCK");
+        fr_menu_mark_display_dirty(menu);
+        fr_menu_print_filter(menu, "step_lockout", now_ms, previous_ab, current_ab);
+        menu->transition_accumulator = 0;
+        return false;
+    }
+    menu->last_step_ms = now_ms;
+    menu->step_lockout_armed = true;
+    menu->detent_step_count += 1U;
+    fr_menu_step(menu, direction, now_ms);
+    menu->transition_accumulator = 0;
+    return true;
+}
+
 static void fr_menu_handle_rotation(fr_menu_state_t *menu, uint32_t now_ms)
 {
     static const int8_t transition_table[16] = {
@@ -585,8 +1066,10 @@ static void fr_menu_handle_rotation(fr_menu_state_t *menu, uint32_t now_ms)
     int8_t delta = transition_table[transition & 0x0fU];
 
     if (now_ms < menu->switch_guard_until_ms) {
+        menu->suppressed_transition_count += 1U;
         menu->previous_ab = current_ab;
         menu->transition_accumulator = 0;
+        fr_menu_print_filter(menu, "sw_guard", now_ms, (uint8_t)(transition >> 2), current_ab);
         return;
     }
 
@@ -603,6 +1086,7 @@ static void fr_menu_handle_rotation(fr_menu_state_t *menu, uint32_t now_ms)
             (unsigned long)menu->invalid_transition_count,
             (unsigned long)now_ms
         );
+        fr_menu_print_filter(menu, "invalid", now_ms, (uint8_t)(transition >> 2), current_ab);
         return;
     }
     menu->previous_ab = current_ab;
@@ -611,41 +1095,103 @@ static void fr_menu_handle_rotation(fr_menu_state_t *menu, uint32_t now_ms)
     }
 
     menu->transition_accumulator += delta;
-    if (menu->transition_accumulator >= FR_ENCODER_TRANSITIONS_PER_STEP) {
-        menu->transition_accumulator = 0;
-        fr_menu_step(menu, 1, now_ms);
-    } else if (menu->transition_accumulator <= -FR_ENCODER_TRANSITIONS_PER_STEP) {
-        menu->transition_accumulator = 0;
-        fr_menu_step(menu, -1, now_ms);
+    if (current_ab == FR_ENCODER_DETENT_AB) {
+        menu->detent_return_count += 1U;
+        if (menu->transition_accumulator >= FR_ENCODER_TRANSITIONS_PER_STEP) {
+            (void)fr_menu_emit_rotation_step(
+                menu,
+                1,
+                now_ms,
+                (uint8_t)(transition >> 2),
+                current_ab
+            );
+        } else if (menu->transition_accumulator <= -FR_ENCODER_TRANSITIONS_PER_STEP) {
+            (void)fr_menu_emit_rotation_step(
+                menu,
+                -1,
+                now_ms,
+                (uint8_t)(transition >> 2),
+                current_ab
+            );
+        } else if (menu->transition_accumulator != 0) {
+            menu->detent_partial_count += 1U;
+            fr_menu_set_last_event(menu, "DETENT PART");
+            fr_menu_mark_display_dirty(menu);
+            fr_menu_print_filter(
+                menu,
+                "detent_partial",
+                now_ms,
+                (uint8_t)(transition >> 2),
+                current_ab
+            );
+        }
+        return;
+    }
+
+    if (FR_ENCODER_DETENT_GATED == 0U &&
+        menu->transition_accumulator >= FR_ENCODER_TRANSITIONS_PER_STEP) {
+        (void)fr_menu_emit_rotation_step(
+            menu,
+            1,
+            now_ms,
+            (uint8_t)(transition >> 2),
+            current_ab
+        );
+    } else if (FR_ENCODER_DETENT_GATED == 0U &&
+               menu->transition_accumulator <= -FR_ENCODER_TRANSITIONS_PER_STEP) {
+        (void)fr_menu_emit_rotation_step(
+            menu,
+            -1,
+            now_ms,
+            (uint8_t)(transition >> 2),
+            current_ab
+        );
     }
 }
 
-static bool fr_menu_sample_ab_channel(
-    fr_menu_state_t *menu,
-    size_t index,
-    uint8_t current_level,
-    uint8_t *candidate_level,
-    uint8_t *stable_samples,
-    uint8_t *stable_level,
-    uint32_t now_ms
-)
+static bool fr_menu_sample_ab_pair(fr_menu_state_t *menu, uint8_t current_ab, uint32_t now_ms)
 {
-    if (current_level == *candidate_level) {
-        if (*stable_samples < UINT8_MAX) {
-            *stable_samples += 1U;
+    if (current_ab == menu->candidate_ab) {
+        if (menu->stable_samples_ab < UINT8_MAX) {
+            menu->stable_samples_ab += 1U;
         }
     } else {
-        *candidate_level = current_level;
-        *stable_samples = 1U;
+        menu->candidate_ab = current_ab;
+        menu->stable_samples_ab = 1U;
+        menu->candidate_changed_ms_ab = now_ms;
     }
 
-    if (*stable_samples < FR_ENCODER_AB_STABLE_SAMPLES ||
-        *candidate_level == *stable_level) {
+    uint8_t stable_ab = fr_menu_stable_ab(menu);
+    if (menu->candidate_ab == stable_ab) {
         return false;
     }
 
-    *stable_level = *candidate_level;
-    fr_menu_print_enc_event(menu, now_ms, index, *stable_level);
+    menu->last_ab_held_ms = now_ms - menu->candidate_changed_ms_ab;
+    menu->last_ab_quiet_ms = now_ms - menu->last_raw_ab_ms;
+    if (menu->stable_samples_ab < FR_ENCODER_AB_STABLE_SAMPLES ||
+        menu->last_ab_held_ms < FR_ENCODER_AB_DEBOUNCE_MS) {
+        menu->ab_debounce_hold_count += 1U;
+        fr_menu_print_filter(menu, "ab_debounce", now_ms, stable_ab, menu->candidate_ab);
+        return false;
+    }
+    uint32_t quiet_window_ms = fr_encoder_ab_quiet_window_ms();
+    if (quiet_window_ms > 0U && menu->last_ab_quiet_ms < quiet_window_ms) {
+        menu->ab_quiet_hold_count += 1U;
+        fr_menu_print_filter(menu, "ab_quiet", now_ms, stable_ab, menu->candidate_ab);
+        return false;
+    }
+
+    uint8_t next_a = fr_menu_ab_a(menu->candidate_ab);
+    uint8_t next_b = fr_menu_ab_b(menu->candidate_ab);
+    if (next_a != menu->stable_a) {
+        menu->stable_a = next_a;
+        fr_menu_print_enc_event(menu, now_ms, 0, menu->stable_a);
+    }
+    if (next_b != menu->stable_b) {
+        menu->stable_b = next_b;
+        fr_menu_print_enc_event(menu, now_ms, 1, menu->stable_b);
+    }
+    menu->accepted_stable_ab_transition_count += 1U;
     return true;
 }
 
@@ -657,6 +1203,7 @@ static void fr_menu_handle_switch_stable(fr_menu_state_t *menu, uint32_t now_ms)
     menu->switch_stable_pressed = pressed;
     menu->transition_accumulator = 0;
     menu->previous_ab = fr_menu_stable_ab(menu);
+    fr_menu_resync_pcnt(menu, now_ms, pressed ? "sw_down" : "sw_up");
 
     if (pressed) {
         menu->switch_pressed_ms = now_ms;
@@ -731,11 +1278,12 @@ static void fr_menu_handle_switch_stable(fr_menu_state_t *menu, uint32_t now_ms)
         menu->ack_until_ms = now_ms + FR_MENU_ACK_MS;
         fr_menu_mark_display_dirty(menu);
         printf(
-            "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=short t=%lu "
+            "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=short held_ms=%lu t=%lu "
             "mode=%s row=%u item=%u top=%u value=%u\r\n",
             (unsigned long)menu->button_press_count,
             fr_bbs_page_name(menu->page),
             (unsigned int)menu->page,
+            (unsigned long)(now_ms - menu->switch_pressed_ms),
             (unsigned long)now_ms,
             fr_menu_mode_name(menu->mode),
             (unsigned int)menu->selected_row,
@@ -783,11 +1331,12 @@ static void fr_menu_handle_long_press(fr_menu_state_t *menu, uint32_t now_ms)
     menu->long_press_handled = true;
     fr_menu_mark_display_dirty(menu);
     printf(
-        "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=long t=%lu "
+        "BBS_MENU_SELECT buttons=%lu page=%s index=%u kind=long held_ms=%lu t=%lu "
         "mode=%s row=%u item=%u top=%u value=%u\r\n",
         (unsigned long)menu->button_press_count,
         fr_bbs_page_name(menu->page),
         (unsigned int)menu->page,
+        (unsigned long)(now_ms - menu->switch_pressed_ms),
         (unsigned long)now_ms,
         fr_menu_mode_name(menu->mode),
         (unsigned int)menu->selected_row,
@@ -812,6 +1361,16 @@ static void fr_menu_process_levels(
     bool raw_sw_changed = current_sw != previous_raw_sw;
 
     if (raw_ab_changed) {
+        if (menu->raw_ab_transition_count > 0U) {
+            menu->last_raw_ab_gap_ms = now_ms - menu->last_raw_ab_ms;
+            uint32_t quiet_window_ms = fr_encoder_ab_quiet_window_ms();
+            if (quiet_window_ms > 0U && menu->last_raw_ab_gap_ms < quiet_window_ms) {
+                menu->raw_ab_burst_count += 1U;
+            }
+        } else {
+            menu->last_raw_ab_gap_ms = 0U;
+        }
+        menu->last_raw_ab_ms = now_ms;
         menu->raw_ab_transition_count += 1U;
         if (now_ms < menu->switch_guard_until_ms) {
             menu->suppressed_transition_count += 1U;
@@ -825,6 +1384,7 @@ static void fr_menu_process_levels(
                 (unsigned long)menu->suppressed_transition_count,
                 (unsigned long)now_ms
             );
+            fr_menu_print_filter(menu, "sw_guard", now_ms, previous_raw_ab, current_raw_ab);
         }
     }
     if (raw_sw_changed) {
@@ -837,32 +1397,13 @@ static void fr_menu_process_levels(
     menu->raw_sw = current_sw;
     if (raw_ab_changed) {
         fr_menu_print_raw_event(menu, "ab", now_ms);
+        menu->stable_a = current_a;
+        menu->stable_b = current_b;
+        menu->candidate_ab = current_raw_ab;
+        menu->accepted_stable_ab_transition_count += 1U;
     }
     if (raw_sw_changed) {
         fr_menu_print_raw_event(menu, "sw", now_ms);
-    }
-
-    bool ab_changed = false;
-    ab_changed |= fr_menu_sample_ab_channel(
-        menu,
-        0,
-        current_a,
-        &menu->candidate_a,
-        &menu->stable_samples_a,
-        &menu->stable_a,
-        now_ms
-    );
-    ab_changed |= fr_menu_sample_ab_channel(
-        menu,
-        1,
-        current_b,
-        &menu->candidate_b,
-        &menu->stable_samples_b,
-        &menu->stable_b,
-        now_ms
-    );
-    if (ab_changed) {
-        fr_menu_handle_rotation(menu, now_ms);
     }
 
     if (current_sw != menu->stable_sw &&
@@ -875,28 +1416,7 @@ static void fr_menu_process_levels(
 
 static void fr_menu_sample_inputs(fr_menu_state_t *menu, uint32_t now_ms)
 {
-    fr_encoder_irq_event_t event;
-    uint32_t drained_count = 0;
-
-    while (fr_encoder_event_queue != NULL &&
-           drained_count < FR_ENCODER_IRQ_DRAIN_LIMIT &&
-           xQueueReceive(fr_encoder_event_queue, &event, 0) == pdTRUE) {
-        uint8_t event_a = menu->raw_a;
-        uint8_t event_b = menu->raw_b;
-        uint8_t event_sw = menu->raw_sw;
-        uint32_t event_ms = (uint32_t)(event.tick * portTICK_PERIOD_MS);
-
-        if (event.index == 0U) {
-            event_a = event.level;
-        } else if (event.index == 1U) {
-            event_b = event.level;
-        } else if (event.index == 2U) {
-            event_sw = event.level;
-        }
-        fr_menu_process_levels(menu, event_a, event_b, event_sw, event_ms);
-        drained_count += 1U;
-    }
-
+    menu->poll_count += 1U;
     fr_menu_process_levels(
         menu,
         fr_pin_finder_read_level(0),
@@ -904,6 +1424,7 @@ static void fr_menu_sample_inputs(fr_menu_state_t *menu, uint32_t now_ms)
         fr_pin_finder_read_level(2),
         now_ms
     );
+    fr_menu_process_pcnt(menu, now_ms);
 }
 
 static bool fr_menu_poll(fr_menu_state_t *menu)
@@ -946,6 +1467,10 @@ static bool fr_menu_poll(fr_menu_state_t *menu)
     if ((now_ms - menu->last_heartbeat_ms) >= FR_MENU_HEARTBEAT_MS) {
         menu->last_heartbeat_ms = now_ms;
         fr_menu_print_heartbeat(menu, now_ms);
+    }
+    if ((now_ms - menu->last_level_heartbeat_ms) >= FR_ENCODER_RAW_HEARTBEAT_MS) {
+        menu->last_level_heartbeat_ms = now_ms;
+        fr_menu_print_level_heartbeat(menu, now_ms);
     }
     return menu->display_dirty;
 }
@@ -1521,6 +2046,33 @@ static const fr_lcd_glyph_bank_t fr_lcd_glyph_banks[FR_GLYPH_BANK_COUNT] = {
             {0x04, 0x0e, 0x15, 0x04, 0x04, 0x04, 0x04, 0x00},
         },
     },
+    {
+        .name = "art_panel",
+        .rows = {
+            {0x1f, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1f, 0x00},
+            {0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f},
+            {0x10, 0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+            {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        },
+    },
+};
+
+static const uint8_t fr_bbs_art_panel_slots[FR_LCD_ROWS][FR_LCD_COLUMNS] = {
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+        FR_BBS_ART_BLANK_SLOT, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+        FR_BBS_ART_BLANK_SLOT, 0},
+    {0, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+        FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+        2, 2, 2, 2, 2, 2, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+        FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT, FR_BBS_ART_BLANK_SLOT,
+        FR_BBS_ART_BLANK_SLOT, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 };
 
 static const char *fr_bbs_page_name(uint8_t page)
@@ -1797,6 +2349,25 @@ static bool fr_bbs_render_generated_frame(
     frame->cursor_col = menu->mode == FR_MENU_MODE_EDIT_LAB ? 18U :
         (menu->mode == FR_MENU_MODE_DETAIL ? 1U : 0U);
     frame->focus = fr_menu_mode_name(menu->mode);
+
+    if (page->glyph_bank_index == FR_BBS_ART_GLYPH_BANK_INDEX &&
+        strcmp(page->id, "ART") == 0) {
+        static const char fallback[3] = {'0', '1', '2'};
+        for (uint8_t row = 0; row < FR_LCD_ROWS; ++row) {
+            for (uint8_t column = 0; column < FR_LCD_COLUMNS; ++column) {
+                uint8_t slot = fr_bbs_art_panel_slots[row][column];
+                if (slot == FR_BBS_ART_BLANK_SLOT) {
+                    continue;
+                }
+                fr_lcd_frame_set_glyph(frame, row, column, slot, fallback[slot]);
+            }
+        }
+        frame->cursor_row = 0;
+        frame->cursor_col = 0;
+        frame->cursor_ddram = fr_lcd_ddram_address(0, 0);
+        frame->focus = "art_panel";
+        return true;
+    }
 
     for (uint8_t row = 0; row < FR_LCD_ROWS; ++row) {
         uint8_t logical_line = (uint8_t)(menu->viewport_top_line + row);
@@ -2307,15 +2878,23 @@ static void fr_menu_init_state(fr_menu_state_t *menu)
     menu->stable_sw = menu->raw_sw;
     menu->candidate_a = menu->raw_a;
     menu->candidate_b = menu->raw_b;
+    menu->candidate_ab = fr_menu_raw_ab(menu);
     menu->stable_samples_a = FR_ENCODER_AB_STABLE_SAMPLES;
     menu->stable_samples_b = FR_ENCODER_AB_STABLE_SAMPLES;
+    menu->stable_samples_ab = FR_ENCODER_AB_STABLE_SAMPLES;
     menu->previous_ab = fr_menu_stable_ab(menu);
     menu->switch_stable_pressed = menu->stable_sw == 0U;
     menu->switch_changed_ms = fr_menu_now_ms();
+    menu->candidate_changed_ms_a = menu->switch_changed_ms;
+    menu->candidate_changed_ms_b = menu->switch_changed_ms;
+    menu->candidate_changed_ms_ab = menu->switch_changed_ms;
+    menu->last_raw_ab_ms = menu->switch_changed_ms;
     menu->last_heartbeat_ms = menu->switch_changed_ms;
+    menu->last_level_heartbeat_ms = menu->switch_changed_ms;
     menu->last_auto_cycle_ms = menu->switch_changed_ms;
     menu->last_animation_ms = menu->switch_changed_ms;
     menu->auto_cycle_enabled = FR_MENU_AUTO_CYCLE_ENABLED != 0U;
+    fr_menu_resync_pcnt(menu, menu->switch_changed_ms, "boot");
     menu->mode = FR_MENU_MODE_PAGE_BROWSE;
     menu->selected_row = 0;
     menu->selected_item = 0;
@@ -2327,6 +2906,15 @@ static void fr_menu_init_state(fr_menu_state_t *menu)
     menu->display_dirty = true;
     fr_menu_set_last_event(menu, "BOOT");
     fr_bbs_sync_menu_view(menu);
+    printf(
+        "ENC_BASE levels=C%uD%uS%u raw_ab=%u pcnt_count=%ld t=%lu\r\n",
+        (unsigned int)menu->raw_a,
+        (unsigned int)menu->raw_b,
+        (unsigned int)menu->raw_sw,
+        (unsigned int)fr_menu_raw_ab(menu),
+        (long)menu->pcnt_last_count,
+        (unsigned long)menu->switch_changed_ms
+    );
     if (menu->switch_stable_pressed) {
         menu->switch_pressed_ms = menu->switch_changed_ms;
     }
@@ -2446,7 +3034,7 @@ static void fr_lcd_bbs_menu_task(void *context)
         "%s BBS_LCD_READY gpio=13/14/32 pullups=on lcd=21/22 addr=0x%02x "
         "pages=%u items=%u xbee=closed relay=closed input=split render=dirty "
         "glyph_banks=%u cursor=software auto_cycle=%s xml=%s render_schema=%s "
-        "scroll=list marquee=%u/%u table=ready cal=real-menu-v1\r\n",
+        "scroll=list marquee=%u/%u table=ready cal=pcnt-v1 decoder=pcnt\r\n",
         FR_DIAG_FIRMWARE_ID,
         lcd.address,
         (unsigned int)FR_MENU_PAGE_COUNT,
@@ -2460,9 +3048,13 @@ static void fr_lcd_bbs_menu_task(void *context)
     );
     printf(
         "%s BBS_INPUT_READY task=split poll_ms=%u render=dirty idle_ms=%u "
-        "irq=anyedge queue=%u modes=scroll,detail,edit actions=page,detail,edit,back "
+        "irq=pcnt queue=%u modes=scroll,detail,edit actions=page,detail,edit,back "
         "step=%u stable=%u sw_debounce_ms=%u sw_guard_ms=%u long_ms=%u drain=%u "
-        "source=%s\r\n",
+        "cal=pcnt-v1 decoder=pcnt sw=poll pcnt=1 counts_per_step=%u "
+        "max_steps=%u glitch_ns=%u dir=%d recenter=%d "
+        "ab_ms=%u quiet_ms=%u step_lockout_ms=%u "
+        "detent=%u detent_gate=%u raw_hb_ms=%u gpio_cfg=1 poll_raw=1 "
+        "raw_log=%u poll_decoder=0 source=%s\r\n",
         FR_DIAG_FIRMWARE_ID,
         (unsigned int)FR_MENU_POLL_MS,
         (unsigned int)FR_MENU_IDLE_REFRESH_MS,
@@ -2473,6 +3065,18 @@ static void fr_lcd_bbs_menu_task(void *context)
         (unsigned int)FR_ENCODER_SW_GUARD_MS,
         (unsigned int)FR_ENCODER_LONG_PRESS_MS,
         (unsigned int)FR_ENCODER_IRQ_DRAIN_LIMIT,
+        (unsigned int)FR_ENCODER_PCNT_COUNTS_PER_STEP,
+        (unsigned int)FR_ENCODER_PCNT_MAX_STEPS_PER_POLL,
+        (unsigned int)FR_ENCODER_PCNT_GLITCH_NS,
+        (int)FR_ENCODER_PCNT_DIR_SIGN,
+        (int)FR_ENCODER_PCNT_RECENTER_LIMIT,
+        (unsigned int)FR_ENCODER_AB_DEBOUNCE_MS,
+        (unsigned int)FR_ENCODER_AB_QUIET_MS,
+        (unsigned int)FR_ENCODER_STEP_LOCKOUT_MS,
+        (unsigned int)FR_ENCODER_DETENT_AB,
+        (unsigned int)FR_ENCODER_DETENT_GATED,
+        (unsigned int)FR_ENCODER_RAW_HEARTBEAT_MS,
+        (unsigned int)FR_ENCODER_RAW_EVENT_LOG_ENABLED,
         FR_BBS_MENU_SOURCE_ID
     );
 

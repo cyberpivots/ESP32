@@ -21,8 +21,8 @@ FW_HEADER_PATH = ROOT / "firmware/projects/four-relay-xbee-wifi/main/bbs_lcd_men
 
 MENU_SCHEMA = "bbs_lcd_menu.v1"
 RENDER_SCHEMA = "bbs_lcd_render.v2"
-FIRMWARE_ID = "PF0530O"
-SOURCE_ID = "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-REAL-MENU-CAL-2026-06-01"
+FIRMWARE_ID = "PF0530W"
+SOURCE_ID = "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-VISUAL-ART-2026-06-02"
 
 ALLOWED_GLYPH_BANKS = {
     "core_status": 0,
@@ -31,6 +31,7 @@ ALLOWED_GLYPH_BANKS = {
     "big_digits": 3,
     "gauge": 4,
     "table": 5,
+    "art_panel": 6,
 }
 WIDGET_GLYPH_BANKS = frozenset({"horizontal_bar", "vertical_chart", "big_digits", "gauge"})
 ALLOWED_ACTIONS = frozenset({"page", "detail", "edit", "back"})
@@ -301,7 +302,7 @@ def generate_firmware_header(pages: tuple[MenuPage, ...]) -> str:
         f"#define FR_BBS_MENU_SOURCE_ID \"{SOURCE_ID}\"\n"
         f"#define FR_BBS_MENU_PAGE_COUNT {len(pages)}u\n"
         f"#define FR_BBS_MENU_ITEM_COUNT {item_count}u\n"
-        "#define FR_BBS_GLYPH_BANK_COUNT 6u\n"
+        "#define FR_BBS_GLYPH_BANK_COUNT 7u\n"
         "#define FR_BBS_MENU_CONTENT_COLUMNS 19u\n"
         "#define FR_BBS_MENU_MARQUEE_HOLD_MS 750u\n"
         "#define FR_BBS_MENU_MARQUEE_STEP_MS 250u\n"

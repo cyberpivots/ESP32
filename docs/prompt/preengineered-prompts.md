@@ -9,11 +9,13 @@ Apply the ESP32 default-multi-agentic-process. Classify the prompt as Tier 0,
 Tier 1, Tier 2, or Tier 3. Emit a routing packet with verified facts,
 assumptions, unknowns, owner role, evidence need, mutation boundary, reviewer
 quorum, gate authority, validation plan, and trust boundary before
-non-trivial mutation. Project-local read-only subagents are default-authorized
-for safe Tier 2 and Tier 3 quorum; mutating workers require explicit disjoint
-write scopes. Perform agent lifecycle cleanup: inspect completed agents before
-spawning, close completed/stale agents after capturing output, close agents
-before fallback/final decisions, and use fallback only after cleanup attempt.
+non-trivial mutation. Project-local read-only subagents are mandatory to
+attempt for safe non-trivial Tier 1 mutation and Tier 2/Tier 3 quorum when
+available and safe; mutating workers require explicit disjoint write scopes.
+Perform agent lifecycle cleanup: inspect completed agents before spawning,
+close completed/stale agents after capturing output, close agents before
+fallback/final decisions, and use fallback only after cleanup attempt while
+recording why the mandatory subagent attempt could not be completed.
 End with a decision footer: continue, ask_user, blocked,
 ready_for_mutation, or handoff; next gate; owner; evidence; approved mutation
 boundary; validation; durable records; and authority limits.

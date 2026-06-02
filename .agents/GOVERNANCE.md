@@ -21,10 +21,15 @@
   `AGENTS.md`.
 - Tier 0 prompts may remain read-only and single-agent after classification.
 - Tier 1 prompts require the relevant owner lens and QA lens before mutation.
+  Attempt project-local read-only subagents for non-trivial Tier 1 mutation
+  when tools are available and safe; record unavailable, unsafe, or
+  higher-priority tool-policy fallback.
 - Tier 2 prompts require a read-only reviewer quorum before mutation for
   governance, protocol, firmware, evidence, hook/config, or broad code work.
-  Project-local read-only subagents are default-authorized when available and
-  safe.
+  Project-local read-only subagents are mandatory to attempt when available and
+  safe; local role-lens fallback is valid only when subagents are unavailable,
+  unsafe, or blocked by higher-priority tool policy, and the fallback reason is
+  recorded.
 - Tier 3 prompts require explicit gate authority and same-session live evidence
   before any live bench, flashing, wiring, radio, serial-write, relay/load/mains,
   release-gate, or equivalent risky mutation.
@@ -62,8 +67,11 @@
   unavailable or unsafe to act on. This is an operational requirement on the
   parent agent; repo-local hooks and tests can remind or audit it but cannot
   guarantee runtime slot release.
-- If read-only subagents are unavailable or unsafe after lifecycle cleanup, run
-  the same role perspectives locally and record that no subagents were spawned.
+- If read-only subagents are unavailable, unsafe, or blocked by higher-priority
+  tool policy after lifecycle cleanup, run the same role perspectives locally
+  and record that no subagents were spawned, why the mandatory subagent attempt
+  could not be completed, and whether cleanup was attempted or lifecycle state
+  was not visible.
 
 ## Validation gates
 

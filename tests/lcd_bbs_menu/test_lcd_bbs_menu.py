@@ -30,6 +30,9 @@ from lcd_bbs_menu import (  # noqa: E402
     GLYPH_BANK,
     GLYPH_BANKS,
     INPUT_EVENTS,
+    LCD_ART_PIXEL_HEIGHT,
+    LCD_ART_PIXEL_WIDTH,
+    LCD_ART_SCHEMA,
     LCD_COLUMNS,
     LCD_CONTENT_COLUMNS,
     LCD_DDRAM_ROW_BASES,
@@ -48,10 +51,13 @@ from lcd_bbs_menu import (  # noqa: E402
     apply_input,
     big_digits,
     build_browser_document,
+    compile_lcd_art_from_pbm,
+    compile_lcd_art_tile_map,
     gauge_demo,
     glyph_bank_for_page,
     horizontal_bar,
     render,
+    sample_art_panel,
     sample_state,
     signal_bars,
     slider,
@@ -82,11 +88,11 @@ class LcdBbsMenuTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('FR_DIAG_FIRMWARE_ID_VALUE "PF0530O"', FW_HEADER_PATH.read_text(encoding="utf-8"))
+        self.assertIn('FR_DIAG_FIRMWARE_ID_VALUE "PF0530W"', FW_HEADER_PATH.read_text(encoding="utf-8"))
 
     def test_xml_source_generates_pages_and_table_bank(self) -> None:
         pages = load_menu()
-        self.assertEqual(len(pages), 14)
+        self.assertEqual(len(pages), 15)
         self.assertEqual(PAGES[0], "HOME")
         self.assertIn("ROUTES", PAGES)
         routes = next(page for page in GENERATED_PAGES if page["id"] == "ROUTES")
@@ -96,13 +102,13 @@ class LcdBbsMenuTests(unittest.TestCase):
 
     def test_xml_rejections_fail_closed(self) -> None:
         cases = {
-            "target_unknown": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="Bad" action="page" target="NOPE" /></page></menu>',
-            "duplicate_item": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="dup" label="A" action="detail" /><item id="dup" label="B" action="detail" /></page></menu>',
-            "bad_glyph": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="bad"><item id="i1" label="A" action="detail" /></page></menu>',
-            "wide_table": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="table"><item id="i1" label="12345678901234567890" action="detail" table="true" /></page></menu>',
-            "bad_token": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="{secret.value}" action="detail" /></page></menu>',
-            "secret_attr": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" pairing_token="x" /></page></menu>',
-            "doctype": '<!DOCTYPE menu [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><menu schema="bbs_lcd_menu.v1" sourceId="PF0530O"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" /></page></menu>',
+            "target_unknown": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530W"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="Bad" action="page" target="NOPE" /></page></menu>',
+            "duplicate_item": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530W"><page id="HOME" title="H" glyphBank="core_status"><item id="dup" label="A" action="detail" /><item id="dup" label="B" action="detail" /></page></menu>',
+            "bad_glyph": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530W"><page id="HOME" title="H" glyphBank="bad"><item id="i1" label="A" action="detail" /></page></menu>',
+            "wide_table": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530W"><page id="HOME" title="H" glyphBank="table"><item id="i1" label="12345678901234567890" action="detail" table="true" /></page></menu>',
+            "bad_token": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530W"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="{secret.value}" action="detail" /></page></menu>',
+            "secret_attr": '<menu schema="bbs_lcd_menu.v1" sourceId="PF0530W"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" pairing_token="x" /></page></menu>',
+            "doctype": '<!DOCTYPE menu [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]><menu schema="bbs_lcd_menu.v1" sourceId="PF0530W"><page id="HOME" title="H" glyphBank="core_status"><item id="i1" label="A" action="detail" /></page></menu>',
         }
         for name, xml in cases.items():
             with self.subTest(name=name), tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as handle:
@@ -118,7 +124,7 @@ class LcdBbsMenuTests(unittest.TestCase):
         rendered = render(sample_state())
         self.assertEqual(rendered.glyph_bank_name, "core_status")
         self.assertEqual(rendered.glyph_bank, GLYPH_BANK)
-        self.assertEqual(set(GLYPH_BANKS), set(["core_status", "horizontal_bar", "vertical_chart", "big_digits", "gauge", "table"]))
+        self.assertEqual(set(GLYPH_BANKS), set(["core_status", "horizontal_bar", "vertical_chart", "big_digits", "gauge", "table", "art_panel"]))
         for bank in GLYPH_BANKS.values():
             self.assertLessEqual(len(bank.glyphs), 8)
             for expected_slot, glyph in enumerate(bank.glyphs):
@@ -136,13 +142,22 @@ class LcdBbsMenuTests(unittest.TestCase):
             GlyphBank("bad_row", (Glyph(0, "bad", (0x20,) * 8),))
 
     def test_all_xml_pages_render_with_expected_glyph_bank(self) -> None:
-        self.assertEqual(len(PAGES), 14)
+        self.assertEqual(len(PAGES), 15)
         for page in PAGES:
             rendered = render(sample_state(), MenuViewState(page=page))
             self.assertEqual(len(rendered.lines), LCD_ROWS)
             self.assertTrue(all(len(line) == LCD_COLUMNS for line in rendered.lines))
             self.assertEqual(rendered.glyph_bank_name, glyph_bank_for_page(page))
             self.assertEqual(rendered.schema, "bbs_lcd_render.v2")
+
+    def test_art_page_renders_compiled_slot_preview(self) -> None:
+        rendered = render(sample_state(), MenuViewState(page="ART"))
+        art = sample_art_panel()
+        self.assertEqual(rendered.firmware_id, "PF0530W")
+        self.assertEqual(rendered.glyph_bank_name, "art_panel")
+        self.assertEqual(rendered.lines, art.preview_lines)
+        self.assertEqual(rendered.viewport["art_panel"]["schema"], LCD_ART_SCHEMA)
+        self.assertEqual(rendered.viewport["art_panel"]["cell_slots"], [list(row) for row in art.cell_slots])
 
     def test_more_than_four_options_scroll_vertically(self) -> None:
         view = MenuViewState(page="HOME")
@@ -278,6 +293,92 @@ class LcdBbsMenuTests(unittest.TestCase):
         rendered = render(sample_state())
         self.assertEqual(rendered.widgets["queue"], "Q~ P2 R1")
         self.assertIn("vertical_chart", rendered.widgets)
+        self.assertEqual(rendered.widgets["art_panel"]["schema"], LCD_ART_SCHEMA)
+        self.assertEqual(len(rendered.widgets["art_panel"]["preview_lines"]), LCD_ROWS)
+
+    def test_lcd_art_tile_map_dedupes_into_safe_metadata(self) -> None:
+        frame = (0x1F, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F, 0x00)
+        diag = (0x10, 0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08)
+        tile_map = [[None for _ in range(LCD_COLUMNS)] for _ in range(LCD_ROWS)]
+        tile_map[0][0] = frame
+        tile_map[0][1] = frame
+        tile_map[1][0] = diag
+
+        art = compile_lcd_art_tile_map("BBS Panel", tile_map)
+        payload = art.to_dict()
+
+        self.assertEqual(payload["schema"], LCD_ART_SCHEMA)
+        self.assertEqual(payload["name"], "bbs_panel")
+        self.assertEqual(payload["preview_lines"][0], "00" + (" " * 18))
+        self.assertEqual(payload["preview_lines"][1], "1" + (" " * 19))
+        self.assertEqual(payload["cell_slots"][0][0], 0)
+        self.assertEqual(payload["cell_slots"][0][1], 0)
+        self.assertEqual(payload["cell_slots"][1][0], 1)
+        self.assertIsNone(payload["cell_slots"][1][1])
+        self.assertEqual(payload["slot_count"], 2)
+        self.assertEqual(payload["glyph_bank"][0]["rows"], list(frame))
+        self.assertEqual(payload["glyph_bank"][1]["rows"], list(diag))
+
+    def test_lcd_art_pbm_maps_pixels_to_5x8_row_bytes(self) -> None:
+        tile_rows = (
+            "10001",
+            "01010",
+            "00100",
+            "11111",
+            "00000",
+            "10101",
+            "01010",
+            "10001",
+        )
+        rows = []
+        for y in range(LCD_ART_PIXEL_HEIGHT):
+            if y < len(tile_rows):
+                rows.append(tile_rows[y] + ("0" * (LCD_ART_PIXEL_WIDTH - 5)))
+            else:
+                rows.append("0" * LCD_ART_PIXEL_WIDTH)
+        pbm = _pbm_from_rows(rows)
+
+        art = compile_lcd_art_from_pbm("pixel badge", pbm)
+
+        self.assertEqual(art.preview_lines[0], "0" + (" " * 19))
+        self.assertEqual(art.cell_slots[0][0], 0)
+        self.assertEqual(
+            art.glyph_bank.glyphs[0].rows,
+            (0x11, 0x0A, 0x04, 0x1F, 0x00, 0x15, 0x0A, 0x11),
+        )
+
+    def test_lcd_art_rejections_fail_closed(self) -> None:
+        good_rows = ["0" * LCD_ART_PIXEL_WIDTH for _ in range(LCD_ART_PIXEL_HEIGHT)]
+        cases = {
+            "bad_magic": "P4 100 32 0",
+            "bad_dimensions": "P1 5 8 " + ("0 " * 40),
+            "bad_pixel": "P1 100 32 " + ("0 " * 100) + "2 " + ("0 " * 3099),
+            "bad_count": "P1 100 32 0 1 0",
+        }
+        for name, pbm in cases.items():
+            with self.subTest(name=name), self.assertRaises(LcdMenuError):
+                compile_lcd_art_from_pbm(name, pbm)
+
+        with self.assertRaisesRegex(LcdMenuError, "art_tile_rows_invalid"):
+            compile_lcd_art_tile_map("bad", [])
+        with self.assertRaisesRegex(LcdMenuError, "art_tile_columns_invalid"):
+            compile_lcd_art_tile_map("bad", [[None], [None], [None], [None]])
+        with self.assertRaisesRegex(LcdMenuError, "art_tile_row_byte_invalid"):
+            compile_lcd_art_tile_map(
+                "bad",
+                [[(0x20,) * 8 for _ in range(LCD_COLUMNS)] for _ in range(LCD_ROWS)],
+            )
+
+        overflow_map = [[None for _ in range(LCD_COLUMNS)] for _ in range(LCD_ROWS)]
+        for column in range(9):
+            overflow_map[0][column] = tuple([column + 1] * 8)
+        with self.assertRaisesRegex(LcdMenuError, "art_glyph_overflow"):
+            compile_lcd_art_tile_map("overflow", overflow_map)
+
+        self.assertEqual(
+            compile_lcd_art_from_pbm("blank", _pbm_from_rows(good_rows)).to_dict()["slot_count"],
+            0,
+        )
 
     def test_browser_mirror_api_and_static_html_are_host_only_v2(self) -> None:
         mirror = LcdBrowserMirror(sample_state())
@@ -456,6 +557,14 @@ class LcdBbsMenuTests(unittest.TestCase):
         self.assertTrue(mirror.closed)
         self.assertEqual(response.status, 410)
         self.assertEqual(dict(response.body), {"error": "interface_closed"})
+
+
+def _pbm_from_rows(rows: list[str]) -> str:
+    return "P1\n{} {}\n{}\n".format(
+        LCD_ART_PIXEL_WIDTH,
+        LCD_ART_PIXEL_HEIGHT,
+        "\n".join(" ".join(row) for row in rows),
+    )
 
 
 if __name__ == "__main__":

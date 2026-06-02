@@ -12,6 +12,12 @@ Source basis:
 `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530N-LIVE-2026-06-01`,
 `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-REAL-MENU-CAL-2026-06-01`,
 `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01`,
+`SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530P-DEBOUNCE-CAL-2026-06-01`,
+`SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530P-LIVE-2026-06-01`,
+`SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530Q-QUIET-CAL-2026-06-01`,
+`SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530Q-LIVE-2026-06-01`,
+`SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530R-DETENT-CAL-2026-06-01`,
+`SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530R-LIVE-2026-06-01`,
 `SRC-LOCAL-ESP32-XBEE-UART-BRIDGE-FLASH-RETEST-2026-05-30`,
 `SRC-LOCAL-ESPNOW-GATE-H-STRUCTURED-LIVE-ACCEPTANCE-2026-05-25`,
 and `SRC-LOCAL-ESPNOW-BBS-LCD-BROWSER-QA-HARDENING-2026-05-31`.
@@ -28,8 +34,10 @@ decisions.
 
 ## Verified Facts
 
-- The latest recorded COM6 LCD/menu live gate is PF0530O, not PF0530N,
-  PF0530L, PF0530H, or PF0530K.
+- The latest recorded COM6 LCD/menu live gate is PF0530W. PF0530W is written
+  and separately verify-flashed with readiness proof while preserving the
+  PF0530V PCNT encoder baseline; physical ART-page visual acceptance remains
+  open.
 - PF0530L same-session records include COM6 identity, 4 MB flash, 3.3 V strap,
   rollback backup, staged hashes, write-flash, separate verify-flash,
   read-only monitor, transcript scan, and cleanup proof.
@@ -57,7 +65,7 @@ decisions.
 - PF0530N added LCD/menu scrolling/XML source/test behavior and was later
   written, verify-flashed, and read-only monitored on COM6 with runtime LCD
   readiness/render proof but no accepted physical readability or input proof.
-- PF0530O is the current real-menu calibration image. It keeps the closed
+- PF0530O is the prior flashed real-menu calibration image. It keeps the closed
   bridge and input-only/display-only boundaries, changes the active firmware ID
   to `PF0530O`, uses one transition per menu step, two AB stable samples, a
   75 ms switch guard, a 650 ms long press, disables boot auto-cycle, and reports
@@ -65,6 +73,39 @@ decisions.
   COM6; reset and attended read-only monitors proved LCD readiness/render/
   heartbeat output with zero crash/unsafe markers, but captured zero input
   events.
+- PF0530P is the flashed debounce calibration image.
+  It keeps the closed bridge and input-only/display-only boundaries, changes
+  the active firmware ID to `PF0530P`, keeps one transition per menu step and
+  two AB stable samples, adds a 5 ms A/B candidate hold and a 40 ms step
+  lockout, and reports `cal=debounce-v2 ab_ms=5 step_lockout_ms=40`. PF0530P
+  write-flash and separate verify-flash passed on COM6; reset and attended
+  read-only monitors proved LCD readiness/render/heartbeat output with zero
+  crash/unsafe markers, but captured zero input events. The user later
+  clarified that they did not rotate during that monitor, so the zero-input
+  transcript is not diagnostic of debounce behavior.
+- PF0530Q is the previous flashed quiet-window calibration image.
+  It keeps the closed bridge and input-only/display-only boundaries, changes
+  the active firmware ID to `PF0530Q`, keeps one transition per menu step, two
+  AB stable samples, a 5 ms A/B candidate hold, 30 ms switch debounce, a 75 ms
+  switch guard, and a 650 ms long press, adds a 10 ms combined A/B pair quiet
+  window, raises step lockout to 60 ms, and reports
+  `cal=quiet-v3 ab_ms=5 quiet_ms=10 step_lockout_ms=60`. PF0530Q write-flash
+  and separate verify-flash passed on COM6; reset and idle read-only monitors
+  proved LCD readiness/render/heartbeat output with zero crash/unsafe markers,
+  but physical behavior was not accepted by monitor because no actuation
+  occurred. The later user report says PF0530Q works but is not stable.
+- PF0530R is a recorded written detent-gated calibration image in the lineage.
+  It keeps the closed bridge and input-only/display-only boundaries, changes
+  the active firmware ID to `PF0530R`, raises A/B candidate hold to 8 ms,
+  raises combined A/B quiet time to 15 ms, changes
+  `FR_ENCODER_TRANSITIONS_PER_STEP` to 2, raises step lockout to 90 ms, emits
+  at most one menu step only when accepted quadrature returns to detent A/B
+  `3`, and reports
+  `cal=detent-v4 ab_ms=8 quiet_ms=15 step_lockout_ms=90 detent=3`. PF0530R
+  write-flash and separate verify-flash passed on COM6; reset and attended
+  read-only monitors proved LCD readiness/render/heartbeat output with zero
+  crash/unsafe markers and zero bad render rows. The monitor captured zero
+  input events, so physical behavior is not accepted by transcript.
 - The XBee bridge lane has a narrow accepted state: COM6 exposes the ESP32
   UART bridge to the attached XBee at host baud `115200`, and a benign
   bidirectional `link_probe` RF proof passed after bridge firmware.
@@ -124,21 +165,21 @@ Current packet default:
 | Field | Value |
 | --- | --- |
 | `schema` | `bench_state_packet.v1` |
-| `claimedBenchPort` | COM6, latest read-only identity refreshed by `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530O-LIVE-2026-06-01`; further live work still requires a fresh Tier 3 boundary. |
-| `currentFirmwareLane` | PF0530O real-menu calibration image is current and has COM6 write/verify/read-only monitor proof; PF0530O physical LCD/user-input acceptance remains pending. PF0530L remains the latest accepted visual, serial/menu, glyph, and electrical evidence image. |
+| `claimedBenchPort` | COM6, latest read-only identity refreshed by `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-LIVE-2026-06-02`; further live work still requires a fresh Tier 3 boundary. |
+| `currentFirmwareLane` | PF0530W visual-art continuation is the current written/verify-flashed COM6 image, with read-only LCD readiness/render proof and preserved PF0530V PCNT encoder baseline. PF0530V remains the user-accepted real LCD menu encoder baseline. PF0530L remains the latest accepted visual, serial/menu, glyph, and electrical evidence image. |
 | `deviceIdentity` | Latest recorded COM6 proof: ESP32-D0WDQ6, MAC `<redacted-mac>`, 4 MB flash, 3.3 V strap. |
-| `rollbackRecovery` | Last PF0530O rollback SHA256 `<redacted-sha256>` retained in ignored local evidence; refresh before flash. |
-| `acceptedEvidence` | PF0530L write/verify/monitor proof, prior page/glyph auto-demo coverage, attended cursor/render/heartbeat proof, accepted serial/menu physical interaction proof, measured LCD high-side/LV-side voltage domain, post-reset LCD readiness/page/glyph serial proof, user-confirmed LCD visual/glyph readability, user-confirmed DMM continuity/toggle/current-margin pass for that gate, PF0530M non-live source/tests, PF0530N XML/generator/scroll-list tests and COM6 LCD readiness/render proof, PF0530O write/verify/read-only LCD readiness/render/heartbeat proof, XBee bridge narrow proof, ESP-NOW BBS accepted transcript lineage. |
-| `openGaps` | PF0530O user visual/input report, physical LCD readability, encoder/button input acceptance, final BBS/XBee payload mapping, relay identity/isolation/current, live SoftAP/browser, CBBS live acceptance, deployment readiness, publication. |
+| `rollbackRecovery` | Latest PF0530W rollback backup and private hashes retained only in ignored local evidence; refresh before any future flash. |
+| `acceptedEvidence` | PF0530L write/verify/monitor proof, prior page/glyph auto-demo coverage, attended cursor/render/heartbeat proof, accepted serial/menu physical interaction proof, measured LCD high-side/LV-side voltage domain, post-reset LCD readiness/page/glyph serial proof, user-confirmed LCD visual/glyph readability, user-confirmed DMM continuity/toggle/current-margin pass for that gate, PF0530M non-live source/tests, PF0530N XML/generator/scroll-list tests and COM6 LCD readiness/render proof, PF0530O write/verify/read-only LCD readiness/render/heartbeat proof, PF0530P source/build calibration proof, PF0530P write/verify/read-only LCD readiness/render proof, PF0530Q source/build quiet-window calibration proof, PF0530Q write/verify/read-only LCD readiness/render proof, PF0530R source/build detent calibration proof, PF0530R write/verify/readiness proof, PF0530V PCNT source/build/live proof and user-accepted encoder functionality, PF0530W visual-art source/build/live readiness proof, XBee bridge narrow proof, ESP-NOW BBS accepted transcript lineage. |
+| `openGaps` | PF0530W physical ART-page visual acceptance, final BBS/XBee payload mapping, relay identity/isolation/current, live SoftAP/browser, CBBS live acceptance, deployment readiness, publication. |
 | `closedSurfaces` | Live hardware, flashing, serial writes/monitor, RF expansion, XBee setting writes, relay/load/mains, persistent config, credentials, destructive ops, external services, GitHub publication. |
-| `nextAllowedAction` | Development work inside an explicitly named non-live boundary, or a fresh Tier 3 gate for any live device action. |
+| `nextAllowedAction` | User visual/input report, development work inside an explicitly named non-live boundary, or a fresh Tier 3 gate for any live device action. |
 
 ## Lane Router
 
 | Lane | Current routing | Next safe action | Gate |
 | --- | --- | --- | --- |
 | COM6 identity/recovery | Latest read-only identity evidence exists from the LCD/electrical-domain attempt; rollback/recovery reference exists but recovery was not executed. | Refresh identity/recovery again before any new live gate. | Tier 3 before device access. |
-| LCD/encoder/menu | PF0530O is the current real-menu calibration image with COM6 write/verify/read-only monitor proof and zero captured input events. PF0530L remains accepted for serial/menu interaction, readable rows/page changes/glyphs, and the closed LCD/DMM gate. | Ask for the PF0530O user visual/input report, continue non-live menu/BBS payload development, or open a fresh COM6 read-only input gate if actuation occurred without response. | Separate COM6 Tier 3 for device access. |
+| LCD/encoder/menu | PF0530W is the current written/verify-flashed visual-art image with COM6 read-only readiness/render proof and preserved PF0530V PCNT input. PF0530V is the accepted real LCD menu encoder baseline. PF0530L remains accepted for serial/menu interaction, readable rows/page changes/glyphs, and the closed LCD/DMM gate. | Collect operator visual report on the PF0530W ART page or run a read-only interaction monitor with confirmed actuation. | Separate COM6 Tier 3 for future flash or broader device access. |
 | XBee/radio | Bridge and benign link proof accepted narrowly. | Offline protocol/profile planning or read-only evidence review. | Separate RF/serial gate. |
 | Relay/power/load | Blocked. | Source-backed module identity and low-voltage evidence plan. | Separate hardware gate; load/mains stay blocked. |
 | ESP-NOW/BBS/CBBS | ESP-NOW accepted by transcript lineage; CBBS must carry own proof. | Host-only mapping or evidence review. | Separate runtime/live gate. |

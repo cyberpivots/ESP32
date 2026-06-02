@@ -60,18 +60,17 @@ class AgentProcessHookTests(unittest.TestCase):
         self.assert_hook_context(
             result,
             "UserPromptSubmit",
-            "agent lifecycle cleanup",
-            "inspect completed agents before spawning",
-            "close completed/stale agents",
-            "close agents before fallback/final",
-            "fallback only after cleanup attempt",
-            "mandatory subagent attempt",
+            "ESP32-GOV-v1",
+            "SOV-v1",
+            "LIFECYCLE-v1",
+            "TIER3-CLOSED-v1",
+            "standing user authorization",
+            "Safe non-trivial Tier 1",
             "evidence need",
-            "mandatory attempt",
-            "Weighted vote",
-            "Missing evidence",
+            "weighted no-P1/P2 quorum",
+            "lifecycle cleanup",
             "decision footer",
-            "advisory aids",
+            "source records",
         )
 
     def test_subagent_hook_emits_default_read_only_boundary(self) -> None:
@@ -82,15 +81,12 @@ class AgentProcessHookTests(unittest.TestCase):
         self.assert_hook_context(
             result,
             "SubagentStart",
-            "agent lifecycle cleanup",
-            "close completed/stale agents",
-            "close agents before fallback/final",
-            "fallback only after cleanup attempt",
-            "mandatory to attempt",
+            "ESP32-GOV-v1",
+            "standing user authorization",
             "explicit disjoint write scope",
-            "role, weight",
-            "premature stop",
-            "advisory aids",
+            "role, weight, evidence",
+            "wait_agent/close_agent",
+            "bypassPermissions",
         )
 
     def test_subagent_stop_hook_emits_lifecycle_cleanup_boundary(self) -> None:
@@ -101,11 +97,11 @@ class AgentProcessHookTests(unittest.TestCase):
         self.assert_hook_context(
             result,
             "SubagentStop",
-            "agent lifecycle cleanup",
-            "inspect completed agents before spawning",
-            "close completed/stale agents",
+            "ESP32-GOV-v1",
+            "inspect visible completed agents before replacements",
+            "close completed/stale agents with close_agent",
             "close agents before fallback/final",
-            "fallback only after cleanup attempt",
+            "fallback is valid only after cleanup attempt",
             "bypassPermissions advisory only",
         )
 
@@ -141,9 +137,9 @@ class AgentProcessHookTests(unittest.TestCase):
             "owner role",
             "evidence need",
             "mutation boundary",
-            "validation path",
-            "weighted reviewer disposition",
-            "advisory aids",
+            "validation plan",
+            "reviewer disposition",
+            "Hooks are advisory",
         )
         self.assertIn("explicit gate authority", context)
 
@@ -175,17 +171,26 @@ class AgentProcessHookTests(unittest.TestCase):
         self.assertNotIn("selected tier, validation path, mutation boundary", context)
 
     def test_pre_tool_read_only_command_does_not_warn(self) -> None:
-        result = run_hook(
-            "pre_tool_use_agent_process.py",
-            json.dumps({
-                "tool_name": "functions.exec_command",
-                "tool_input": {"cmd": "rg -n default-multi-agentic-process docs"},
-                "prompt": "",
-            }),
-        )
-        self.assertEqual(0, result.returncode)
-        self.assertEqual("", result.stderr)
-        self.assertEqual("", result.stdout)
+        commands = [
+            "rg -n default-multi-agentic-process docs",
+            "pwd && rg --files",
+            "nl -ba AGENTS.md | sed -n '1,80p'",
+            "for f in AGENTS.md docs/index.md; do sed -n '1,20p' \"$f\"; done",
+            "git status --short --branch --untracked-files=all",
+        ]
+        for command in commands:
+            with self.subTest(command=command):
+                result = run_hook(
+                    "pre_tool_use_agent_process.py",
+                    json.dumps({
+                        "tool_name": "functions.exec_command",
+                        "tool_input": {"cmd": command},
+                        "prompt": "",
+                    }),
+                )
+                self.assertEqual(0, result.returncode)
+                self.assertEqual("", result.stderr)
+                self.assertEqual("", result.stdout)
 
     def test_pre_tool_complete_triage_emits_scheduler_advisory_only(self) -> None:
         prompt = (

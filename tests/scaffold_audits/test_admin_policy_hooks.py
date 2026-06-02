@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 HOOK = ROOT / ".codex" / "admin" / "hooks" / "esp32_admin_policy.py"
+INSTALLER = ROOT / ".codex" / "admin" / "install_admin_policy.py"
 DEFAULT_REQUIREMENTS = ROOT / ".codex" / "admin" / "requirements.toml"
 YOLO_REQUIREMENTS = ROOT / ".codex" / "admin" / "profiles" / "yolo-compatible" / "requirements.toml"
 
@@ -33,6 +35,15 @@ def output(result: subprocess.CompletedProcess[str]) -> dict[str, object]:
     if not result.stdout.strip():
         return {}
     return json.loads(result.stdout)
+
+
+def run_installer(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(INSTALLER), *args],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
 
 
 class AdminPolicyHookTests(unittest.TestCase):
@@ -120,11 +131,13 @@ class AdminPolicyHookTests(unittest.TestCase):
                 result = run_hook(payload)
                 data = self.assert_clean_json(result)
                 context = data["hookSpecificOutput"]["additionalContext"]
-                self.assertIn("Agent lifecycle cleanup", context)
-                self.assertIn("inspect completed agents before spawning", context)
-                self.assertIn("close completed/stale agents", context)
-                self.assertIn("close agents before fallback/final", context)
-                self.assertIn("fallback only after cleanup attempt", context)
+                self.assertIn("ESP32-GOV-v1", context)
+                self.assertIn("LIFECYCLE-v1", context)
+                self.assertIn("standing user authorization", context)
+                if event == "UserPromptSubmit":
+                    self.assertIn("weighted vote", context)
+                else:
+                    self.assertIn("wait_agent/close_agent", context)
 
     def test_bypass_user_prompt_marks_lifecycle_advisory_only(self) -> None:
         result = run_hook({
@@ -133,8 +146,9 @@ class AdminPolicyHookTests(unittest.TestCase):
         })
         data = self.assert_clean_json(result)
         context = data["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("bypassPermissions advisory only", context)
-        self.assertIn("Agent lifecycle cleanup", context)
+        self.assertIn("permission_mode=bypassPermissions detected", context)
+        self.assertIn("advisory only", context)
+        self.assertIn("LIFECYCLE-v1", context)
 
     def test_subagent_stop_rejects_open_blocker_or_reject_vote(self) -> None:
         messages = [
@@ -242,6 +256,14 @@ class AdminPolicyHookTests(unittest.TestCase):
         self.assert_clean_json(result)
         self.assertEqual("", result.stdout)
 
+    def test_stop_ignores_read_only_validation_wording_without_mutation_claim(self) -> None:
+        result = run_hook({
+            "hook_event_name": "Stop",
+            "last_assistant_message": "Validation performed: unittest PASS. Durable records unchanged.",
+        })
+        self.assert_clean_json(result)
+        self.assertEqual("", result.stdout)
+
     def test_transcript_context_can_supply_triage(self) -> None:
         prompt = (
             "Verified facts: docs change. Assumptions: none. Unknowns: none. "
@@ -324,6 +346,154 @@ class AdminPolicyHookTests(unittest.TestCase):
                 rules = data.get("rules")
                 if isinstance(rules, dict):
                     self.assertNotIn("prefix_rules", rules)
+
+    def test_installer_dry_run_reports_hook_support_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_installer("--dry-run", "--profile", "yolo-compatible", "--target-dir", tmp)
+        self.assertEqual(0, result.returncode, result.stderr)
+        for marker in [
+            "profile: yolo-compatible",
+            "target-dir:",
+            "source files",
+            "target files",
+            "requirements diff",
+            "hook diff",
+            "support:agent_process_classifiers.py diff",
+            "support:agent_process_contracts.py diff",
+            "planned backups",
+            "sha256=",
+            "mode=",
+            "owner=",
+        ]:
+            self.assertIn(marker, result.stdout)
+
+    def test_temp_install_validate_remove_and_installed_hook_smoke(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stale_scripts = Path(tmp) / "scripts"
+            stale_scripts.mkdir()
+            for support_name in ["agent_process_classifiers.py", "agent_process_contracts.py"]:
+                (stale_scripts / support_name).write_text(
+                    "raise RuntimeError('stale fallback support imported')\n",
+                    encoding="utf-8",
+                )
+
+            target = Path(tmp) / "root" / "codex"
+            install = run_installer("--install", "--profile", "yolo-compatible", "--target-dir", str(target))
+            self.assertEqual(0, install.returncode, install.stderr)
+            for marker in [
+                "installed profile: yolo-compatible",
+                "esp32_admin_policy.py",
+                "agent_process_classifiers.py",
+                "agent_process_contracts.py",
+                "sha256=",
+                "mode=",
+                "owner=",
+                "backups:",
+            ]:
+                self.assertIn(marker, install.stdout)
+
+            hook = target / "hooks" / "esp32_admin_policy.py"
+            self.assertTrue(hook.exists())
+            self.assertEqual(0o755, hook.stat().st_mode & 0o777)
+            self.assertEqual(0o644, (target / "hooks" / "agent_process_classifiers.py").stat().st_mode & 0o777)
+            self.assertEqual(0o644, (target / "hooks" / "agent_process_contracts.py").stat().st_mode & 0o777)
+
+            env = os.environ.copy()
+            env.pop("PYTHONPATH", None)
+            env["PYTHONDONTWRITEBYTECODE"] = "1"
+            fixtures: list[object | str] = [
+                "{",
+                {"hook_event_name": "UserPromptSubmit", "permission_mode": "bypassPermissions"},
+            ]
+            for payload in fixtures:
+                with self.subTest(payload=payload):
+                    stdin_text = payload if isinstance(payload, str) else json.dumps(payload)
+                    result = subprocess.run(
+                        [sys.executable, str(hook)],
+                        input=stdin_text,
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                        cwd=tmp,
+                        env=env,
+                    )
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    self.assertNotIn("ModuleNotFoundError", result.stderr)
+                    self.assertNotIn("stale fallback support imported", result.stderr)
+                    self.assertIn("hookSpecificOutput", result.stdout)
+
+            deny_payload = {
+                "hook_event_name": "PreToolUse",
+                "tool_name": "Bash",
+                "tool_input": {"command": "touch blocked"},
+                "prompt": "",
+            }
+            deny = subprocess.run(
+                [sys.executable, str(hook)],
+                input=json.dumps(deny_payload),
+                text=True,
+                capture_output=True,
+                check=False,
+                cwd=tmp,
+                env=env,
+            )
+            self.assertEqual(0, deny.returncode, deny.stderr)
+            self.assertIn("permissionDecision", deny.stdout)
+            self.assertIn("deny", deny.stdout)
+
+            bypass = subprocess.run(
+                [sys.executable, str(hook)],
+                input=json.dumps({
+                    "hook_event_name": "PreToolUse",
+                    "permission_mode": "bypassPermissions",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "rm -rf build"},
+                    "prompt": "",
+                }),
+                text=True,
+                capture_output=True,
+                check=False,
+                cwd=tmp,
+                env=env,
+            )
+            self.assertEqual(0, bypass.returncode, bypass.stderr)
+            self.assertEqual("", bypass.stdout)
+
+            validate = run_installer("--validate", "--profile", "yolo-compatible", "--target-dir", str(target))
+            self.assertEqual(0, validate.returncode, validate.stderr)
+            self.assertIn("validated profile: yolo-compatible", validate.stdout)
+            self.assertIn("agent_process_classifiers.py", validate.stdout)
+            self.assertIn("agent_process_contracts.py", validate.stdout)
+
+            remove = run_installer("--remove-system-requirements", "--target-dir", str(target))
+            self.assertEqual(0, remove.returncode, remove.stderr)
+            self.assertIn("removed target requirements", remove.stdout)
+            self.assertIn("remaining managed hook files", remove.stdout)
+            self.assertFalse((target / "requirements.toml").exists())
+            self.assertTrue(hook.exists())
+
+    def test_validate_detects_missing_mismatched_or_wrong_mode_support(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "codex"
+            install = run_installer("--install", "--profile", "yolo-compatible", "--target-dir", str(target))
+            self.assertEqual(0, install.returncode, install.stderr)
+
+            support = target / "hooks" / "agent_process_contracts.py"
+            support.write_text(support.read_text(encoding="utf-8") + "\n# stale copy\n", encoding="utf-8")
+            mismatch = run_installer("--validate", "--profile", "yolo-compatible", "--target-dir", str(target))
+            self.assertNotEqual(0, mismatch.returncode)
+            self.assertIn("support:agent_process_contracts.py hash mismatch", mismatch.stdout)
+
+            support.write_text((ROOT / "scripts" / "agent_process_contracts.py").read_text(encoding="utf-8"), encoding="utf-8")
+            support.chmod(0o600)
+            wrong_mode = run_installer("--validate", "--profile", "yolo-compatible", "--target-dir", str(target))
+            self.assertNotEqual(0, wrong_mode.returncode)
+            self.assertIn("support:agent_process_contracts.py mode must be 0644", wrong_mode.stdout)
+
+            support.unlink()
+            missing = run_installer("--validate", "--profile", "yolo-compatible", "--target-dir", str(target))
+            self.assertNotEqual(0, missing.returncode)
+            self.assertIn("missing installed files", missing.stdout)
 
 
 if __name__ == "__main__":

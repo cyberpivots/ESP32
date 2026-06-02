@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -53,7 +54,13 @@ REQUIRED_SOURCE_IDS = [
     "SRC-LANGCHAIN-CONTEXT-ENGINEERING-2026-05-27",
     "SRC-CODEX-ADMIN-REQUIREMENTS-2026-05-28",
     "SRC-CODEX-HOOKS-MANAGED-2026-05-28",
+    "SRC-CODEX-SKILLS-2026-06-02",
+    "SRC-CODEX-AGENTS-MD-2026-06-02",
+    "SRC-CODEX-HOOKS-2026-06-02",
+    "SRC-CODEX-MANAGED-CONFIG-2026-06-02",
+    "SRC-CODEX-SUBAGENTS-2026-06-02",
     "SRC-OPENAI-LLM-ACCURACY-2026-05-28",
+    "SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-06-02",
     "SRC-LOCAL-MULTI-AGENTIC-DEFAULT-PROCESS-2026-05-27",
     "SRC-LOCAL-MULTI-AGENTIC-CONTINUATION-DECISION-2026-05-27",
     "SRC-LOCAL-ADMIN-STRICT-CODEX-ENFORCEMENT-2026-05-28",
@@ -64,6 +71,8 @@ REQUIRED_SOURCE_IDS = [
     "SRC-LOCAL-MULTI-WINDOW-CODEX-SCHEDULER-2026-06-01",
     "SRC-LOCAL-SUBAGENT-LIFECYCLE-CLEANUP-2026-06-01",
     "SRC-LOCAL-ALWAYS-ON-SUBAGENT-PROCESS-ENFORCEMENT-2026-06-02",
+    "SRC-LOCAL-AGENT-INSTRUCTION-SKILL-HOOK-CI-HARDENING-2026-06-02",
+    "SRC-LOCAL-AGENT-PROCESS-HARDENING-PRODUCTION-REFACTOR-2026-06-02",
 ]
 
 
@@ -143,6 +152,127 @@ def _run_admin_hook(
     return failures
 
 
+def _run_admin_installer_dry_run(root: Path, profile: str) -> list[str]:
+    path = root / ".codex" / "admin" / "install_admin_policy.py"
+    label = f".codex/admin/install_admin_policy.py --dry-run --profile {profile}"
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "codex"
+        result = subprocess.run(
+            [sys.executable, str(path), "--dry-run", "--profile", profile, "--target-dir", str(target)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    if result.returncode != 0:
+        return [f"{label} exited {result.returncode}: {result.stdout}{result.stderr}"]
+    return _require_markers(result.stdout, [
+        f"profile: {profile}",
+        "target-dir:",
+        "source files",
+        "target files",
+        "requirements diff",
+        "hook diff",
+        "support:agent_process_classifiers.py diff",
+        "support:agent_process_contracts.py diff",
+        "planned backups",
+        "sha256=",
+        "mode=",
+        "owner=",
+    ], label)
+
+
+def _run_admin_installer_temp_smoke(root: Path) -> list[str]:
+    path = root / ".codex" / "admin" / "install_admin_policy.py"
+    failures: list[str] = []
+    label = ".codex/admin/install_admin_policy.py temp --target-dir smoke"
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "codex"
+        install_result = subprocess.run(
+            [sys.executable, str(path), "--install", "--profile", "yolo-compatible", "--target-dir", str(target)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if install_result.returncode != 0:
+            return [f"{label} install exited {install_result.returncode}: {install_result.stdout}{install_result.stderr}"]
+        failures.extend(_require_markers(install_result.stdout, [
+            "installed profile: yolo-compatible",
+            "agent_process_classifiers.py",
+            "agent_process_contracts.py",
+            "sha256=",
+            "mode=",
+            "owner=",
+            "backups:",
+        ], label))
+
+        hook = target / "hooks" / "esp32_admin_policy.py"
+        support_files = [
+            target / "hooks" / "agent_process_classifiers.py",
+            target / "hooks" / "agent_process_contracts.py",
+        ]
+        for support in [hook, *support_files]:
+            if not support.exists():
+                failures.append(f"{label} missing installed file: {support}")
+        env = os.environ.copy()
+        env.pop("PYTHONPATH", None)
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        hook_fixtures: list[dict[str, object] | str] = [
+            "{",
+            {"hook_event_name": "UserPromptSubmit", "permission_mode": "bypassPermissions"},
+        ]
+        for fixture in hook_fixtures:
+            stdin_text = fixture if isinstance(fixture, str) else json.dumps(fixture)
+            hook_result = subprocess.run(
+                [sys.executable, str(hook)],
+                input=stdin_text,
+                text=True,
+                capture_output=True,
+                check=False,
+                cwd=tmp,
+                env=env,
+            )
+            if hook_result.returncode != 0:
+                failures.append(f"{label} installed hook exited {hook_result.returncode}: {hook_result.stderr.strip()}")
+                continue
+            if "ModuleNotFoundError" in hook_result.stderr:
+                failures.append(f"{label} installed hook imported from repo or missed support module: {hook_result.stderr.strip()}")
+            failures.extend(_require_markers(hook_result.stdout, ["hookSpecificOutput"], label))
+
+        validate_result = subprocess.run(
+            [sys.executable, str(path), "--validate", "--profile", "yolo-compatible", "--target-dir", str(target)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if validate_result.returncode != 0:
+            failures.append(f"{label} validate exited {validate_result.returncode}: {validate_result.stdout}{validate_result.stderr}")
+        else:
+            failures.extend(_require_markers(validate_result.stdout, [
+                "validated profile: yolo-compatible",
+                "agent_process_classifiers.py",
+                "agent_process_contracts.py",
+            ], label))
+
+        remove_result = subprocess.run(
+            [sys.executable, str(path), "--remove-system-requirements", "--target-dir", str(target)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if remove_result.returncode != 0:
+            failures.append(f"{label} remove exited {remove_result.returncode}: {remove_result.stdout}{remove_result.stderr}")
+        else:
+            failures.extend(_require_markers(remove_result.stdout, [
+                "removed target requirements",
+                "remaining managed hook files",
+                "agent_process_classifiers.py",
+                "agent_process_contracts.py",
+            ], label))
+        if (target / "requirements.toml").exists():
+            failures.append(f"{label} remove left temp requirements.toml in place")
+    return failures
+
+
 def _run_decision_helper(root: Path) -> list[str]:
     path = root / "scripts" / "agent_process_decision.py"
     failures: list[str] = []
@@ -206,6 +336,8 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "close completed/stale agents",
         "close agents before fallback/final",
         "fallback is valid only after a cleanup attempt",
+        "Standing user authorization",
+        "requested and allowed for every prompt",
         "## Agent Instruction Enforcement Boundary",
         ".codex/agents/*.toml",
         "operator sovereignty",
@@ -228,6 +360,8 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "wait_agent",
         "close_agent",
         "guarantee runtime slot release",
+        "Standing user authorization",
+        "requested and allowed for every prompt",
     ], "governance"))
 
     ownership_text = _read(root / ".agents/OWNERSHIP.md")
@@ -249,6 +383,8 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "mandatory to attempt",
         "agent lifecycle cleanup",
         "fallback only after cleanup attempt",
+        "Standing user authorization",
+        "requested and allowed for every prompt",
     ], "roles"))
 
     docs_text = "\n".join(_read(root / rel) for rel in [
@@ -294,6 +430,8 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "agent_scheduler.py",
         "scheduler-unavailable",
         "multi_window_coordination.v1",
+        "Standing user authorization",
+        "requested and allowed for every prompt",
     ], "agent process docs"))
 
     decision_helper = root / "scripts" / "agent_process_decision.py"
@@ -342,6 +480,7 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
             failures.append(f"{path.relative_to(root)} name must be {profile}")
         text = _read(path)
         failures.extend(_require_markers(text, [
+            "Contract IDs: ESP32-GOV-v1 SOV-v1 LIFECYCLE-v1 TIER3-CLOSED-v1",
             "AGENTS.md as the canonical contract",
             "operator sovereignty",
             "/etc/codex/requirements.toml",
@@ -428,6 +567,73 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
             "test_pretool_check_daemon_unavailable_fallback_is_advisory",
         ], "tests/scaffold_audits/test_agent_scheduler.py"))
 
+    classifier_path = root / "scripts" / "agent_process_classifiers.py"
+    contracts_path = root / "scripts" / "agent_process_contracts.py"
+    classifier_tests = root / "tests" / "scaffold_audits" / "test_agent_process_classifiers.py"
+    if not classifier_path.exists():
+        failures.append("missing script: scripts/agent_process_classifiers.py")
+    else:
+        failures.extend(_require_markers(_read(classifier_path), [
+            "stdlib-only",
+            "ClassificationResult",
+            "classify_shell_command",
+            "classify_tool",
+            "is_mutating_tool",
+            "is_live_tier3_tool",
+            "is_shell_read_only_command",
+            "ROUTING_PATTERNS",
+            "TIER3_AUTH_PATTERNS",
+            "MUTATION_CLAIM_RE",
+            "footer_semantic_failure",
+            "publication",
+            "destructive_git",
+            "redirection_or_tee",
+        ], "scripts/agent_process_classifiers.py"))
+    if not contracts_path.exists():
+        failures.append("missing script: scripts/agent_process_contracts.py")
+    else:
+        failures.extend(_require_markers(_read(contracts_path), [
+            "stdlib-only",
+            "CONTRACT_IDS",
+            "ROUTING_PACKET",
+            "PROCESS_CHECKLIST",
+            "SUBAGENT_BOUNDARY",
+            "BYPASS_ADVISORY",
+            "LIFECYCLE_MARKERS",
+            "SUBAGENT_STANDING_AUTHORIZATION",
+            "pretool_missing_triage_message",
+        ], "scripts/agent_process_contracts.py"))
+    if not classifier_tests.exists():
+        failures.append("missing classifier tests: tests/scaffold_audits/test_agent_process_classifiers.py")
+    else:
+        failures.extend(_require_markers(_read(classifier_tests), [
+            "test_read_only_shell_chains_are_not_mutating",
+            "pwd && rg --files",
+            "nl -ba AGENTS.md | sed",
+            "git status --short",
+            "test_mutating_shell_commands_are_detected",
+            "test_live_tier3_commands_are_detected",
+            "test_structured_classification_flags_risk_categories",
+            "test_structured_classification_preserves_wrapper_compatibility",
+            "test_validation_performed_is_not_a_mutation_claim",
+        ], "tests/scaffold_audits/test_agent_process_classifiers.py"))
+    for rel in [
+        ".codex/hooks/user_prompt_submit_agent_process.py",
+        ".codex/hooks/subagent_start_agent_process.py",
+        ".codex/hooks/subagent_stop_agent_process.py",
+        ".codex/hooks/pre_tool_use_agent_process.py",
+        ".codex/admin/hooks/esp32_admin_policy.py",
+    ]:
+        hook_text = _read(root / rel)
+        if rel.endswith("pre_tool_use_agent_process.py") or rel.endswith("esp32_admin_policy.py"):
+            if "from agent_process_classifiers import" not in hook_text:
+                failures.append(f"{rel} must import scripts/agent_process_classifiers.py")
+        if "from agent_process_contracts import" not in hook_text:
+            failures.append(f"{rel} must import scripts/agent_process_contracts.py")
+        for duplicate_marker in ["MUTATING_SHELL_RE =", "READ_ONLY_SHELL_RE =", "LIVE_TIER3_COMMAND_RE ="]:
+            if duplicate_marker in hook_text:
+                failures.append(f"{rel} duplicates shared classifier marker: {duplicate_marker}")
+
     admin_requirements = root / ".codex" / "admin" / "requirements.toml"
     yolo_requirements = root / ".codex" / "admin" / "profiles" / "yolo-compatible" / "requirements.toml"
     strict_requirements = root / ".codex" / "admin" / "profiles" / "admin-strict" / "requirements.toml"
@@ -485,6 +691,21 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
                 "yolo",
                 "Tier 3",
             ], str(path.relative_to(root))))
+    if admin_installer.exists():
+        failures.extend(_require_markers(_read(admin_installer), [
+            "--target-dir",
+            "SUPPORT_SOURCES",
+            "agent_process_classifiers.py",
+            "agent_process_contracts.py",
+            "target-dir:",
+            "support:",
+        ], ".codex/admin/install_admin_policy.py"))
+    if admin_hook.exists():
+        failures.extend(_require_markers(_read(admin_hook), [
+            "HOOK_DIR",
+            "ROOT / \"scripts\"",
+            "agent_process_contracts",
+        ], ".codex/admin/hooks/esp32_admin_policy.py"))
 
     failures.extend(_run_admin_hook(
         root,
@@ -542,6 +763,9 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         },
         [],
     ))
+    failures.extend(_run_admin_installer_dry_run(root, "yolo-compatible"))
+    failures.extend(_run_admin_installer_dry_run(root, "admin-strict"))
+    failures.extend(_run_admin_installer_temp_smoke(root))
 
     failures.extend(_run_hook(
         root,
@@ -549,17 +773,16 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         json.dumps({"hook_event_name": "UserPromptSubmit"}),
         "UserPromptSubmit",
         [
+            "ESP32-GOV-v1",
+            "SOV-v1",
+            "LIFECYCLE-v1",
+            "TIER3-CLOSED-v1",
+            "standing user authorization",
+            "Safe non-trivial Tier 1",
             "evidence need",
-            "mandatory attempt",
-            "Weighted vote",
-            "Missing evidence",
+            "weighted no-P1/P2 quorum",
             "decision footer",
-            "agent lifecycle cleanup",
-            "inspect completed agents before spawning",
-            "close completed/stale agents",
-            "close agents before fallback/final",
-            "fallback only after cleanup attempt",
-            "advisory aids",
+            "source records",
         ],
     ))
     failures.extend(_run_hook(
@@ -568,15 +791,11 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         json.dumps({"agent_type": "qa-validation-reviewer", "permission_mode": "read-only"}),
         "SubagentStart",
         [
-            "mandatory to attempt",
+            "standing user authorization",
             "explicit disjoint write scope",
-            "role, weight",
-            "premature stop",
-            "agent lifecycle cleanup",
-            "close completed/stale agents",
-            "close agents before fallback/final",
-            "fallback only after cleanup attempt",
-            "advisory aids",
+            "role, weight, evidence",
+            "wait_agent/close_agent",
+            "bypassPermissions",
         ],
     ))
     failures.extend(_run_hook(
@@ -585,11 +804,11 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         json.dumps({"hook_event_name": "SubagentStop"}),
         "SubagentStop",
         [
-            "agent lifecycle cleanup",
-            "inspect completed agents before spawning",
-            "close completed/stale agents",
+            "ESP32-GOV-v1",
+            "inspect visible completed agents before replacements",
+            "close completed/stale agents with close_agent",
             "close agents before fallback/final",
-            "fallback only after cleanup attempt",
+            "fallback is valid only after cleanup attempt",
             "bypassPermissions advisory only",
         ],
     ))
@@ -602,7 +821,7 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
             "prompt": "Tier 2 validation plan mutation boundary",
         }),
         "PreToolUse",
-        ["verified facts", "assumptions", "unknowns", "owner role", "evidence need", "weighted reviewer disposition", "advisory aids"],
+        ["verified facts", "assumptions", "unknowns", "owner role", "evidence need", "reviewer disposition", "Hooks are advisory"],
     ))
     for script, event_name in [
         ("user_prompt_submit_agent_process.py", "UserPromptSubmit"),
@@ -641,6 +860,12 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         "../.agents/TASK_LOG/0137-always-on-subagent-process-enforcement.md",
         "../.agents/handoffs/0101-always-on-subagent-process-enforcement-to-qa-tooling.md",
         "../knowledge-base/source-ledger/2026-06-02-always-on-subagent-process-enforcement.md",
+        "../.agents/TASK_LOG/0144-agent-instruction-skill-hook-ci-hardening.md",
+        "../.agents/handoffs/0105-agent-instruction-skill-hook-ci-hardening-to-qa-tooling.md",
+        "../knowledge-base/source-ledger/2026-06-02-agent-instruction-skill-hook-ci-hardening.md",
+        "../.agents/TASK_LOG/0145-agent-process-hardening-production-refactor.md",
+        "../.agents/handoffs/0106-agent-process-hardening-production-refactor-to-qa-tooling.md",
+        "../knowledge-base/source-ledger/2026-06-02-agent-process-hardening-production-refactor.md",
         "prompt/admin-strict-codex-enforcement.md",
         "prompt/comprehensive-bench-development-process.md",
         "../.agents/TASK_LOG/0120-comprehensive-bench-development-process.md",
@@ -679,6 +904,12 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0137-always-on-subagent-process-enforcement.md",
         ".agents/handoffs/0101-always-on-subagent-process-enforcement-to-qa-tooling.md",
         "knowledge-base/source-ledger/2026-06-02-always-on-subagent-process-enforcement.md",
+        ".agents/TASK_LOG/0144-agent-instruction-skill-hook-ci-hardening.md",
+        ".agents/handoffs/0105-agent-instruction-skill-hook-ci-hardening-to-qa-tooling.md",
+        "knowledge-base/source-ledger/2026-06-02-agent-instruction-skill-hook-ci-hardening.md",
+        ".agents/TASK_LOG/0145-agent-process-hardening-production-refactor.md",
+        ".agents/handoffs/0106-agent-process-hardening-production-refactor-to-qa-tooling.md",
+        "knowledge-base/source-ledger/2026-06-02-agent-process-hardening-production-refactor.md",
         ".agents/TASK_LOG/0119-development-agent-panel.md",
         "knowledge-base/source-ledger/2026-05-31-development-agent-panel.md",
         ".agents/TASK_LOG/0120-comprehensive-bench-development-process.md",

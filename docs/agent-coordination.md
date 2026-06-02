@@ -11,6 +11,11 @@
 6. Check source coverage before editing factual docs.
 7. Leave validation evidence and handoff notes.
 
+Use the compact contract IDs in hooks and subagent prompts when the full text
+would be noisy: `ESP32-GOV-v1`, `SOV-v1`, `LIFECYCLE-v1`, and
+`TIER3-CLOSED-v1`. The full definitions remain in `AGENTS.md`,
+`.agents/GOVERNANCE.md`, and [Instruction surface map](instruction-surface-map.md).
+
 ## Tiers
 
 - Tier 0: trivial or read-only. Coordinator triage plus local role lens.
@@ -31,6 +36,11 @@ mandatory to attempt when available and safe. Use local role lenses only when
 subagents are unavailable, unsafe, or blocked by higher-priority tool policy
 after lifecycle cleanup, and record that no subagents were spawned and why the
 mandatory subagent attempt could not be completed.
+
+Standing user authorization for project-local read-only subagent use is recorded
+in `AGENTS.md`; treat subagent use as requested and allowed for every prompt in
+this workspace. Do not treat generic explicit-user-request limits as a fallback
+reason when a selected tier requires subagent review.
 
 A no-P1/P2 reviewer quorum may accept only the named gate and mutation
 boundary. Tier 3 acceptance also requires same-session evidence, explicit
@@ -100,6 +110,11 @@ No feature or factual document should be considered accepted unless it has:
 - an owner for the next action,
 - selected tier and mutation boundary for non-trivial work.
 - continuation decision and authority limits.
+- skill/config audit coverage when Codex skills or `.codex/config.toml` skill
+  routing changes.
+- durable-record audit coverage for new non-trivial task records.
+- publication-hygiene report before any explicit commit, push, PR, branch
+  cleanup, release, or Pages publication gate.
 
 Project-local Codex hooks under `.codex/hooks.json` add model-visible reminders
 for triage, subagent boundaries, agent lifecycle cleanup, and mutating tool

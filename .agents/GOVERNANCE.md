@@ -72,6 +72,9 @@
   and record that no subagents were spawned, why the mandatory subagent attempt
   could not be completed, and whether cleanup was attempted or lifecycle state
   was not visible.
+- Standing user authorization for project-local read-only subagent use is
+  explicit and persistent in this workspace. Treat subagent use as requested and allowed for every prompt; do not use generic explicit-user-request limits as
+  a fallback reason when a tier requires a subagent attempt.
 
 ## Validation gates
 
@@ -86,11 +89,30 @@
 - Agent-process gate: project-local `.codex` hooks, agent profiles, and prompt
   process records must pass `scripts/scaffold_audit_agent_process.py` before
   the scaffold is considered valid.
+- Skill gate: repo-local skills and configured skill paths must pass
+  `scripts/scaffold_audit_skills.py`; plugin cache paths are drift-prone and
+  require same-session inventory before path claims are trusted.
+- Durable-record gate: new non-trivial task records must pass
+  `scripts/scaffold_audit_records.py` for task/source/validation/unknowns/
+  authority/handoff coverage.
+- Publication hygiene gate: before any commit, push, PR, branch cleanup, or
+  publication action, run `scripts/git_publication_hygiene.py check --json` and
+  require explicit user authority for the exact action.
 - Codex profile gate: `.codex/admin/requirements.toml`,
   `.codex/admin/profiles/`, managed hook scripts, installer/validator, source
   records, and hook tests must pass before any managed profile is considered
   installable. The default and yolo-compatible profiles must pass the
   operator-sovereignty audit.
+
+## Contract IDs
+
+- `ESP32-GOV-v1`: tiered routing, owner, evidence, mutation boundary, and
+  validation packet.
+- `SOV-v1`: operator sovereignty for yolo-compatible launches and
+  `permission_mode=bypassPermissions`.
+- `LIFECYCLE-v1`: Tier 2/Tier 3 reviewer lifecycle cleanup.
+- `TIER3-CLOSED-v1`: live bench, flash, serial-write, RF/XBee write,
+  relay/load/mains, release, and other closed-surface gates.
 
 ## Current status
 

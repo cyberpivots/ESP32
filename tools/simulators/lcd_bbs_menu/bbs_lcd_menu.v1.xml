@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu schema="bbs_lcd_menu.v1" sourceId="PF0530W">
   <page id="HOME" title="BBS Field" glyphBank="core_status">
-    <item id="home-status" label="BBS FIELD STATUS READY" action="detail" />
-    <item id="home-messages" label="Messages queue and custody" action="page" target="MESSAGES" />
-    <item id="home-peers" label="Peers and RSSI" action="page" target="PEERS" />
-    <item id="home-queue" label="Queue/files overview" action="page" target="QUEUE" />
-    <item id="home-mesh" label="Mesh routes table" action="page" target="ROUTES" />
-    <item id="home-diag" label="Diagnostics and locks" action="page" target="DIAG" />
-    <item id="home-widgets" label="Local widget pages" action="page" target="BARS" />
-    <item id="home-art" label="LCD art badge panel" action="page" target="ART" />
+    <item id="home-status" label="BBS Ready {link.status}" action="detail" />
+    <item id="home-messages" label="Messages Custody" action="page" target="MESSAGES" />
+    <item id="home-peers" label="Peers RSSI" action="page" target="PEERS" />
+    <item id="home-queue" label="Queue Files" action="page" target="QUEUE" />
+    <item id="home-mesh" label="Routes Mesh" action="page" target="ROUTES" />
+    <item id="home-diag" label="Diag Locks" action="page" target="DIAG" />
+    <item id="home-widgets" label="Widget Lab" action="page" target="BARS" />
+    <item id="home-art" label="ART Pixel Gallery" action="page" target="ART" />
   </page>
   <page id="MESSAGES" title="Messages" glyphBank="core_status">
     <item id="msg-new" label="New inbox messages" action="detail" />

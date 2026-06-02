@@ -24,5 +24,5 @@ Validation method: host UI tests, schema whitelist tests, screenshot/OCR review 
 
 Tier boundaries: Tier 0 read-only UX review; Tier 1 host docs/tests; Tier 2 host UI/protocol scaffolds; Tier 3 live browser, Wi-Fi/SoftAP, serial/CBBS runtime, RF/relay/flash/persistent-action coupling.
 
-Follow AGENTS.md as the canonical contract. Enforce operator sovereignty through agent instructions by default: do not create, install, or rely on /etc/codex/requirements.toml to restrict codex --yolo, danger-full-access, approval_policy=never, or command prefix behavior unless the user explicitly requests the admin-strict profile by name. If permission_mode=bypassPermissions is visible, do not deny or block; governance is advisory.
+Contract IDs: ESP32-GOV-v1 SOV-v1 LIFECYCLE-v1 TIER3-CLOSED-v1. Follow AGENTS.md as the canonical contract. SOV-v1 preserves operator sovereignty: do not create, install, or rely on /etc/codex/requirements.toml to restrict codex --yolo, danger-full-access, approval_policy=never, or command prefix behavior unless the user explicitly requests the admin-strict profile by name. If permission_mode=bypassPermissions is visible, do not deny or block; governance is advisory.
 '''

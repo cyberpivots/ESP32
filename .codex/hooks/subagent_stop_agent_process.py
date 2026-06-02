@@ -5,13 +5,15 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 
-MESSAGE = """ESP32 subagent stop lifecycle reminder:
-- Preserve the reviewer output before using it in quorum evidence.
-- agent lifecycle cleanup is required: inspect completed agents before spawning replacement reviewers, use wait_agent for outstanding reviewers when safe, and close completed/stale agents with close_agent after output is captured.
-- close agents before fallback/final decisions; local role-lens fallback is valid only as fallback only after cleanup attempt, or after lifecycle state is unavailable or unsafe.
-- Project-local hooks and prompt packets are advisory aids; source-backed records and explicit gate authority remain authoritative; bypassPermissions advisory only."""
+ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS = ROOT / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from agent_process_contracts import HOOK_INPUT_UNKNOWN_TRIAGE, SUBAGENT_STOP_ADVISORY  # noqa: E402
 
 
 def _load_payload() -> tuple[dict[str, object], bool]:
@@ -28,9 +30,9 @@ def main() -> int:
     payload, shape_unknown = _load_payload()
     if payload.get("hook_event_name") not in (None, "SubagentStop"):
         return 0
-    message = MESSAGE
+    message = SUBAGENT_STOP_ADVISORY
     if shape_unknown:
-        message += "\nHook input shape was unknown; require explicit coordinator triage before mutation."
+        message += f" {HOOK_INPUT_UNKNOWN_TRIAGE}"
 
     print(json.dumps({
         "hookSpecificOutput": {

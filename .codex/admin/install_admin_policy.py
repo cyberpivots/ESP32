@@ -12,10 +12,12 @@ import argparse
 import difflib
 import hashlib
 import os
+import shutil
 import stat
 import subprocess
 import sys
 import tomllib
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,13 +26,31 @@ ROOT = Path(__file__).resolve().parents[2]
 ADMIN_DIR = ROOT / ".codex" / "admin"
 PROFILE_DIR = ADMIN_DIR / "profiles"
 DEFAULT_PROFILE = "yolo-compatible"
+DEFAULT_TARGET_DIR = Path("/etc/codex")
 SOURCE_HOOK = ADMIN_DIR / "hooks" / "esp32_admin_policy.py"
-TARGET_DIR = Path("/etc/codex")
-TARGET_HOOK_DIR = TARGET_DIR / "hooks"
-BACKUP_DIR = TARGET_DIR / "backups"
-TARGET_REQUIREMENTS = TARGET_DIR / "requirements.toml"
-TARGET_HOOK = TARGET_HOOK_DIR / "esp32_admin_policy.py"
+SUPPORT_SOURCES = [
+    ROOT / "scripts" / "agent_process_classifiers.py",
+    ROOT / "scripts" / "agent_process_contracts.py",
+]
 YOLO_FORBIDDEN_KEYS = ("allowed_sandbox_modes", "allowed_approval_policies")
+
+
+@dataclass(frozen=True)
+class InstallEntry:
+    label: str
+    source: Path
+    target: Path
+    file_mode: str
+
+
+@dataclass(frozen=True)
+class TargetLayout:
+    target_dir: Path
+    hook_dir: Path
+    backup_dir: Path
+    requirements: Path
+    hook: Path
+    privileged: bool
 
 
 def profile_requirements(profile: str) -> Path:
@@ -39,6 +59,36 @@ def profile_requirements(profile: str) -> Path:
     if profile == "admin-strict":
         return PROFILE_DIR / "admin-strict" / "requirements.toml"
     raise SystemExit(f"unknown profile: {profile}")
+
+
+def is_system_target(target_dir: Path) -> bool:
+    resolved = target_dir.resolve()
+    system = DEFAULT_TARGET_DIR.resolve()
+    return resolved == system or system in resolved.parents
+
+
+def target_layout(target_dir: Path) -> TargetLayout:
+    target_dir = target_dir.expanduser()
+    hook_dir = target_dir / "hooks"
+    return TargetLayout(
+        target_dir=target_dir,
+        hook_dir=hook_dir,
+        backup_dir=target_dir / "backups",
+        requirements=target_dir / "requirements.toml",
+        hook=hook_dir / "esp32_admin_policy.py",
+        privileged=is_system_target(target_dir) and os.geteuid() != 0,
+    )
+
+
+def install_entries(requirements: Path, layout: TargetLayout) -> list[InstallEntry]:
+    return [
+        InstallEntry("requirements", requirements, layout.requirements, "0644"),
+        InstallEntry("hook", SOURCE_HOOK, layout.hook, "0755"),
+        *[
+            InstallEntry(f"support:{source.name}", source, layout.hook_dir / source.name, "0644")
+            for source in SUPPORT_SOURCES
+        ],
+    ]
 
 
 def sha256(path: Path) -> str:
@@ -63,32 +113,48 @@ def parse_toml(path: Path) -> dict[str, object]:
         return tomllib.load(handle)
 
 
-def run_root(args: list[str]) -> None:
-    command = args if os.geteuid() == 0 else ["sudo", *args]
+def run_command(args: list[str], privileged: bool) -> None:
+    command = ["sudo", *args] if privileged else args
     subprocess.run(command, check=True)
 
 
-def backup_existing(target: Path, label: str) -> Path | None:
+def copy_with_mode(source: Path, target: Path, file_mode: str, layout: TargetLayout) -> None:
+    if layout.privileged:
+        run_command(["mkdir", "-p", str(target.parent)], privileged=True)
+        run_command(["install", "-m", file_mode, "-o", "root", "-g", "root", str(source), str(target)], privileged=True)
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, target)
+    target.chmod(int(file_mode, 8))
+
+
+def backup_existing(target: Path, label: str, layout: TargetLayout) -> Path | None:
     if not target.exists():
         return None
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    backup = BACKUP_DIR / f"{target.name}.{timestamp}.{label}.bak"
-    run_root(["mkdir", "-p", str(BACKUP_DIR)])
-    run_root(["cp", "-p", str(target), str(backup)])
+    backup = layout.backup_dir / f"{target.name}.{timestamp}.{label}.bak"
+    if layout.privileged:
+        run_command(["mkdir", "-p", str(layout.backup_dir)], privileged=True)
+        run_command(["cp", "-p", str(target), str(backup)], privileged=True)
+    else:
+        layout.backup_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(target, backup)
     return backup
 
 
-def install_file(source: Path, target: Path, file_mode: str) -> Path | None:
-    backup = backup_existing(target, sha256(source)[:12])
-    run_root(["mkdir", "-p", str(target.parent)])
-    run_root(["install", "-m", file_mode, "-o", "root", "-g", "root", str(source), str(target)])
+def install_file(entry: InstallEntry, layout: TargetLayout) -> Path | None:
+    backup = backup_existing(entry.target, sha256(entry.source)[:12], layout)
+    copy_with_mode(entry.source, entry.target, entry.file_mode, layout)
     return backup
 
 
-def remove_file(target: Path) -> Path | None:
-    backup = backup_existing(target, "remove")
+def remove_file(target: Path, layout: TargetLayout) -> Path | None:
+    backup = backup_existing(target, "remove", layout)
     if target.exists():
-        run_root(["rm", "-f", str(target)])
+        if layout.privileged:
+            run_command(["rm", "-f", str(target)], privileged=True)
+        else:
+            target.unlink()
     return backup
 
 
@@ -117,8 +183,9 @@ def source_checks(profile: str) -> Path:
     if profile == DEFAULT_PROFILE:
         assert_yolo_compatible(requirements)
         assert_yolo_compatible(ADMIN_DIR / "requirements.toml")
-    if not SOURCE_HOOK.exists():
-        raise SystemExit(f"missing hook template: {SOURCE_HOOK}")
+    for source in [SOURCE_HOOK, *SUPPORT_SOURCES]:
+        if not source.exists():
+            raise SystemExit(f"missing managed-hook source file: {source}")
     return requirements
 
 
@@ -139,79 +206,89 @@ def print_report(title: str, paths: list[Path]) -> None:
             print(f"- {path}: missing")
 
 
-def dry_run(profile: str) -> int:
+def dry_run(profile: str, target_dir: Path) -> int:
     requirements = source_checks(profile)
+    layout = target_layout(target_dir)
+    entries = install_entries(requirements, layout)
     print(f"profile: {profile}")
-    print_report("source files", [requirements, SOURCE_HOOK])
-    print_report("target files", [TARGET_REQUIREMENTS, TARGET_HOOK])
-    print("requirements diff:")
-    print(diff_text(requirements, TARGET_REQUIREMENTS), end="")
-    print("hook diff:")
-    print(diff_text(SOURCE_HOOK, TARGET_HOOK), end="")
+    print(f"target-dir: {layout.target_dir}")
+    print_report("source files", [entry.source for entry in entries])
+    print_report("target files", [entry.target for entry in entries])
+    for entry in entries:
+        print(f"{entry.label} diff:")
+        print(diff_text(entry.source, entry.target), end="")
     print("planned backups:")
-    for target in [TARGET_REQUIREMENTS, TARGET_HOOK]:
-        if target.exists():
-            print(f"- {target} -> {BACKUP_DIR}/{target.name}.<utc>.<label>.bak")
+    for entry in entries:
+        if entry.target.exists():
+            print(f"- {entry.target} -> {layout.backup_dir}/{entry.target.name}.<utc>.<label>.bak")
         else:
-            print(f"- {target}: no backup needed; target missing")
+            print(f"- {entry.target}: no backup needed; target missing")
     return 0
 
 
-def install(profile: str) -> int:
+def install(profile: str, target_dir: Path) -> int:
     requirements = source_checks(profile)
+    layout = target_layout(target_dir)
+    entries = install_entries(requirements, layout)
     if profile == "admin-strict":
         print("WARNING: admin-strict blocks codex --yolo by design.")
-    backups = [
-        install_file(requirements, TARGET_REQUIREMENTS, "0644"),
-        install_file(SOURCE_HOOK, TARGET_HOOK, "0755"),
-    ]
-    parse_toml(TARGET_REQUIREMENTS)
+    backups = [(entry.label, install_file(entry, layout)) for entry in entries]
+    parse_toml(layout.requirements)
     print(f"installed profile: {profile}")
-    print_report("installed files", [TARGET_REQUIREMENTS, TARGET_HOOK])
+    print(f"target-dir: {layout.target_dir}")
+    print_report("installed files", [entry.target for entry in entries])
     print("backups:")
-    for backup in backups:
-        print(f"- {backup}" if backup else "- none")
+    for label, backup in backups:
+        print(f"- {label}: {backup}" if backup else f"- {label}: none")
     return 0
 
 
-def validate(profile: str) -> int:
+def validate(profile: str, target_dir: Path) -> int:
     requirements = source_checks(profile)
-    missing = [str(path) for path in [TARGET_REQUIREMENTS, TARGET_HOOK] if not path.exists()]
+    layout = target_layout(target_dir)
+    entries = install_entries(requirements, layout)
+    missing = [str(entry.target) for entry in entries if not entry.target.exists()]
     if missing:
         print("FAIL: missing installed files: " + ", ".join(missing))
         return 1
-    parse_toml(TARGET_REQUIREMENTS)
+    parse_toml(layout.requirements)
     failures: list[str] = []
-    if sha256(requirements) != sha256(TARGET_REQUIREMENTS):
-        failures.append("requirements hash mismatch")
-    if sha256(SOURCE_HOOK) != sha256(TARGET_HOOK):
-        failures.append("hook hash mismatch")
-    if oct(TARGET_REQUIREMENTS.stat().st_mode & 0o777) != "0o644":
-        failures.append("requirements mode must be 0644")
-    if oct(TARGET_HOOK.stat().st_mode & 0o777) != "0o755":
-        failures.append("hook mode must be 0755")
+    for entry in entries:
+        if sha256(entry.source) != sha256(entry.target):
+            failures.append(f"{entry.label} hash mismatch")
+        actual_mode = entry.target.stat().st_mode & 0o777
+        expected_mode = int(entry.file_mode, 8)
+        if actual_mode != expected_mode:
+            failures.append(f"{entry.label} mode must be {entry.file_mode}")
     if profile == DEFAULT_PROFILE:
         try:
-            assert_yolo_compatible(TARGET_REQUIREMENTS)
+            assert_yolo_compatible(layout.requirements)
         except SystemExit as exc:
             failures.append(str(exc))
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}")
-        print_report("installed files", [TARGET_REQUIREMENTS, TARGET_HOOK])
+        print_report("installed files", [entry.target for entry in entries])
         return 1
     print(f"validated profile: {profile}")
-    print_report("validated installed files", [TARGET_REQUIREMENTS, TARGET_HOOK])
+    print(f"target-dir: {layout.target_dir}")
+    print_report("validated installed files", [entry.target for entry in entries])
     return 0
 
 
-def remove_system_requirements() -> int:
-    backup = remove_file(TARGET_REQUIREMENTS)
-    if TARGET_REQUIREMENTS.exists():
-        print(f"FAIL: {TARGET_REQUIREMENTS} still exists")
+def remove_system_requirements(target_dir: Path) -> int:
+    layout = target_layout(target_dir)
+    backup = remove_file(layout.requirements, layout)
+    if layout.requirements.exists():
+        print(f"FAIL: {layout.requirements} still exists")
         return 1
-    print("removed system requirements; codex --yolo is no longer constrained by /etc/codex/requirements.toml")
+    if is_system_target(layout.target_dir):
+        print("removed system requirements; codex --yolo is no longer constrained by requirements.toml")
+    else:
+        print("removed target requirements; temp target no longer has requirements.toml")
+    print(f"target-dir: {layout.target_dir}")
     print(f"backup: {backup}" if backup else "backup: none; target missing")
+    print_report("remaining managed hook files", [layout.hook, *[layout.hook_dir / source.name for source in SUPPORT_SOURCES]])
     return 0
 
 
@@ -228,15 +305,21 @@ def main() -> int:
         default=DEFAULT_PROFILE,
         help="requirements profile to use; admin-strict blocks codex --yolo",
     )
+    parser.add_argument(
+        "--target-dir",
+        type=Path,
+        default=DEFAULT_TARGET_DIR,
+        help="managed policy target directory; defaults to /etc/codex",
+    )
     args = parser.parse_args()
     if args.remove_system_requirements:
-        return remove_system_requirements()
+        return remove_system_requirements(args.target_dir)
     if args.dry_run:
-        return dry_run(args.profile)
+        return dry_run(args.profile, args.target_dir)
     if args.install:
-        return install(args.profile)
+        return install(args.profile, args.target_dir)
     if args.validate:
-        return validate(args.profile)
+        return validate(args.profile, args.target_dir)
     return 2
 
 

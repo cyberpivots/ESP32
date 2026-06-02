@@ -22,6 +22,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Check diff whitespace
+        run: git diff --check
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
@@ -39,6 +42,7 @@ jobs:
         run: |
           python3 scripts/audit_public_manifest.py
           python3 scripts/smoke_github_pages.py
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/scaffold_audits -p 'test_*.py'
           python3 scripts/verify_scaffold.py
 
       - name: Run host-side contract tests

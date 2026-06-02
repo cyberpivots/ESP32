@@ -39,6 +39,12 @@ still use the same classification.
   Require same-session evidence, explicit gate authority, recovery path, and
   reviewer quorum before mutation.
 
+Standing user authorization for project-local read-only subagent use is
+explicitly recorded for this workspace. Treat subagent use as requested and allowed for every prompt; do not record generic explicit-user-request limits as a
+fallback reason. Still record actual tool unavailability, unsafe lifecycle state,
+or a higher-priority system/developer prohibition if one prevents a required
+subagent attempt.
+
 Codex managed-hook profiles are tracked under `.codex/admin/`. The default
 profile is yolo-compatible: no default `/etc/codex/requirements.toml` may
 silently block a user-launched `codex --yolo` session, `danger-full-access`,

@@ -32,10 +32,12 @@ from lcd_bbs_menu import (  # noqa: E402
     INPUT_EVENTS,
     LCD_ART_PIXEL_HEIGHT,
     LCD_ART_PIXEL_WIDTH,
+    LCD_ART_CATALOG_SCHEMA,
     LCD_ART_SCHEMA,
     LCD_COLUMNS,
     LCD_CONTENT_COLUMNS,
     LCD_DDRAM_ROW_BASES,
+    LCD_PIXEL_PREVIEW_SCHEMA,
     LCD_ROWS,
     MARQUEE_HOLD_MS,
     MARQUEE_STEP_MS,
@@ -56,6 +58,8 @@ from lcd_bbs_menu import (  # noqa: E402
     gauge_demo,
     glyph_bank_for_page,
     horizontal_bar,
+    lcd_art_catalog,
+    lcd_art_pixel_preview,
     render,
     sample_art_panel,
     sample_state,
@@ -75,7 +79,7 @@ class LcdBbsMenuTests(unittest.TestCase):
         self.assertEqual(rendered.source_id, SOURCE_ID)
         self.assertEqual(len(rendered.lines), LCD_ROWS)
         self.assertTrue(all(len(line) == LCD_COLUMNS for line in rendered.lines))
-        self.assertEqual(rendered.lines[0], ">BBS FIELD STATUS RE")
+        self.assertEqual(rendered.lines[0], ">BBS Ready OK       ")
         self.assertEqual(rendered.viewport["selected_item_id"], "home-status")
         self.assertEqual(rendered.viewport["visible_item_ids"][0], "home-status")
 
@@ -156,8 +160,16 @@ class LcdBbsMenuTests(unittest.TestCase):
         self.assertEqual(rendered.firmware_id, "PF0530W")
         self.assertEqual(rendered.glyph_bank_name, "art_panel")
         self.assertEqual(rendered.lines, art.preview_lines)
+        self.assertEqual(rendered.cursor.focus, "art_panel")
+        self.assertEqual(rendered.cursor.row, 0)
+        self.assertEqual(rendered.cursor.column, 0)
+        self.assertEqual(rendered.cursor.ddram_address, 0)
         self.assertEqual(rendered.viewport["art_panel"]["schema"], LCD_ART_SCHEMA)
         self.assertEqual(rendered.viewport["art_panel"]["cell_slots"], [list(row) for row in art.cell_slots])
+        self.assertEqual(rendered.viewport["art_panel"]["pixel_preview"]["schema"], LCD_PIXEL_PREVIEW_SCHEMA)
+        self.assertEqual(rendered.viewport["art_catalog"]["schema"], LCD_ART_CATALOG_SCHEMA)
+        self.assertEqual(rendered.viewport["art_catalog"]["active"], "bbs_badge")
+        self.assertIn("packet_flow", rendered.viewport["art_catalog"]["names"])
 
     def test_more_than_four_options_scroll_vertically(self) -> None:
         view = MenuViewState(page="HOME")
@@ -168,7 +180,23 @@ class LcdBbsMenuTests(unittest.TestCase):
         self.assertEqual(view.selected_row, 3)
         rendered = render(sample_state(), view)
         self.assertEqual(rendered.viewport["selected_item_id"], "home-mesh")
-        self.assertEqual(rendered.lines[3], ">Mesh routes table  ")
+        self.assertEqual(rendered.lines[3], ">Routes Mesh        ")
+
+    def test_home_first_viewport_labels_fit_without_marquee(self) -> None:
+        view = MenuViewState(page="HOME")
+        at_start = render(sample_state(), view, now_ms=0)
+        after_hold = render(sample_state(), view, now_ms=2000)
+        self.assertEqual(at_start.lines[:4], after_hold.lines[:4])
+        self.assertEqual(at_start.viewport["horizontal_scroll_offsets"][:4], [0, 0, 0, 0])
+        self.assertEqual(
+            at_start.lines[:4],
+            (
+                ">BBS Ready OK       ",
+                "|Messages Custody   ",
+                "|Peers RSSI         ",
+                "|Queue Files        ",
+            ),
+        )
 
     def test_indicator_moves_before_viewport_scrolls(self) -> None:
         view = MenuViewState(page="HOME")
@@ -248,7 +276,7 @@ class LcdBbsMenuTests(unittest.TestCase):
     def test_missing_data_and_secret_fields(self) -> None:
         state = {"schema": SNAPSHOT_SCHEMA}
         rendered = render(state)
-        self.assertEqual(rendered.lines[0], ">BBS FIELD STATUS RE")
+        self.assertEqual(rendered.lines[0], ">BBS Ready ?        ")
 
         state = sample_state()
         state["mesh"] = {"pairing_token": "do-not-render"}
@@ -295,6 +323,38 @@ class LcdBbsMenuTests(unittest.TestCase):
         self.assertIn("vertical_chart", rendered.widgets)
         self.assertEqual(rendered.widgets["art_panel"]["schema"], LCD_ART_SCHEMA)
         self.assertEqual(len(rendered.widgets["art_panel"]["preview_lines"]), LCD_ROWS)
+        self.assertEqual(rendered.widgets["art_panel"]["pixel_preview"]["schema"], LCD_PIXEL_PREVIEW_SCHEMA)
+
+    def test_lcd_art_pixel_preview_is_exact_100_by_32_metadata(self) -> None:
+        art = sample_art_panel()
+        preview = lcd_art_pixel_preview(art)
+
+        self.assertEqual(preview["schema"], LCD_PIXEL_PREVIEW_SCHEMA)
+        self.assertEqual(preview["source_art_name"], "bbs_badge")
+        self.assertEqual(preview["pixel_width"], LCD_ART_PIXEL_WIDTH)
+        self.assertEqual(preview["pixel_height"], LCD_ART_PIXEL_HEIGHT)
+        self.assertEqual(len(preview["rows"]), LCD_ART_PIXEL_HEIGHT)
+        self.assertTrue(all(len(row) == LCD_ART_PIXEL_WIDTH for row in preview["rows"]))
+        self.assertTrue(all(set(row) <= {".", "#"} for row in preview["rows"]))
+        self.assertTrue(preview["rows"][0].startswith("#####"))
+        self.assertTrue(preview["rows"][1].startswith("#...#"))
+        self.assertEqual(preview["rows"][8][25:75], "#" * 50)
+
+    def test_lcd_art_catalog_keeps_named_panels_within_one_bank(self) -> None:
+        catalog = lcd_art_catalog()
+
+        self.assertEqual(
+            tuple(catalog),
+            ("bbs_badge", "mesh_radar", "packet_flow", "signal_skyline", "link_heat"),
+        )
+        for name, art in catalog.items():
+            with self.subTest(name=name):
+                payload = art.to_dict()
+                self.assertLessEqual(payload["slot_count"], 8)
+                self.assertEqual(len(payload["cell_slots"]), LCD_ROWS)
+                self.assertTrue(all(len(row) == LCD_COLUMNS for row in payload["cell_slots"]))
+                self.assertEqual(payload["pixel_preview"]["schema"], LCD_PIXEL_PREVIEW_SCHEMA)
+                self.assertEqual(len(payload["pixel_preview"]["rows"]), LCD_ART_PIXEL_HEIGHT)
 
     def test_lcd_art_tile_map_dedupes_into_safe_metadata(self) -> None:
         frame = (0x1F, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F, 0x00)
@@ -423,6 +483,24 @@ class LcdBbsMenuTests(unittest.TestCase):
             "relay_toggle",
         ):
             self.assertNotIn(forbidden, html)
+
+        art_html = build_browser_document(render(sample_state(), MenuViewState(page="ART")))
+        self.assertIn('data-pixel-preview-schema="bbs_lcd_pixel_preview.v1"', art_html)
+        self.assertIn('data-art-name="bbs_badge"', art_html)
+        self.assertIn('data-cursor-focus="art_panel"', art_html)
+        for forbidden in (
+            "fetch(",
+            "XMLHttpRequest",
+            "WebSocket",
+            "EventSource",
+            "localStorage",
+            "navigator.serial",
+            "Bluetooth",
+            "gpio_set_level",
+            "uart_write",
+            "relay_toggle",
+        ):
+            self.assertNotIn(forbidden, art_html)
 
     def test_browser_mirror_accepts_only_v2_intents(self) -> None:
         for intent in sorted(INPUT_EVENTS):

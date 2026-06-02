@@ -231,7 +231,7 @@ class FirmwareEncoderPullupBoundaryTests(unittest.TestCase):
         self.assertIn(".name = \"art_panel\"", source)
         self.assertIn("FR_BBS_ART_GLYPH_BANK_INDEX 6U", source)
         self.assertIn("fr_bbs_art_panel_slots", source)
-        self.assertIn("LCD art badge panel", source)
+        self.assertIn("ART Pixel Gallery", source)
         self.assertIn("ART", source)
         self.assertIn("NODE |RSSI|Q", source)
         self.assertIn("ROUTES", source)

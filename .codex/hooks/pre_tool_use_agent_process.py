@@ -5,40 +5,26 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 
-MUTATING_SHELL_RE = re.compile(
-    r"(^|\s)(apply_patch|rm|mv|cp|touch|mkdir|chmod|chown|truncate|dd|tee|"
-    r"git\s+(add|commit|push|merge|rebase|reset|checkout|switch|branch\s+-D)|"
-    r"sed\s+-i|find\s+.*\s-delete|"
-    r"python3?\s+.*(write|update|generate|build|package|install|deploy|flash))\b|"
-    r"(>>|>\s*[^&]|\|\s*tee\b)",
-    re.IGNORECASE | re.DOTALL,
-)
-READ_ONLY_SHELL_RE = re.compile(
-    r"^\s*(pwd|ls|find|rg|sed|cat|nl|wc|git\s+(status|diff|show|log)|"
-    r"python3?\s+-m\s+json\.tool|python3?\s+scripts/(verify|scaffold_audit)[\w_./-]*\.py)\b",
-    re.IGNORECASE,
-)
-MUTATING_MCP_RE = re.compile(
-    r"(write|edit|delete|remove|create|update|patch|apply|commit|push|merge|"
-    r"flash|erase|deploy|upload)",
-    re.IGNORECASE,
-)
-TIER_RE = re.compile(r"\bTier\s*[0-3]\b", re.IGNORECASE)
-VALIDATION_RE = re.compile(r"\b(validation plan|validate|verification|tests?|audit|gate)\b", re.IGNORECASE)
-BOUNDARY_RE = re.compile(r"\b(mutation boundary|write scope|scope boundary|read-only|no mutation)\b", re.IGNORECASE)
-VERIFIED_RE = re.compile(r"\bverified facts?\b", re.IGNORECASE)
-ASSUMPTIONS_RE = re.compile(r"\bassumptions?\b", re.IGNORECASE)
-UNKNOWNS_RE = re.compile(r"\bunknowns?\b", re.IGNORECASE)
-OWNER_RE = re.compile(r"\b(owner role|owner)\b", re.IGNORECASE)
-EVIDENCE_RE = re.compile(r"\bevidence need\b|\bevidence\s*:\b", re.IGNORECASE)
 ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS = ROOT / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from agent_process_classifiers import (  # noqa: E402
+    ROUTING_PATTERNS,
+    is_mutating_tool,
+    latest_text_from_transcript,
+    missing,
+)
+from agent_process_contracts import pretool_missing_triage_message  # noqa: E402
+
+
 SCHEDULER = ROOT / "scripts" / "agent_scheduler.py"
 SCHEDULER_TIMEOUT_SECONDS = float(os.environ.get("ESP32_SCHEDULER_HOOK_TIMEOUT", "0.75"))
 
@@ -53,93 +39,9 @@ def _load_payload() -> tuple[dict[str, Any], bool]:
     return raw, False
 
 
-def _extract_command(tool_input: Any) -> str:
-    if isinstance(tool_input, dict):
-        for key in ("command", "cmd"):
-            value = tool_input.get(key)
-            if isinstance(value, str):
-                return value
-    if isinstance(tool_input, str):
-        return tool_input
-    return ""
-
-
-def _latest_prompt_from_transcript(path: str | None) -> str:
-    if not path:
-        return ""
-    transcript = Path(path)
-    if not transcript.exists() or not transcript.is_file():
-        return ""
-    try:
-        lines = transcript.read_text(encoding="utf-8", errors="replace").splitlines()
-    except OSError:
-        return ""
-
-    for line in reversed(lines[-300:]):
-        try:
-            item = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        text = _prompt_text_from_item(item)
-        if text:
-            return text
-    return ""
-
-
-def _prompt_text_from_item(item: Any) -> str:
-    if not isinstance(item, dict):
-        return ""
-    candidates: list[Any] = []
-    candidates.append(item.get("prompt"))
-    candidates.append(item.get("user_prompt"))
-    payload = item.get("payload")
-    if isinstance(payload, dict):
-        candidates.append(payload.get("prompt"))
-        candidates.append(payload.get("text"))
-        if payload.get("role") == "user":
-            candidates.append(payload.get("content"))
-    if item.get("role") == "user":
-        candidates.append(item.get("content"))
-    for candidate in candidates:
-        text = _stringify_content(candidate)
-        if text:
-            return text
-    return ""
-
-
-def _stringify_content(value: Any) -> str:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list):
-        parts: list[str] = []
-        for entry in value:
-            if isinstance(entry, str):
-                parts.append(entry)
-            elif isinstance(entry, dict):
-                text = entry.get("text") or entry.get("content")
-                if isinstance(text, str):
-                    parts.append(text)
-        return "\n".join(parts)
-    return ""
-
-
-def _is_mutating(tool_name: str, tool_input: Any) -> bool:
-    normalized = tool_name.lower()
-    if normalized in {"apply_patch", "edit", "write"}:
-        return True
-    if normalized in {"bash", "shell", "functions.exec_command"}:
-        command = _extract_command(tool_input)
-        if READ_ONLY_SHELL_RE.search(command) and not MUTATING_SHELL_RE.search(command):
-            return False
-        return bool(MUTATING_SHELL_RE.search(command))
-    if normalized.startswith("mcp__"):
-        return bool(MUTATING_MCP_RE.search(tool_name))
-    return False
-
-
 def _scheduler_context(payload: dict[str, Any]) -> str:
     if not SCHEDULER.exists():
-        return "ESP32 multi-window scheduler advisory: scheduler-unavailable (missing scripts/agent_scheduler.py); no deny/block."
+        return "ESP32 scheduler advisory: scheduler-unavailable; no deny/block."
     try:
         result = subprocess.run(
             [
@@ -159,14 +61,14 @@ def _scheduler_context(payload: dict[str, Any]) -> str:
             timeout=SCHEDULER_TIMEOUT_SECONDS + 0.5,
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        return f"ESP32 multi-window scheduler advisory: scheduler-unavailable ({exc}); no deny/block."
+        return f"ESP32 scheduler advisory: scheduler-unavailable ({exc}); no deny/block."
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or f"exit {result.returncode}").strip()
-        return f"ESP32 multi-window scheduler advisory: scheduler-unavailable ({detail}); no deny/block."
+        return f"ESP32 scheduler advisory: scheduler-unavailable ({detail}); no deny/block."
     try:
         output = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
-        return f"ESP32 multi-window scheduler advisory: scheduler-unavailable (invalid output: {exc}); no deny/block."
+        return f"ESP32 scheduler advisory: scheduler-unavailable (invalid output: {exc}); no deny/block."
     hook_output = output.get("hookSpecificOutput")
     if not isinstance(hook_output, dict):
         return ""
@@ -174,22 +76,8 @@ def _scheduler_context(payload: dict[str, Any]) -> str:
     return context if isinstance(context, str) else ""
 
 
-def _emit_warning(missing: list[str], scheduler_context: str = "") -> None:
-    shape_note = ""
-    if "valid hook input shape" in missing:
-        shape_note = "Hook input shape was unknown; "
-    message = (
-        f"{shape_note}ESP32 agent-process warning: this mutating tool call is starting before "
-        f"the hook can see {', '.join(missing)} in the prompt context. "
-        "Before continuing, state verified facts, assumptions, unknowns, selected "
-        "tier, owner role, evidence need, mutation boundary, and validation plan. "
-        "For Tier 2/Tier 3 work, include weighted reviewer disposition and continue "
-        "automatable evidence acquisition instead of stopping on missing evidence. "
-        "Project-local hooks and prompt packets are advisory aids; source-backed "
-        "records and explicit gate authority remain authoritative."
-    )
-    if scheduler_context:
-        message = f"{message}\n\n{scheduler_context}"
+def _emit_warning(missing_fields: list[str], scheduler_context: str = "") -> None:
+    message = pretool_missing_triage_message(missing_fields, scheduler_context)
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
@@ -206,31 +94,15 @@ def main() -> int:
 
     tool_name = str(payload.get("tool_name") or "")
     tool_input = payload.get("tool_input")
-    if not _is_mutating(tool_name, tool_input):
+    if not is_mutating_tool(tool_name, tool_input):
         return 0
     scheduler_context = _scheduler_context(payload)
 
-    prompt = str(payload.get("prompt") or "") or _latest_prompt_from_transcript(
+    prompt = str(payload.get("prompt") or "") or latest_text_from_transcript(
         payload.get("transcript_path")
     )
-    missing = []
-    if not VERIFIED_RE.search(prompt):
-        missing.append("verified facts")
-    if not ASSUMPTIONS_RE.search(prompt):
-        missing.append("assumptions")
-    if not UNKNOWNS_RE.search(prompt):
-        missing.append("unknowns")
-    if not TIER_RE.search(prompt):
-        missing.append("selected tier")
-    if not OWNER_RE.search(prompt):
-        missing.append("owner role")
-    if not EVIDENCE_RE.search(prompt):
-        missing.append("evidence need")
-    if not VALIDATION_RE.search(prompt):
-        missing.append("validation path")
-    if not BOUNDARY_RE.search(prompt):
-        missing.append("mutation boundary")
-    if not missing:
+    missing_fields = missing(ROUTING_PATTERNS, prompt)
+    if not missing_fields:
         if scheduler_context:
             print(json.dumps({
                 "hookSpecificOutput": {
@@ -240,7 +112,7 @@ def main() -> int:
             }))
         return 0
 
-    _emit_warning(missing, scheduler_context)
+    _emit_warning(missing_fields, scheduler_context)
     return 0
 
 

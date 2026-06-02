@@ -389,7 +389,7 @@ def audit_encoder_menu_boundary(root: Path = ROOT) -> list[str]:
         ".name = \"art_panel\"",
         "FR_BBS_ART_GLYPH_BANK_INDEX 6U",
         "fr_bbs_art_panel_slots",
-        "LCD art badge panel",
+        "ART Pixel Gallery",
         "ART",
         "fr_lcd_load_glyph_bank",
         "BBS_CURSOR row=%u col=%u ddram=0x%02x focus=%s mode=%s",

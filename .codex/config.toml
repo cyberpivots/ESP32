@@ -115,3 +115,7 @@ enabled = true
 [[skills.config]]
 path = "skills/lcd-menu-operations"
 enabled = true
+
+[[skills.config]]
+path = "skills/xbee-radio-integration"
+enabled = true

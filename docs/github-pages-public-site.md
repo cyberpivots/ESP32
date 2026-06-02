@@ -134,6 +134,20 @@ Known open deployment question:
 - Whether future deployment protection rules will be added to the
   `github-pages` environment.
 
+## Publication Hygiene
+
+Do not create a PR, push, delete branches, rebase/reset, merge, release, or
+change Pages settings unless the user explicitly authorizes that exact
+publication gate. If a PR or feature branch is used, the same gate must verify
+that the PR is merged or closed and that no leftover local or remote feature
+branch refs remain.
+
+Run the read-only hygiene helper before any publication gate:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/git_publication_hygiene.py check --json
+```
+
 ## Validation
 
 Run these checks before handoff:
@@ -142,15 +156,23 @@ Run these checks before handoff:
 python3 scripts/build_github_pages.py
 python3 scripts/audit_public_manifest.py
 python3 scripts/smoke_github_pages.py
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/scaffold_audits -p 'test_*.py'
 python3 scripts/verify_scaffold.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/scaffold_audit_skills.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/scaffold_audit_records.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/git_publication_hygiene.py check --json
 python3 -m py_compile scripts/*.py tests/four_relay_safe_core/run_host_tests.py
 git diff --check
 ```
 
 The GitHub Actions Pages workflow runs the non-browser subset before uploading
-the Pages artifact: JSON and JavaScript syntax checks, build, manifest audit,
-smoke checks, scaffold verification, Python compilation, and host-side contract
-tests.
+the Pages artifact: JSON and JavaScript syntax checks, `git diff --check`,
+build, manifest audit, smoke checks, full scaffold-audit unittest discovery,
+scaffold verification, Python compilation, and host-side contract tests.
+
+The non-deploy `scaffold-ci.yml` workflow runs on pull requests and manual
+dispatch. It validates scaffold audits and host tests without uploading or
+deploying a Pages artifact.
 
 Local browser verification should confirm that the landing page renders on
 desktop and mobile, `blueprints.html`, `quality.html`, and

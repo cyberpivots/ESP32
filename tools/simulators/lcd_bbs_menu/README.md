@@ -16,7 +16,10 @@ panels. It compiles deterministic 100x32 ASCII PBM `P1` bitmaps or direct
 4x20 tile maps into 5x8 HD44780 glyph rows, reuses identical nonblank tiles,
 and fails closed when a panel needs more than eight custom glyphs. The normal
 `lines` field stays ASCII-safe; compiled art exposes `preview_lines`,
-`cell_slots`, and its own eight-slot glyph bank as metadata only.
+`cell_slots`, a deterministic `bbs_lcd_pixel_preview.v1` 100x32 `.`/`#`
+preview, and its own eight-slot glyph bank as metadata only. The ART page also
+exposes a host-only catalog of candidate panels for comparison before any
+firmware or physical LCD gate.
 
 ## Boundaries
 
@@ -26,6 +29,9 @@ and fails closed when a panel needs more than eight custom glyphs. The normal
   TFT, MicroSD, load, mains, or wiring action.
 - The art compiler is host-only metadata. It does not write raw CGRAM control
   codes into `lines` and does not prove physical LCD readability or flicker.
+- Pixel previews and catalog panels are host-rendered planning evidence only;
+  they do not prove contrast, transient CGRAM redraw behavior, or physical
+  ART-page readability.
 - Rotary events produce local UI intents only: scroll-list item movement,
   XML-defined page navigation, detail view, local edit value changes, local
   acknowledgement, back, or home.
@@ -67,7 +73,7 @@ Secret-bearing field names are rejected recursively.
 
 The current host page set is generated from XML: `HOME`, `MESSAGES`, `PEERS`,
 `QUEUE`, `FILES`, `MESH`, `XBEE`, `DIAG`, `LOCKS`, `BARS`, `CHART`, `DIGITS`,
-`GAUGE`, and `ROUTES`.
+`GAUGE`, `ROUTES`, and `ART`.
 
 Run:
 
@@ -76,11 +82,16 @@ python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page HOME
 python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page MESH
 python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page ROUTES
 python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page GAUGE
+python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page ART
 python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page MESSAGES --now-ms 1000
 python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page HOME --browser-html
+python3 tools/simulators/lcd_bbs_menu/lcd_bbs_menu.py --page ART --browser-html
 ```
 
 The sample render output includes an `art_panel` widget with
 `bbs_lcd_art.v1` metadata. It is suitable for host tests and browser mirror
-inspection only; a future physical LCD acceptance gate must collect
-same-session visual evidence before claiming a new art panel is readable.
+inspection only. The `ART` page output includes `art_catalog` and
+`bbs_lcd_pixel_preview.v1` metadata for five host candidate panels:
+`bbs_badge`, `mesh_radar`, `packet_flow`, `signal_skyline`, and `link_heat`.
+A future physical LCD acceptance gate must collect same-session visual evidence
+before claiming any art panel is readable.

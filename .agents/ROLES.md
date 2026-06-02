@@ -12,6 +12,12 @@ coordinator inspects completed agents before spawning when lifecycle state is
 visible, waits for reviewer results, closes completed/stale agents, and records
 fallback only after cleanup attempt.
 
+Standing user authorization for project-local read-only subagent use is explicit
+and persistent in this workspace. The coordinator treats subagent use as
+requested and allowed for every prompt, subject only to actual tool
+unavailability, unsafe lifecycle state, or higher-priority system/developer
+prohibition.
+
 ## Agent Operations
 
 Maintains prompt governance, project-local Codex profiles, hook guidance, task

@@ -45,14 +45,14 @@ typedef struct {
 } fr_bbs_menu_page_t;
 
 static const fr_bbs_menu_item_t fr_bbs_menu_items_home[] = {
-    {"home-status", "BBS FIELD STATUS READY", {"", "", ""}, 1u, FR_BBS_ACTION_DETAIL, 0u, false, false},
-    {"home-messages", "Messages queue and custody", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 1u, false, false},
-    {"home-peers", "Peers and RSSI", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 2u, false, false},
-    {"home-queue", "Queue/files overview", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 3u, false, false},
-    {"home-mesh", "Mesh routes table", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 13u, false, false},
-    {"home-diag", "Diagnostics and locks", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 7u, false, false},
-    {"home-widgets", "Local widget pages", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 9u, false, false},
-    {"home-art", "LCD art badge panel", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 14u, false, false},
+    {"home-status", "BBS Ready {link.status}", {"", "", ""}, 1u, FR_BBS_ACTION_DETAIL, 0u, false, false},
+    {"home-messages", "Messages Custody", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 1u, false, false},
+    {"home-peers", "Peers RSSI", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 2u, false, false},
+    {"home-queue", "Queue Files", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 3u, false, false},
+    {"home-mesh", "Routes Mesh", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 13u, false, false},
+    {"home-diag", "Diag Locks", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 7u, false, false},
+    {"home-widgets", "Widget Lab", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 9u, false, false},
+    {"home-art", "ART Pixel Gallery", {"", "", ""}, 1u, FR_BBS_ACTION_PAGE, 14u, false, false},
 };
 
 static const fr_bbs_menu_item_t fr_bbs_menu_items_messages[] = {

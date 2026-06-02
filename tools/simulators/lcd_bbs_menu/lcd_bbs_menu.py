@@ -28,6 +28,8 @@ LCD_CONTENT_COLUMNS = 19
 LCD_DDRAM_ROW_BASES = (0x00, 0x40, 0x14, 0x54)
 SNAPSHOT_SCHEMA = "bbs_lcd_state.v1"
 LCD_ART_SCHEMA = "bbs_lcd_art.v1"
+LCD_PIXEL_PREVIEW_SCHEMA = "bbs_lcd_pixel_preview.v1"
+LCD_ART_CATALOG_SCHEMA = "bbs_lcd_art_catalog.v1"
 LCD_ART_TILE_WIDTH = 5
 LCD_ART_TILE_HEIGHT = 8
 LCD_ART_PIXEL_WIDTH = LCD_COLUMNS * LCD_ART_TILE_WIDTH
@@ -144,6 +146,7 @@ class CompiledLcdArt:
                 {"slot": glyph.slot, "name": glyph.name, "rows": list(glyph.rows)}
                 for glyph in self.glyph_bank.glyphs
             ],
+            "pixel_preview": lcd_art_pixel_preview(self),
         }
 
 
@@ -254,13 +257,18 @@ class CursorTracker:
         previous_lines: Sequence[str] | None = None,
     ) -> CursorState:
         mode = _effective_mode(view)
-        row = max(0, min(LCD_ROWS - 1, view.selected_row))
-        column = 18 if mode == "edit_lab" else 1 if mode == "detail" else 0
-        focus = {
-            "scroll": "item",
-            "detail": "detail",
-            "edit_lab": "edit",
-        }[_canonical_mode(mode)]
+        if view.page == "ART":
+            row = 0
+            column = 0
+            focus = "art_panel"
+        else:
+            row = max(0, min(LCD_ROWS - 1, view.selected_row))
+            column = 18 if mode == "edit_lab" else 1 if mode == "detail" else 0
+            focus = {
+                "scroll": "item",
+                "detail": "detail",
+                "edit_lab": "edit",
+            }[_canonical_mode(mode)]
         dirty_rows, dirty_cells = _dirty_metadata(lines, previous_lines)
         return CursorState(
             row=row,
@@ -608,6 +616,40 @@ def render_widgets(snapshot: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def lcd_art_pixel_preview(art: CompiledLcdArt) -> dict[str, Any]:
+    rows = _pixel_preview_rows(art)
+    return {
+        "schema": LCD_PIXEL_PREVIEW_SCHEMA,
+        "source_art_schema": LCD_ART_SCHEMA,
+        "source_art_name": art.name,
+        "pixel_width": LCD_ART_PIXEL_WIDTH,
+        "pixel_height": LCD_ART_PIXEL_HEIGHT,
+        "glyph_slot_count": len(art.glyph_bank.glyphs),
+        "rows": list(rows),
+    }
+
+
+def lcd_art_catalog() -> dict[str, CompiledLcdArt]:
+    panels = (
+        _bbs_badge_art(),
+        _mesh_radar_art(),
+        _packet_flow_art(),
+        _signal_skyline_art(),
+        _link_heat_art(),
+    )
+    return {panel.name: panel for panel in panels}
+
+
+def lcd_art_catalog_payload() -> dict[str, Any]:
+    catalog = lcd_art_catalog()
+    return {
+        "schema": LCD_ART_CATALOG_SCHEMA,
+        "active": "bbs_badge",
+        "names": list(catalog),
+        "panels": {name: panel.to_dict() for name, panel in catalog.items()},
+    }
+
+
 def compile_lcd_art_from_pbm(name: str, pbm_text: str) -> CompiledLcdArt:
     tokens = _pbm_tokens(pbm_text)
     if not tokens or tokens[0] != "P1":
@@ -697,6 +739,10 @@ def compile_lcd_art_tile_map(
 
 
 def sample_art_panel() -> CompiledLcdArt:
+    return lcd_art_catalog()["bbs_badge"]
+
+
+def _bbs_badge_art() -> CompiledLcdArt:
     frame = (0x1F, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F, 0x00)
     fill = (0x1F,) * LCD_ART_TILE_HEIGHT
     diag = (0x10, 0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08)
@@ -714,11 +760,91 @@ def sample_art_panel() -> CompiledLcdArt:
     return compile_lcd_art_tile_map("bbs_badge", tile_map)
 
 
+def _mesh_radar_art() -> CompiledLcdArt:
+    ring = (0x0E, 0x11, 0x15, 0x11, 0x15, 0x11, 0x0E, 0x00)
+    spoke = (0x04, 0x04, 0x04, 0x1F, 0x04, 0x04, 0x04, 0x00)
+    sweep = (0x10, 0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08)
+    blip = (0x00, 0x04, 0x0E, 0x04, 0x00, 0x04, 0x00, 0x00)
+    tile_map = [[None for _ in range(LCD_COLUMNS)] for _ in range(LCD_ROWS)]
+    for row, column in ((0, 4), (0, 15), (1, 9), (2, 8), (3, 13)):
+        tile_map[row][column] = blip
+    for row in range(LCD_ROWS):
+        tile_map[row][0] = spoke
+        tile_map[row][LCD_COLUMNS - 1] = spoke
+    for column in range(7, 13):
+        tile_map[1][column] = ring if column in {8, 11} else sweep
+        tile_map[2][column] = sweep if column in {7, 12} else ring
+    return compile_lcd_art_tile_map("mesh_radar", tile_map)
+
+
+def _packet_flow_art() -> CompiledLcdArt:
+    node = (0x0E, 0x11, 0x15, 0x15, 0x15, 0x11, 0x0E, 0x00)
+    rail = (0x00, 0x00, 0x1F, 0x04, 0x1F, 0x00, 0x00, 0x00)
+    arrow = (0x04, 0x06, 0x1F, 0x06, 0x04, 0x00, 0x1F, 0x00)
+    pulse = (0x04, 0x0E, 0x1F, 0x0E, 0x04, 0x00, 0x04, 0x00)
+    tile_map = [[None for _ in range(LCD_COLUMNS)] for _ in range(LCD_ROWS)]
+    for row in (0, 3):
+        tile_map[row][1] = node
+        tile_map[row][18] = node
+        for column in range(3, 17):
+            tile_map[row][column] = rail
+        tile_map[row][10] = arrow
+    for column in (5, 8, 11, 14):
+        tile_map[1][column] = pulse
+    for column in (4, 9, 13, 16):
+        tile_map[2][column] = arrow
+    return compile_lcd_art_tile_map("packet_flow", tile_map)
+
+
+def _signal_skyline_art() -> CompiledLcdArt:
+    levels = (
+        (0x00, 0x00, 0x00, 0x00, 0x10, 0x10, 0x10, 0x10),
+        (0x00, 0x00, 0x00, 0x08, 0x18, 0x18, 0x18, 0x18),
+        (0x00, 0x00, 0x04, 0x0C, 0x1C, 0x1C, 0x1C, 0x1C),
+        (0x00, 0x02, 0x06, 0x0E, 0x1E, 0x1E, 0x1E, 0x1E),
+        (0x01, 0x03, 0x07, 0x0F, 0x1F, 0x1F, 0x1F, 0x1F),
+    )
+    sparkle = (0x04, 0x0E, 0x15, 0x0E, 0x04, 0x00, 0x00, 0x00)
+    tile_map = [[None for _ in range(LCD_COLUMNS)] for _ in range(LCD_ROWS)]
+    pattern = (0, 1, 2, 3, 4, 3, 2, 4, 1, 3, 4, 2, 1, 0, 2, 3, 4, 2, 1, 0)
+    for column, level in enumerate(pattern):
+        tile_map[3][column] = levels[level]
+    for column in (2, 9, 15):
+        tile_map[0][column] = sparkle
+    for column in (5, 12, 18):
+        tile_map[1][column] = levels[1]
+    return compile_lcd_art_tile_map("signal_skyline", tile_map)
+
+
+def _link_heat_art() -> CompiledLcdArt:
+    cold = (0x00, 0x00, 0x0E, 0x11, 0x11, 0x0E, 0x00, 0x00)
+    warm = (0x00, 0x0E, 0x1F, 0x15, 0x15, 0x1F, 0x0E, 0x00)
+    hot = (0x1F, 0x1F, 0x1B, 0x15, 0x15, 0x1B, 0x1F, 0x1F)
+    guard = (0x1F, 0x10, 0x17, 0x14, 0x17, 0x10, 0x1F, 0x00)
+    tile_map = [[None for _ in range(LCD_COLUMNS)] for _ in range(LCD_ROWS)]
+    row_patterns = (
+        (cold, cold, warm, warm, hot),
+        (cold, warm, hot, warm, cold),
+        (warm, hot, hot, warm, cold),
+        (guard, cold, warm, hot, guard),
+    )
+    for row, pattern in enumerate(row_patterns):
+        for block, tile in enumerate(pattern):
+            for offset in range(3):
+                column = 1 + block * 4 + offset
+                if column < LCD_COLUMNS:
+                    tile_map[row][column] = tile
+    tile_map[0][0] = guard
+    tile_map[3][LCD_COLUMNS - 1] = guard
+    return compile_lcd_art_tile_map("link_heat", tile_map)
+
+
 def _render_art_page_lines(
     page: Mapping[str, Any],
     view: MenuViewState,
 ) -> tuple[tuple[str, ...], dict[str, Any]]:
     art = sample_art_panel()
+    catalog = lcd_art_catalog_payload()
     selected_id = str(page["items"][view.selected_item]["id"])
     viewport = {
         "source_xml_version": MENU_SCHEMA,
@@ -737,6 +863,7 @@ def _render_art_page_lines(
         "logical_line_count": int(page["line_count"]),
         "page_item_count": len(page["items"]),
         "art_panel": art.to_dict(),
+        "art_catalog": catalog,
     }
     return art.preview_lines, viewport
 
@@ -955,6 +1082,7 @@ def build_browser_document(rendered: RenderedLcdMenu) -> str:
         .replace("<", "\\u003c")
         .replace(">", "\\u003e")
     )
+    pixel_preview = _browser_pixel_preview(rendered)
     return f"""<!doctype html>
 <html lang="en">
   <head>
@@ -985,10 +1113,51 @@ def build_browser_document(rendered: RenderedLcdMenu) -> str:
 {glyphs}
       </ol>
     </section>
+{pixel_preview}
     <script type="application/json" id="lcd-render-state">{payload}</script>
   </body>
 </html>
 """
+
+
+def _pixel_preview_rows(art: CompiledLcdArt) -> tuple[str, ...]:
+    glyph_rows = {glyph.slot: glyph.rows for glyph in art.glyph_bank.glyphs}
+    pixel_rows: list[str] = []
+    for cell_row in art.cell_slots:
+        for tile_y in range(LCD_ART_TILE_HEIGHT):
+            pixels: list[str] = []
+            for slot in cell_row:
+                rows = ART_BLANK_TILE if slot is None else glyph_rows.get(slot)
+                if rows is None:
+                    raise LcdMenuError("art_slot_unknown", str(slot))
+                row_byte = rows[tile_y]
+                for tile_x in range(LCD_ART_TILE_WIDTH):
+                    mask = 1 << (LCD_ART_TILE_WIDTH - 1 - tile_x)
+                    pixels.append("#" if row_byte & mask else ".")
+            pixel_rows.append("".join(pixels))
+    if len(pixel_rows) != LCD_ART_PIXEL_HEIGHT or any(
+        len(row) != LCD_ART_PIXEL_WIDTH for row in pixel_rows
+    ):
+        raise LcdMenuError("pixel_preview_shape_invalid", art.name)
+    return tuple(pixel_rows)
+
+
+def _browser_pixel_preview(rendered: RenderedLcdMenu) -> str:
+    art_panel = rendered.viewport.get("art_panel")
+    if not isinstance(art_panel, Mapping):
+        return ""
+    preview = art_panel.get("pixel_preview")
+    if not isinstance(preview, Mapping):
+        return ""
+    rows = preview.get("rows")
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes, bytearray)):
+        return ""
+    preview_text = "\n".join(html.escape(str(row)) for row in rows)
+    schema = html.escape(str(preview.get("schema", "")))
+    art_name = html.escape(str(preview.get("source_art_name", "")))
+    return f"""    <section aria-label="LCD pixel preview" data-pixel-preview-schema="{schema}" data-art-name="{art_name}" data-pixel-width="{preview.get("pixel_width", 0)}" data-pixel-height="{preview.get("pixel_height", 0)}">
+      <pre>{preview_text}</pre>
+    </section>"""
 
 
 def _render_page_lines(

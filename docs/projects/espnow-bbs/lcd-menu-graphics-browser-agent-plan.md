@@ -194,6 +194,26 @@ Compiled art is metadata only:
   menu headers, and does not prove physical LCD readability, contrast, or
   flicker behavior.
 
+## Pixel Preview And Catalog
+
+Task 0146 continues the host-only visual lane by adding
+`bbs_lcd_pixel_preview.v1` as derived metadata for compiled LCD art. Each
+preview is a deterministic 100x32 grid of `.` and `#` rows generated from the
+compiled 4x20 `cell_slots` matrix and 5x8 glyph row bytes. It gives reviewers a
+pixel-level host preview without placing raw CGRAM control codes in the normal
+four LCD `lines`.
+
+The same continuation adds a host-only ART catalog with five candidate panels:
+`bbs_badge`, `mesh_radar`, `packet_flow`, `signal_skyline`, and `link_heat`.
+Every panel still compiles through `bbs_lcd_art.v1`, reuses duplicate tiles,
+and fails closed above eight nonblank custom glyphs per active panel.
+
+This catalog does not change the PF0530W firmware image, does not open PF0530X,
+does not prove physical LCD readability, and does not authorize live flash,
+monitor, serial writes, XBee/RF, ESP-NOW runtime, relay, wiring, load, mains,
+release, commit, or push. Physical ART-page acceptance and ART render telemetry
+remain pending under the PF0530W live handoff.
+
 ## Browser Mirror
 
 The host mirror is a Python request shim and static HTML generator. It opens no

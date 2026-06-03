@@ -7,6 +7,10 @@ qa-output/
 .pytest_cache/
 __pycache__/
 *.pyc
+node_modules/
+.expo/
+coverage/
+*.tsbuildinfo
 
 # Firmware/toolchain generated state
 sdkconfig

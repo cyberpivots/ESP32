@@ -10,6 +10,7 @@ from scaffold_audit_docs import audit_docs
 from scaffold_audit_firmware import audit_firmware
 from scaffold_audit_pages import audit_pages
 from scaffold_audit_paths import audit_paths
+from scaffold_audit_react_native import audit_react_native
 from scaffold_audit_records import audit_records
 from scaffold_audit_sources import audit_sources
 from scaffold_audit_skills import audit_skills
@@ -21,6 +22,7 @@ AUDITS = [
     audit_docs,
     audit_firmware,
     audit_pages,
+    audit_react_native,
     audit_agent_process,
     audit_skills,
     audit_records,

@@ -45,6 +45,13 @@ class AgentProcessClassifierTests(unittest.TestCase):
             "install -m 644 a b",
             "sed -i 's/a/b/' AGENTS.md",
             "python3 /etc/codex/hooks/esp32_admin_policy.py",
+            "pnpm install --frozen-lockfile",
+            "npx create-expo-app apps/cbbs-client",
+            "expo prebuild",
+            "expo export --platform web",
+            "pod install",
+            "xcodebuild -scheme App",
+            "./gradlew assembleDebug",
         ]
         for command in commands:
             with self.subTest(command=command):
@@ -59,6 +66,12 @@ class AgentProcessClassifierTests(unittest.TestCase):
             "tcpdump -i wlan0",
             "relay test",
             "mains bringup",
+            "expo run:android",
+            "react-native run-windows",
+            "eas build --platform android",
+            "appcenter distribute release",
+            "adb devices",
+            "xcrun simctl list",
         ]
         for command in commands:
             with self.subTest(command=command):
@@ -77,6 +90,9 @@ class AgentProcessClassifierTests(unittest.TestCase):
             ("git reset --hard HEAD", "destructive_git", "destructive_git"),
             ("gh pr create --title x", "publication", "publication"),
             ("idf.py flash", "tier3", "tier3"),
+            ("eas submit --platform ios", "tier3", "tier3"),
+            ("store upload android.aab", "publication", "publication"),
+            ("expo prebuild", "mutation", "mutation"),
         ]
         for command, category, flag in cases:
             with self.subTest(command=command):

@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "noEmit": true,
+    "types": ["jest", "react", "react-native"]
+  },
+  "include": [
+    "apps/cbbs-client/app/**/*.ts",
+    "apps/cbbs-client/app/**/*.tsx",
+    "apps/cbbs-client/src/**/*.ts",
+    "apps/cbbs-client/src/**/*.tsx",
+    "apps/cbbs-windows/__tests__/**/*.ts",
+    "apps/cbbs-windows/src/**/*.ts",
+    "apps/cbbs-windows/src/**/*.tsx",
+    "packages/**/*.ts",
+    "packages/**/*.tsx"
+  ]
+}

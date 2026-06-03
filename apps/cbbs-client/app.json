@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "CBBS Client",
+    "slug": "cbbs-client",
+    "scheme": "cbbs-client",
+    "version": "0.1.0",
+    "orientation": "default",
+    "platforms": ["android", "ios", "web"],
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    }
+  }
+}

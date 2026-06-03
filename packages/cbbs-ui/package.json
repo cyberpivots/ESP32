@@ -1,0 +1,22 @@
+{
+  "name": "@cbbs/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "scripts": {
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "dependencies": {
+    "@cbbs/evidence": "workspace:*",
+    "@cbbs/fixtures": "workspace:*",
+    "@cbbs/protocol": "workspace:*",
+    "@cbbs/state": "workspace:*",
+    "@cbbs/theme": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "19.2.3",
+    "react-native": "0.85.3"
+  }
+}

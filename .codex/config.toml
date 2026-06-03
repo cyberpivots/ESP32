@@ -92,6 +92,26 @@ config_file = "agents/protocol-bridge-abi-reviewer.toml"
 description = "Read-only reviewer for power, voltage, boot-pin, isolation, wiring, fixture, and relay/load/mains stop gates."
 config_file = "agents/power-wiring-isolation-reviewer.toml"
 
+[agents.react-native-source-research-reviewer]
+description = "Read-only reviewer for React Native, Expo, RNW, platform permission, EAS, and App Center source claims."
+config_file = "agents/react-native-source-research-reviewer.toml"
+
+[agents.react-native-ui-parity-reviewer]
+description = "Read-only reviewer for CBBS React Native role, view, intent, evidence wording, and unsafe-control parity."
+config_file = "agents/react-native-ui-parity-reviewer.toml"
+
+[agents.react-native-protocol-state-reviewer]
+description = "Read-only reviewer for CBBS React Native fixture protocol, state reducer, schema bounds, and no-transport side effects."
+config_file = "agents/react-native-protocol-state-reviewer.toml"
+
+[agents.react-native-devex-ci-reviewer]
+description = "Read-only reviewer for CBBS React Native pnpm, Expo Doctor, native-folder absence, CI, and release boundaries."
+config_file = "agents/react-native-devex-ci-reviewer.toml"
+
+[agents.react-native-safety-security-reviewer]
+description = "Read-only reviewer for CBBS React Native secrets, permissions, external services, live connectivity, and hardware authority boundaries."
+config_file = "agents/react-native-safety-security-reviewer.toml"
+
 [agents.governance-doc-worker]
 description = "Worker for bounded governance documentation edits after coordinator triage and reviewer quorum."
 config_file = "agents/governance-doc-worker.toml"
@@ -118,4 +138,8 @@ enabled = true
 
 [[skills.config]]
 path = "skills/xbee-radio-integration"
+enabled = true
+
+[[skills.config]]
+path = "skills/react-native-client-development"
 enabled = true

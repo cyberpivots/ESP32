@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/cbbs-protocol" },
+    { "path": "packages/cbbs-fixtures" },
+    { "path": "packages/cbbs-theme" },
+    { "path": "packages/cbbs-evidence" },
+    { "path": "packages/cbbs-state" },
+    { "path": "packages/cbbs-ui" },
+    { "path": "apps/cbbs-client" },
+    { "path": "apps/cbbs-windows" }
+  ]
+}

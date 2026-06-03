@@ -125,6 +125,35 @@ PUBLICATION_SHELL_RE = re.compile(
     r"deploy|release|pages\s+deploy)\b",
     re.IGNORECASE,
 )
+REACT_NATIVE_MUTATION_RE = re.compile(
+    r"\b("
+    r"(npm|pnpm|yarn)\s+(install|add|remove|dlx|create)|"
+    r"corepack\s+(enable|prepare|install)|"
+    r"npx\s+create-expo-app|create-expo-app|"
+    r"expo\s+(prebuild|export)|"
+    r"react-native\s+init|react-native-windows-init|"
+    r"pod\s+install|xcodebuild|gradlew"
+    r")\b",
+    re.IGNORECASE,
+)
+REACT_NATIVE_TIER3_RE = re.compile(
+    r"\b("
+    r"expo\s+run:(android|ios)|"
+    r"react-native\s+run-(android|ios|windows)|"
+    r"eas\s+(build|submit|update|deploy|login|credentials)|"
+    r"appcenter\s+(login|build|test|distribute|codepush)|"
+    r"adb\b|emulator\b|xcrun\s+simctl"
+    r")\b",
+    re.IGNORECASE,
+)
+REACT_NATIVE_PUBLICATION_RE = re.compile(
+    r"\b("
+    r"eas\s+(submit|update|deploy)|"
+    r"appcenter\s+(distribute|codepush)|"
+    r"store\s+upload|app\s+store|play\s+console"
+    r")\b",
+    re.IGNORECASE,
+)
 DESTRUCTIVE_GIT_RE = re.compile(
     r"\bgit\s+(reset\s+--hard|clean\b|checkout\b|switch\b|branch\s+-D|rebase\b|merge\b)",
     re.IGNORECASE,
@@ -298,13 +327,16 @@ def classify_shell_command(command: str) -> ClassificationResult:
         return ClassificationResult(category="unknown", reasons=("empty command",))
 
     system_codex = bool(SYSTEM_CODEX_RE.search(normalized))
-    publication = bool(PUBLICATION_SHELL_RE.search(normalized))
+    react_native_mutation = bool(REACT_NATIVE_MUTATION_RE.search(normalized))
+    react_native_tier3 = bool(REACT_NATIVE_TIER3_RE.search(normalized))
+    publication = bool(PUBLICATION_SHELL_RE.search(normalized) or REACT_NATIVE_PUBLICATION_RE.search(normalized))
     destructive_git = bool(DESTRUCTIVE_GIT_RE.search(normalized))
     redirection_or_tee = bool(REDIRECTION_OR_TEE_RE.search(normalized))
-    tier3 = bool(LIVE_TIER3_COMMAND_RE.search(normalized))
+    tier3 = bool(LIVE_TIER3_COMMAND_RE.search(normalized) or react_native_tier3)
     mutation = bool(
         MUTATING_SHELL_RE.search(normalized)
         or system_codex
+        or react_native_mutation
         or publication
         or destructive_git
         or redirection_or_tee
@@ -320,6 +352,10 @@ def classify_shell_command(command: str) -> ClassificationResult:
         reasons.append("redirection or tee")
     if tier3:
         reasons.append("Tier 3 live-surface command")
+    if react_native_mutation:
+        reasons.append("React Native/Expo/native scaffold command")
+    if react_native_tier3:
+        reasons.append("React Native/Expo device, native build, EAS, or App Center command")
     if mutation and not reasons:
         reasons.append("mutating shell command")
 

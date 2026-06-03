@@ -1,0 +1,33 @@
+{
+  "name": "@cbbs/client",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "export:web": "expo export --platform web",
+    "lint": "eslint app src --ext .ts,.tsx --max-warnings=0",
+    "start": "expo start --web",
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "dependencies": {
+    "@cbbs/evidence": "workspace:*",
+    "@cbbs/fixtures": "workspace:*",
+    "@cbbs/protocol": "workspace:*",
+    "@cbbs/state": "workspace:*",
+    "@cbbs/theme": "workspace:*",
+    "@cbbs/ui": "workspace:*",
+    "expo": "~56.0.0",
+    "expo-router": "*",
+    "expo-status-bar": "*",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "*",
+    "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "*",
+    "typescript": "*"
+  }
+}

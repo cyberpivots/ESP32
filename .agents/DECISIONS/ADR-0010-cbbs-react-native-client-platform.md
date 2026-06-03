@@ -1,0 +1,271 @@
+# ADR-0010: CBBS React Native Client Platform Strategy
+
+Status: Accepted
+
+Date: 2026-06-02
+
+## Context
+
+The workspace remains framework-neutral for firmware except where accepted
+firmware ADRs explicitly narrow that scope. `ADR-0003` accepts ESP-IDF only for
+the ESP-NOW BBS coordinator/client firmware lane. It does not select a mobile
+or browser client framework.
+
+The project now needs a separate CBBS client/operator app lane for host-only
+fixture UI work across Android, iOS, browser, and a later Windows spike. This
+lane must not replace the accepted Win31/DOSBox-X/Pi/ESP32 path and must not
+create live hardware authority from UI intent.
+
+## Verified Facts
+
+- React Native `0.85` is the latest stable line as of 2026-06-02, and Expo SDK
+  `56.0.0` maps to React Native `0.85`, React `19.2.3`, React Native Web
+  `0.21.0`, and minimum Node.js `22.13.x`.
+- React Native documentation recommends using a framework for new React Native
+  apps, and Expo is documented as a production-grade React Native framework.
+- Expo supports monorepos with workspace package managers including `pnpm`.
+- Expo Router is a file-based router for React Native and web apps and supports
+  shared Android, iOS, and web navigation.
+- Expo SDK 55 and later run entirely on React Native's New Architecture; SDK 56
+  cannot disable it.
+- React Native for Windows is versioned and supported separately from Expo and
+  React Native Web. RNW `0.83` is the current active line as of 2026-06-02.
+- EAS Build is a hosted build/signing service for Expo and React Native app
+  binaries. No EAS build proof is created by this ADR.
+- Visual Studio App Center reached its lifecycle retirement date on
+  2025-03-31. Microsoft separately extended App Center Analytics and
+  Diagnostics support beyond the original retirement window; App Center is not
+  selected for build, test, distribution, or CodePush in this project.
+- Android and iOS local-network/Bluetooth behavior has platform-specific
+  permission and privacy requirements. This ADR records those requirements for
+  later planning only.
+
+## Accepted Decision
+
+Accept a CBBS client/operator app platform strategy using:
+
+- Expo SDK 56 and React Native 0.85 for the Android, iOS, and browser
+  client/operator app lane.
+- React Native Web through Expo for browser export proof.
+- Expo Router for shared Android, iOS, and web route structure.
+- `pnpm` workspaces for the modular client scaffold.
+- A separate React Native for Windows spike lane that remains docs/stub only
+  until a future Windows toolchain gate proves runner support.
+
+This decision applies only to CBBS client/operator apps. It does not select or
+change firmware framework, firmware ABI, coordinator serial ABI, bridge ABI,
+Gate F service codes, RF transport, BLE transport, ESP-WIFI-MESH transport,
+router/admin behavior, persistent device configuration, or release tooling.
+
+## Initial Shared Contract
+
+Stable app roles:
+
+- `client`
+- `sysop`
+- `monitor`
+- `devconfig`
+
+Stable view IDs:
+
+- `home`
+- `messages`
+- `downloads`
+- `peers`
+- `network`
+- `diagnostics`
+- `safety`
+- `config`
+- `evidence`
+
+Initial UI intent whitelist:
+
+- `navigate`
+- `refresh`
+- `filter`
+- `select_row`
+- `open_detail`
+- `compose_draft`
+- `queue_file_request`
+- `ack_local`
+- `view_proof`
+
+All initial intents are local fixture/UI intents. They do not send bridge
+messages, write files, acknowledge live packets, discover networks, connect to
+devices, mutate configuration, or trigger hardware actions.
+
+## Scaffold Boundary
+
+After this ADR is accepted, the approved scaffold boundary is:
+
+- `apps/cbbs-client/`: Expo SDK 56 Android/iOS/browser fixture app.
+- `apps/cbbs-windows/`: RNW spike docs/stub package only; no generated
+  `windows/` native project.
+- `packages/cbbs-ui/`, `packages/cbbs-state/`, `packages/cbbs-protocol/`,
+  `packages/cbbs-fixtures/`, `packages/cbbs-theme/`, and
+  `packages/cbbs-evidence/`.
+- `tools/react-native/`, `research/cbbs-react-native/`, and a repo-local
+  React Native client skill/reviewer profile set.
+
+The first scaffold must not create native `android/`, `ios/`, or `windows/`
+folders, must not add `eas.json`, and must not run native prebuilds, native
+builds, external service builds, signing, deploy, submit, or release commands.
+
+## Windows W0/W1 Host-Only Amendment
+
+Accepted on 2026-06-02.
+
+The Windows lane may advance from docs/stub-only to host-only records,
+TypeScript source models, fixture data, UI render tests, protocol tests, audit
+policy, and CI validation for one role-aware `apps/cbbs-windows` Client/Sysop
+planning app. This amendment authorizes only:
+
+- W0 governance/source records for RNW `0.83` planning, Windows toolchain
+  prerequisites, RNW CLI telemetry/`--no-telemetry`, and Windows capability
+  manifest planning.
+- W1 host-only protocol hardening: exact top-level intent keys, mandatory
+  `localOnlyReason === "fixture-only-ui-intent"`, forbidden metadata-key
+  rejection, 512-byte payload bounds, and closed-surface parity between
+  protocol constants, fixtures, UI labels, and audits.
+- W1 local fixture UI for Client and Sysop modes, including role/view parity,
+  deterministic accessibility/test IDs, disabled unsafe controls, and
+  transcript-first evidence wording.
+- W1 TypeScript-only `apps/cbbs-windows` source/tests that model the Windows
+  Client/Sysop product shape without adding RNW dependencies or native files.
+- CI validation using `pnpm install --frozen-lockfile`, lint, typecheck, Jest,
+  lockfile-bound Expo Doctor, Windows spike typecheck, and the React Native
+  scaffold audit.
+
+This amendment still does not authorize `react-native-windows` dependencies,
+RNW JS package selection, native `windows/` project generation, `init-windows`,
+`run-windows`, Visual Studio/MSBuild, Package.appxmanifest capability
+declarations, package identity, signing, store packaging, App Center, EAS,
+simulator/device launch, live network, BLE, Web Serial, Web Bluetooth, serial,
+RF/XBee, firmware/bridge/serial ABI changes, flash, erase, monitor, relay,
+load, mains, release, commit, push, PR, or deploy.
+
+Future W2 RNW dependency work must open a separate gate and keep RNW `0.83.x`
+isolated from the Expo React Native `0.85.3` lane unless a new source review
+proves a different compatibility strategy. Future W3/W4 native Windows work
+must prove a Windows host/toolchain in the same session and use explicit
+`--no-telemetry` CLI options when any RNW CLI command is authorized.
+
+## Windows W2 RNW JS Dependency Amendment
+
+Accepted on 2026-06-02.
+
+The Windows lane may advance to W2 package-only RNW dependency selection for
+`apps/cbbs-windows` after the W2 reviewer quorum. This amendment authorizes
+only:
+
+- Exact React Native Windows dependency-lane selection in
+  `apps/cbbs-windows/package.json`: `react-native-windows` `0.83.0`,
+  `react-native` `0.83.9`, and React `19.2.3`.
+- `apps/cbbs-windows` source/tests that import React Native primitives only
+  for host-side TypeScript/Jest validation.
+- Lockfile update and audit checks proving RNW package ownership remains
+  scoped to the Windows package and does not enter `apps/cbbs-client`, root
+  tooling, or shared `packages/cbbs-*` packages.
+- Import-boundary checks forbidding `@cbbs/ui`, Expo, Expo Router,
+  React Native Web, live transports, and native CLI/build/release scripts in
+  the Windows lane.
+
+W2 package validation is not Windows native proof. It still does not authorize
+RNW CLI execution, `init-windows`, `run-windows`, native `windows/` project
+generation, Visual Studio/MSBuild, Package.appxmanifest capability
+declarations, package identity, signing, store packaging, App Center, EAS,
+simulator/device launch, live network, BLE, Web Serial, Web Bluetooth, serial,
+RF/XBee, firmware/bridge/serial ABI changes, flash, erase, monitor, relay,
+load, mains, release, commit, push, PR, or deploy.
+
+## Assumptions
+
+- The first app slice is host-only and fixture-backed.
+- The client app supplements existing Win31/CBBS/LCD/browser-mirror evidence
+  surfaces; it does not supersede them.
+- Expo SDK 56 remains the correct current Expo target for React Native 0.85 at
+  this decision date.
+- Future live mobile connectivity must open a separate Tier 3 gate before
+  device, simulator, BLE, Web Serial, Web Bluetooth, LAN, SoftAP, or serial
+  actions are attempted.
+
+## Unknowns
+
+- Exact live client transport, BLE UUIDs, SoftAP/LAN mode, credentials,
+  native distribution model, and update policy remain unresolved.
+- No Android permission prompt, iOS local-network prompt, BLE pairing,
+  simulator run, device run, native app build, Windows native build, EAS build,
+  or store submission is proven.
+- RNW Windows runner/toolchain availability is unverified.
+- CBBS live acceptance remains separate from this client scaffold.
+
+## Review Quorum
+
+- Governance reviewer, weight 5: conditional approval after ADR-first ordering;
+  rejected framework-dependent mutation before accepted ADR/source records.
+- Source research reviewer, weight 3: approved with current official source
+  rows and precise App Center wording.
+- UI/UX reviewer, weight 3: approved host-only scaffold with stable role, view,
+  and intent tests plus transcript-first evidence wording.
+- Protocol/state reviewer, weight 3: approved fixture-only protocol package
+  with no bridge/serial/RF side effects.
+- DevEx/CI reviewer, weight 3: approved with lockfile-bound validation and
+  native-folder absence audit.
+- Security/safety reviewer, weight 3: approved with no secrets, no native
+  folders, no external services, no live connectivity, and disabled unsafe
+  authority.
+
+Weighted disposition: 17/17 approve for the named Phase 0 plus Phase 1/2
+host-only boundary after the governance ADR-first condition. No P1/P2 blockers
+remain for this boundary.
+
+## Validation Expectations
+
+- Source rows and source ledger for the React Native/Expo/RNW/App Center and
+  platform-permission claims.
+- `scripts/scaffold_audit_react_native.py`.
+- No native-folder audit for `apps/cbbs-client` and `apps/cbbs-windows`.
+- Fixture contract tests for roles, views, intent whitelist, no-secret
+  recursion, oversize payload rejection, and unsafe action rejection.
+- `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck`,
+  `pnpm test`, and lockfile-bound `pnpm --filter @cbbs/client exec
+  expo-doctor` when the local Node/pnpm toolchain supports them.
+- Existing scaffold/source/docs/records/skill/agent-process audits.
+- No publication or release action without a separate gate.
+
+## Sources
+
+- `SRC-REACT-NATIVE-VERSIONS-2026-06-02`
+- `SRC-REACT-NATIVE-ENV-SETUP-2026-06-02`
+- `SRC-EXPO-SDK-56-REFERENCE-2026-06-02`
+- `SRC-EXPO-MONOREPOS-2026-06-02`
+- `SRC-EXPO-ROUTER-2026-06-02`
+- `SRC-EXPO-NEW-ARCHITECTURE-2026-06-02`
+- `SRC-EXPO-EAS-BUILD-2026-06-02`
+- `SRC-REACT-NATIVE-WEB-2026-06-02`
+- `SRC-REACT-NATIVE-WINDOWS-SUPPORT-2026-06-02`
+- `SRC-ANDROID-NETWORK-OPS-2026-06-02`
+- `SRC-ANDROID-BLUETOOTH-PERMISSIONS-2026-06-02`
+- `SRC-ANDROID-WIFI-PERMISSIONS-2026-06-02`
+- `SRC-APPLE-LOCAL-NETWORK-PRIVACY-2026-06-02`
+- `SRC-APPLE-CORE-BLUETOOTH-2026-06-02`
+- `SRC-MICROSOFT-APP-CENTER-RETIREMENT-2026-06-02`
+- `SRC-LOCAL-CBBS-REACT-NATIVE-CLIENT-PLATFORM-2026-06-02`
+- `SRC-REACT-NATIVE-WINDOWS-DEPENDENCIES-2026-06-02`
+- `SRC-REACT-NATIVE-WINDOWS-GETTING-STARTED-2026-06-02`
+- `SRC-REACT-NATIVE-WINDOWS-CLI-2026-06-02`
+- `SRC-WINDOWS-APP-CAPABILITIES-2026-06-02`
+- `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W0-W1-2026-06-02`
+- `SRC-NPM-RNW-DEPENDENCY-METADATA-2026-06-02`
+- `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W2-2026-06-02`
+
+## Stop Gates
+
+This ADR does not authorize native prebuild, native Android/iOS/Windows
+project generation, simulator/device runs, Expo Go claims, EAS Build, EAS
+Submit, EAS Update, EAS Hosting, App Center SDKs or automation, signing
+credentials, store upload, GitHub publication, release, BLE pairing, Web
+Bluetooth, Web Serial, local-network discovery, SoftAP probing, live bridge
+traffic, serial writes, firmware ABI changes, bridge ABI changes, Gate F
+service-code changes, flash, erase, monitor, RF/XBee action, router/admin
+mutation, relay, MicroSD, TFT, wiring, load, mains, or live proof.

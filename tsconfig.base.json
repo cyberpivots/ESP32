@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "composite": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "ignoreDeprecations": "6.0",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmitOnError": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "outDir": "dist",
+    "paths": {
+      "@cbbs/evidence": ["packages/cbbs-evidence/src"],
+      "@cbbs/fixtures": ["packages/cbbs-fixtures/src"],
+      "@cbbs/protocol": ["packages/cbbs-protocol/src"],
+      "@cbbs/state": ["packages/cbbs-state/src"],
+      "@cbbs/theme": ["packages/cbbs-theme/src"],
+      "@cbbs/ui": ["packages/cbbs-ui/src"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022"
+  }
+}

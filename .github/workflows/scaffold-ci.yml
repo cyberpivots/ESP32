@@ -34,6 +34,26 @@ jobs:
           node --check site/github-pages/app.js
           node --check docs/projects/four-relay-xbee-wifi/ui/app.js
 
+      - name: Set up Node for React Native workspace checks
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.13.0"
+
+      - name: Set up pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
+
+      - name: Run React Native workspace checks
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+          pnpm --filter @cbbs/client exec expo-doctor
+          pnpm --filter @cbbs/windows-spike typecheck
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/scaffold_audit_react_native.py
+
       - name: Run scaffold-audit unittest discovery
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/scaffold_audits -p 'test_*.py'
 

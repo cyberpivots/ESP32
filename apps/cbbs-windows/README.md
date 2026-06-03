@@ -10,12 +10,16 @@
 - `ADR-0010` W2 now permits package-only RNW dependency selection for this
   package: `react-native-windows` `0.83.0`, `react-native` `0.83.9`, and React
   `19.2.3`.
+- W2.1 adds a package-only Client/Sysop local shell with React Native
+  primitives, shared protocol constants, fixture-only intents, disabled closed
+  surfaces, and transcript-first evidence wording.
+- W3A proves RNW 0.83 package-local Windows prerequisites: Visual Studio 2022,
+  Windows SDK, Node, Yarn, .NET 8, and Windows `pnpm`.
 - This package remains TypeScript-only and has no generated native Windows
   project.
 
 ## Unknowns
 
-- Windows runner/toolchain availability.
 - RNW native project generation requirements.
 - RNW build, packaging, signing, and distribution path.
 - Windows package identity and capability declarations.
@@ -23,6 +27,8 @@
 ## Host-Only Model
 
 - One role-aware Windows Client/Sysop app is modeled in `src/index.tsx`.
+- The shell derives the local-only marker and closed-surface IDs from
+  `@cbbs/protocol`.
 - Client actions remain local draft, filter, select, proof view, and staged
   request placeholders.
 - Sysop actions remain local refresh, filter, select, detail, ack, and proof

@@ -10,12 +10,17 @@
 - React Native for Windows is tracked separately. W0/W1 now permits
   host-only records, TypeScript source models, fixtures, UI/protocol tests,
   audit policy, and CI validation for Windows Client/Sysop planning only.
-- RNW dependencies, native `windows/` generation, Windows runner/toolchain
-  proof, package identity, capabilities, signing, live transport, and release
-  work remain closed future gates.
+- RNW native `windows/` generation, package identity, capabilities, signing,
+  live transport, and release work remain closed future gates.
 - W2 permits RNW package-only dependency selection inside `apps/cbbs-windows`
   with `react-native-windows` `0.83.0`, `react-native` `0.83.9`, and React
   `19.2.3`; this is package/source validation only.
+- W2.1 adds a package-only Windows Client/Sysop local shell using React Native
+  primitives and shared protocol constants; it still does not prove Windows
+  native runtime behavior.
+- W3A proves the Windows host/toolchain prerequisites for the RNW 0.83
+  package-local dependency check; it still does not generate a native Windows
+  project or prove build/run behavior.
 - The first scaffold is host-only and fixture-backed. No native `android/`,
   `ios/`, or `windows/` project folders are part of this phase.
 
@@ -68,15 +73,16 @@ or start network/file-transfer behavior.
 - Live transport, BLE UUIDs, local-network mode, credentials, native
   distribution, and update policy remain unresolved.
 - No Android/iOS permission prompt, BLE pairing, local-network discovery,
-  native build, RNW native build, Windows runner, Windows package
-  identity/capabilities, signing, or EAS build has been proven.
+  native build, RNW native generation/build, Windows package
+  identity/capabilities, signing, runtime proof, or EAS build has been proven.
 - CBBS live acceptance remains a separate proof lane.
 
 ## Current Scaffold
 
 - `apps/cbbs-client/`: Expo Router Android/iOS/browser fixture app.
 - `apps/cbbs-windows/`: Windows Client/Sysop host source model with W2 RNW
-  package dependencies only; no generated Windows project.
+  package dependencies, W2.1 local shell source/tests, and W3A Windows
+  prerequisite proof only; no generated Windows project.
 - `packages/cbbs-protocol/`: shared role, view, intent, and safety contract.
 - `packages/cbbs-fixtures/`: redacted fixture data.
 - `packages/cbbs-state/`: local reducer for fixture-only UI intents.
@@ -93,9 +99,10 @@ Bluetooth, Web Serial, SoftAP, serial write, RF/XBee action, relay, flash,
 erase, monitor, persistent config, router/admin mutation, MicroSD, TFT, wiring,
 load, or mains action is authorized by this project page.
 
-Windows W2 also does not authorize RNW CLI execution, Visual Studio/MSBuild,
-Package.appxmanifest capability declarations, package identity, installer/store
-packaging, or Windows runtime proof.
+Windows W3A authorizes only host/toolchain prerequisite checks and remediation.
+It does not authorize RNW CLI `init-windows`, generated native project files,
+Visual Studio/MSBuild build, Package.appxmanifest capability declarations,
+package identity, installer/store packaging, or Windows runtime proof.
 
 ## Sources
 
@@ -107,7 +114,10 @@ packaging, or Windows runtime proof.
 - `SRC-REACT-NATIVE-WINDOWS-DEPENDENCIES-2026-06-02`
 - `SRC-REACT-NATIVE-WINDOWS-GETTING-STARTED-2026-06-02`
 - `SRC-REACT-NATIVE-WINDOWS-CLI-2026-06-02`
+- `SRC-REACT-NATIVE-WINDOWS-PACKAGE-DEPS-2026-06-03`
 - `SRC-WINDOWS-APP-CAPABILITIES-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W0-W1-2026-06-02`
 - `SRC-NPM-RNW-DEPENDENCY-METADATA-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W2-2026-06-02`
+- `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W21-2026-06-02`
+- `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3A-2026-06-03`

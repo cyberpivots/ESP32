@@ -178,6 +178,40 @@ simulator/device launch, live network, BLE, Web Serial, Web Bluetooth, serial,
 RF/XBee, firmware/bridge/serial ABI changes, flash, erase, monitor, relay,
 load, mains, release, commit, push, PR, or deploy.
 
+## Windows W3A Toolchain Preflight Amendment
+
+Accepted on 2026-06-03.
+
+The Windows lane may advance to W3A Windows host/toolchain preflight after
+explicit user authority and reviewer quorum. This amendment authorizes only:
+
+- Same-session Windows host inventory for OS version, Developer Mode, long
+  paths, Visual Studio, Windows SDK, Node, Yarn, .NET SDK, and Windows package
+  manager availability.
+- Package-local RNW `0.83.0` dependency-script checks from
+  `node_modules/react-native-windows/Scripts/rnw-dependencies.ps1`.
+- Source-backed prerequisite remediation through the package-local RNW script
+  when the floating public dependency script has drifted from the versioned RNW
+  package requirements.
+- Narrow Windows PATH/Corepack configuration needed for Yarn and the
+  repo-pinned `pnpm@10.15.0`.
+- Durable W3A task/source/handoff records and audits proving that no app native
+  Windows project was generated.
+
+W3A proves host prerequisite readiness only. It still does not authorize RNW
+CLI `init-windows`, `run-windows`, native `windows/` project generation,
+MSBuild build, Visual Studio launch, Package.appxmanifest capability
+declarations, package identity, signing, store packaging, App Center, EAS,
+simulator/device launch, live network, BLE, Web Serial, Web Bluetooth, serial,
+RF/XBee, firmware/bridge/serial ABI changes, flash, erase, monitor, relay,
+load, mains, release, commit, push, PR, or deploy.
+
+Future W3 native generation must open a separate boundary for
+`apps/cbbs-windows/windows`, update the scaffold audit to allow and inspect the
+generated native surface, state the exact no-overwrite `init-windows
+--no-telemetry` command, stop if the CLI requires `--overwrite`, and preserve
+all live, release, signing, and hardware gates.
+
 ## Assumptions
 
 - The first app slice is host-only and fixture-backed.
@@ -254,10 +288,12 @@ remain for this boundary.
 - `SRC-REACT-NATIVE-WINDOWS-DEPENDENCIES-2026-06-02`
 - `SRC-REACT-NATIVE-WINDOWS-GETTING-STARTED-2026-06-02`
 - `SRC-REACT-NATIVE-WINDOWS-CLI-2026-06-02`
+- `SRC-REACT-NATIVE-WINDOWS-PACKAGE-DEPS-2026-06-03`
 - `SRC-WINDOWS-APP-CAPABILITIES-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W0-W1-2026-06-02`
 - `SRC-NPM-RNW-DEPENDENCY-METADATA-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W2-2026-06-02`
+- `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3A-2026-06-03`
 
 ## Stop Gates
 

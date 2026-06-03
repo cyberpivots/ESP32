@@ -32,10 +32,13 @@ REQUIRED_SOURCE_IDS = [
     "SRC-REACT-NATIVE-WINDOWS-DEPENDENCIES-2026-06-02",
     "SRC-REACT-NATIVE-WINDOWS-GETTING-STARTED-2026-06-02",
     "SRC-REACT-NATIVE-WINDOWS-CLI-2026-06-02",
+    "SRC-REACT-NATIVE-WINDOWS-PACKAGE-DEPS-2026-06-03",
     "SRC-WINDOWS-APP-CAPABILITIES-2026-06-02",
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W0-W1-2026-06-02",
     "SRC-NPM-RNW-DEPENDENCY-METADATA-2026-06-02",
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W2-2026-06-02",
+    "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W21-2026-06-02",
+    "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3A-2026-06-03",
 ]
 
 WINDOWS_RNW_DEPENDENCIES = {
@@ -207,6 +210,12 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0151-cbbs-react-native-windows-w2-dependency-lane.md",
         ".agents/handoffs/0112-cbbs-react-native-windows-w2-to-qa.md",
         "knowledge-base/source-ledger/2026-06-02-cbbs-react-native-windows-w2.md",
+        ".agents/TASK_LOG/0153-cbbs-react-native-windows-w21-local-shell.md",
+        ".agents/handoffs/0113-cbbs-react-native-windows-w21-local-shell-to-qa.md",
+        "knowledge-base/source-ledger/2026-06-02-cbbs-react-native-windows-w21.md",
+        ".agents/TASK_LOG/0154-cbbs-react-native-windows-w3a-toolchain-preflight.md",
+        ".agents/handoffs/0114-cbbs-react-native-windows-w3a-toolchain-to-qa.md",
+        "knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3a.md",
     ]:
         if not (root / rel).exists():
             failures.append(f"missing React Native scaffold file: {rel}")
@@ -331,13 +340,22 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
     windows_text = _read(root / "apps" / "cbbs-windows" / "src" / "index.tsx")
     for marker in [
         "package-only-rnw-dependency-lane",
+        "WindowsClientSysopShell",
+        "createWindowsLocalIntent",
         "single-role-aware-windows-app",
         "nativeDependencySelected: true",
         "react-native-windows",
         "0.83.0",
-        "fixture-only-ui-intent",
         "native_windows_project",
         "live_transport",
+        "LOCAL_ONLY_REASON",
+        "CLOSED_SURFACE_IDS",
+        "localIntent(",
+        "windows-view-",
+        "windows-action-",
+        "windows-closed-surface-",
+        "accessibilityState={{ disabled: true }}",
+        "Transcript-first Windows fixture evidence",
     ]:
         if marker not in windows_text:
             failures.append(f"Windows spike missing W0/W1 marker: {marker}")
@@ -378,11 +396,17 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "../knowledge-base/source-ledger/2026-06-02-cbbs-react-native-client-platform.md",
         "../knowledge-base/source-ledger/2026-06-02-cbbs-react-native-windows-w0-w1.md",
         "../knowledge-base/source-ledger/2026-06-02-cbbs-react-native-windows-w2.md",
+        "../knowledge-base/source-ledger/2026-06-02-cbbs-react-native-windows-w21.md",
+        "../knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3a.md",
         "../research/cbbs-react-native/README.md",
         "../.agents/TASK_LOG/0150-cbbs-react-native-windows-client-sysop-w0-w1.md",
         "../.agents/handoffs/0111-cbbs-react-native-windows-client-sysop-w0-w1-to-qa.md",
         "../.agents/TASK_LOG/0151-cbbs-react-native-windows-w2-dependency-lane.md",
         "../.agents/handoffs/0112-cbbs-react-native-windows-w2-to-qa.md",
+        "../.agents/TASK_LOG/0153-cbbs-react-native-windows-w21-local-shell.md",
+        "../.agents/handoffs/0113-cbbs-react-native-windows-w21-local-shell-to-qa.md",
+        "../.agents/TASK_LOG/0154-cbbs-react-native-windows-w3a-toolchain-preflight.md",
+        "../.agents/handoffs/0114-cbbs-react-native-windows-w3a-toolchain-to-qa.md",
     ]:
         if marker not in docs_index:
             failures.append(f"docs index missing React Native link: {marker}")

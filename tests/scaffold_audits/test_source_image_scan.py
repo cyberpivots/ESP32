@@ -32,6 +32,20 @@ class SourceImageScanTests(unittest.TestCase):
             failures,
         )
 
+    def test_rnw_generated_package_images_are_allowlisted(self) -> None:
+        failures = audit_source_image_paths(
+            relative_files=[
+                "apps/cbbs-windows/windows/CbbsWindows.Package/Images/LockScreenLogo.scale-200.png",
+                "apps/cbbs-windows/windows/CbbsWindows.Package/Images/SplashScreen.scale-200.png",
+                "apps/cbbs-windows/windows/CbbsWindows.Package/Images/Square150x150Logo.scale-200.png",
+                "apps/cbbs-windows/windows/CbbsWindows.Package/Images/Square44x44Logo.scale-200.png",
+                "apps/cbbs-windows/windows/CbbsWindows.Package/Images/Square44x44Logo.targetsize-24_altform-unplated.png",
+                "apps/cbbs-windows/windows/CbbsWindows.Package/Images/StoreLogo.png",
+                "apps/cbbs-windows/windows/CbbsWindows.Package/Images/Wide310x150Logo.scale-200.png",
+            ]
+        )
+        self.assertEqual([], failures)
+
 
 if __name__ == "__main__":
     unittest.main()

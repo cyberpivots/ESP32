@@ -15,12 +15,14 @@
   surfaces, and transcript-first evidence wording.
 - W3A proves RNW 0.83 package-local Windows prerequisites: Visual Studio 2022,
   Windows SDK, Node, Yarn, .NET 8, and Windows `pnpm`.
-- This package remains TypeScript-only and has no generated native Windows
-  project.
+- The W3B native generation gate generated the app-local RNW `cpp-app` native
+  project after a fresh no-P1/P2 reviewer disposition, package-lock guard,
+  pnpm reconciliation, and manifest capability inspection.
+- RNW native build/run remains closed.
 
 ## Unknowns
 
-- RNW native project generation requirements.
+- RNW native build behavior.
 - RNW build, packaging, signing, and distribution path.
 - Windows package identity and capability declarations.
 
@@ -37,8 +39,8 @@
 
 ## Closed Surfaces
 
-No generated `windows/` native project, RNW init, RNW run, Visual Studio build,
-Package.appxmanifest, Windows capability declaration, package identity,
-signing, installer packaging, App Center, EAS, live connectivity, serial, BLE,
-RF/XBee, relay, flash, erase, monitor, release, PR, or deploy is authorized in
-this spike.
+No RNW run, Visual Studio build, Package.appxmanifest capability use, package
+identity acceptance, signing, installer packaging, App Center, EAS, live
+connectivity, serial, BLE, RF/XBee, relay, flash, erase, monitor, release, PR,
+or deploy is authorized in this spike. W3B native generation is complete and
+build/run remains closed.

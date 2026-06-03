@@ -356,6 +356,13 @@ ALLOWED_IMAGE_BINARY_PATHS = {
     "site/github-pages/assets/workbench/hero-workbench.webp",
     "site/github-pages/assets/workbench/rd-loop-backplate.webp",
     "site/github-pages/assets/workbench/admin-hmi-backplate.webp",
+    "apps/cbbs-windows/windows/CbbsWindows.Package/Images/LockScreenLogo.scale-200.png",
+    "apps/cbbs-windows/windows/CbbsWindows.Package/Images/SplashScreen.scale-200.png",
+    "apps/cbbs-windows/windows/CbbsWindows.Package/Images/Square150x150Logo.scale-200.png",
+    "apps/cbbs-windows/windows/CbbsWindows.Package/Images/Square44x44Logo.scale-200.png",
+    "apps/cbbs-windows/windows/CbbsWindows.Package/Images/Square44x44Logo.targetsize-24_altform-unplated.png",
+    "apps/cbbs-windows/windows/CbbsWindows.Package/Images/StoreLogo.png",
+    "apps/cbbs-windows/windows/CbbsWindows.Package/Images/Wide310x150Logo.scale-200.png",
 }
 
 IMAGE_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".webp"}

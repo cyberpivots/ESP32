@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,8 @@ REQUIRED_SOURCE_IDS = [
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W2-2026-06-02",
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W21-2026-06-02",
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3A-2026-06-03",
+    "SRC-REACT-NATIVE-WINDOWS-CPP-APP-TEMPLATE-2026-06-03",
+    "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3B-2026-06-03",
 ]
 
 WINDOWS_RNW_DEPENDENCIES = {
@@ -71,6 +74,7 @@ EXPECTED_INTENTS = [
     "view_proof",
 ]
 
+WINDOWS_NATIVE_DIR = Path("apps/cbbs-windows/windows")
 NATIVE_DIRS = [
     Path("apps/cbbs-client/android"),
     Path("apps/cbbs-client/ios"),
@@ -78,9 +82,42 @@ NATIVE_DIRS = [
     Path("apps/cbbs-client/macos"),
     Path("apps/cbbs-windows/android"),
     Path("apps/cbbs-windows/ios"),
-    Path("apps/cbbs-windows/windows"),
     Path("apps/cbbs-windows/macos"),
 ]
+W3B_RECORD_FILES = [
+    Path(".agents/TASK_LOG/0155-cbbs-react-native-windows-w3b-native-generation.md"),
+    Path(".agents/handoffs/0115-cbbs-react-native-windows-w3b-native-generation-to-qa.md"),
+    Path("knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3b.md"),
+]
+EXPECTED_WINDOWS_NATIVE_FILES = [
+    Path("CbbsWindows.sln"),
+    Path("CbbsWindows/CbbsWindows.vcxproj"),
+    Path("CbbsWindows.Package/Package.appxmanifest"),
+]
+ALLOWED_WINDOWS_TEMPLATE_CAPABILITIES = {"internetClient", "runFullTrust"}
+FORBIDDEN_WINDOWS_OUTPUT_DIRS = {
+    ".vs",
+    "AppPackages",
+    "bin",
+    "obj",
+    "Debug",
+    "Release",
+}
+FORBIDDEN_WINDOWS_OUTPUT_SUFFIXES = {
+    ".appx",
+    ".appxbundle",
+    ".cer",
+    ".msix",
+    ".msixbundle",
+    ".p12",
+    ".pem",
+    ".pfx",
+    ".pvk",
+    ".snk",
+}
+FORBIDDEN_WINDOWS_OUTPUT_NAMES = {
+    "Package.StoreAssociation.xml",
+}
 FORBIDDEN_CONFIG_FILES = [
     Path("eas.json"),
     Path("apps/cbbs-client/eas.json"),
@@ -158,6 +195,17 @@ def _package_json_paths(root: Path) -> list[Path]:
     return sorted([root / "package.json", *root.glob("apps/*/package.json"), *root.glob("packages/*/package.json")])
 
 
+def _package_script_blob(root: Path) -> str:
+    scripts: list[str] = []
+    for path in _package_json_paths(root):
+        package = _load_json(path)
+        values = package.get("scripts")
+        if isinstance(values, dict):
+            for name, command in values.items():
+                scripts.append(f"{path.relative_to(root).as_posix()}#{name}: {command}")
+    return "\n".join(scripts)
+
+
 def _repo_ts_files(root: Path, rel: str) -> list[Path]:
     ignored_parts = {"node_modules", "dist", "build", "coverage", ".expo"}
     base = root / rel
@@ -173,6 +221,76 @@ def _repo_ts_files(root: Path, rel: str) -> list[Path]:
 def _has_package_reference(text: str, package_name: str) -> bool:
     package_re = re.compile(rf"(?<![\w@.-]){re.escape(package_name)}(?=$|[\"'\s;/])")
     return bool(package_re.search(text))
+
+
+def _xml_local_name(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _manifest_capabilities(path: Path) -> set[str]:
+    tree = ET.parse(path)
+    capabilities: set[str] = set()
+    for element in tree.iter():
+        if _xml_local_name(element.tag) in {"Capability", "DeviceCapability"}:
+            name = element.attrib.get("Name")
+            if name:
+                capabilities.add(name)
+    return capabilities
+
+
+def _inspect_windows_native_surface(root: Path) -> list[str]:
+    failures: list[str] = []
+    native_dir = root / WINDOWS_NATIVE_DIR
+    if not native_dir.exists():
+        return failures
+
+    for rel in W3B_RECORD_FILES:
+        if not (root / rel).exists():
+            failures.append(f"W3B native surface exists without record: {rel.as_posix()}")
+    for rel in EXPECTED_WINDOWS_NATIVE_FILES:
+        if not (native_dir / rel).exists():
+            failures.append(f"W3B Windows native surface missing expected file: {rel.as_posix()}")
+
+    for path in sorted(native_dir.rglob("*")):
+        rel = path.relative_to(native_dir)
+        if any(part in FORBIDDEN_WINDOWS_OUTPUT_DIRS for part in rel.parts):
+            failures.append(f"W3B Windows native surface contains build output dir: {rel.as_posix()}")
+        if path.is_file():
+            if path.name in FORBIDDEN_WINDOWS_OUTPUT_NAMES:
+                failures.append(f"W3B Windows native surface contains store/signing file: {rel.as_posix()}")
+            if path.suffix.lower() in FORBIDDEN_WINDOWS_OUTPUT_SUFFIXES:
+                failures.append(f"W3B Windows native surface contains package/signing artifact: {rel.as_posix()}")
+
+    manifests = sorted(native_dir.rglob("Package.appxmanifest"))
+    if len(manifests) != 1:
+        failures.append(f"W3B Windows native surface must contain exactly one Package.appxmanifest, found {len(manifests)}")
+        return failures
+
+    manifest = manifests[0]
+    try:
+        capabilities = _manifest_capabilities(manifest)
+    except ET.ParseError as exc:
+        failures.append(f"W3B Package.appxmanifest is not valid XML: {exc}")
+        return failures
+    extra_capabilities = capabilities - ALLOWED_WINDOWS_TEMPLATE_CAPABILITIES
+    missing_capabilities = ALLOWED_WINDOWS_TEMPLATE_CAPABILITIES - capabilities
+    if extra_capabilities:
+        failures.append(
+            "W3B Package.appxmanifest has unapproved capabilities: "
+            + ", ".join(sorted(extra_capabilities))
+        )
+    if missing_capabilities:
+        failures.append(
+            "W3B Package.appxmanifest missing reviewed template capabilities: "
+            + ", ".join(sorted(missing_capabilities))
+        )
+
+    manifest_text = _read(manifest)
+    for marker in ["Identity", "Publisher=", "TargetDeviceFamily", "internetClient", "runFullTrust"]:
+        if marker not in manifest_text:
+            failures.append(f"W3B Package.appxmanifest missing marker: {marker}")
+
+    return failures
 
 
 def audit_react_native(root: Path = ROOT) -> list[str]:
@@ -216,6 +334,9 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0154-cbbs-react-native-windows-w3a-toolchain-preflight.md",
         ".agents/handoffs/0114-cbbs-react-native-windows-w3a-toolchain-to-qa.md",
         "knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3a.md",
+        ".agents/TASK_LOG/0155-cbbs-react-native-windows-w3b-native-generation.md",
+        ".agents/handoffs/0115-cbbs-react-native-windows-w3b-native-generation-to-qa.md",
+        "knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3b.md",
     ]:
         if not (root / rel).exists():
             failures.append(f"missing React Native scaffold file: {rel}")
@@ -235,15 +356,19 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
     for rel in NATIVE_DIRS:
         if (root / rel).exists():
             failures.append(f"native project directory must not exist: {rel.as_posix()}")
+    failures.extend(_inspect_windows_native_surface(root))
     for rel in FORBIDDEN_CONFIG_FILES:
         if (root / rel).exists():
             failures.append(f"external service/native config file must not exist: {rel.as_posix()}")
+    for path in sorted([root / "package-lock.json", *root.glob("apps/*/package-lock.json"), *root.glob("packages/*/package-lock.json")]):
+        if path.exists():
+            failures.append(f"npm package-lock output must not exist in tracked package roots: {path.relative_to(root).as_posix()}")
 
     package_blob = "\n".join(_read(path) for path in _package_json_paths(root))
     for term in FORBIDDEN_PACKAGE_TERMS:
         if term.lower() in package_blob.lower():
             failures.append(f"package manifests contain forbidden dependency/config term: {term}")
-    if FORBIDDEN_SCRIPT_RE.search(package_blob):
+    if FORBIDDEN_SCRIPT_RE.search(_package_script_blob(root)):
         failures.append("package scripts contain native, EAS, App Center, or release commands")
 
     windows_package = _load_json(root / "apps" / "cbbs-windows" / "package.json")
@@ -259,7 +384,7 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         rel = path.relative_to(root).as_posix()
         deps = _deps(_load_json(path))
         if rel != "apps/cbbs-windows/package.json":
-            for name in ["react-native-windows"]:
+            for name in ["react-native-windows", "@rnx-kit/jest-preset"]:
                 if name in deps:
                     failures.append(f"{rel} must not depend on {name}")
         if rel in {"package.json", "apps/cbbs-client/package.json"} or rel.startswith("packages/"):
@@ -366,7 +491,8 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "0.83.0",
         "react-native` `0.83.9",
         "19.2.3",
-        "no generated native Windows",
+        "W3B native generation gate",
+        "build/run remains closed",
     ]:
         if marker not in windows_readme:
             failures.append(f"Windows README missing W2 marker: {marker}")
@@ -398,6 +524,7 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "../knowledge-base/source-ledger/2026-06-02-cbbs-react-native-windows-w2.md",
         "../knowledge-base/source-ledger/2026-06-02-cbbs-react-native-windows-w21.md",
         "../knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3a.md",
+        "../knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3b.md",
         "../research/cbbs-react-native/README.md",
         "../.agents/TASK_LOG/0150-cbbs-react-native-windows-client-sysop-w0-w1.md",
         "../.agents/handoffs/0111-cbbs-react-native-windows-client-sysop-w0-w1-to-qa.md",
@@ -407,6 +534,8 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "../.agents/handoffs/0113-cbbs-react-native-windows-w21-local-shell-to-qa.md",
         "../.agents/TASK_LOG/0154-cbbs-react-native-windows-w3a-toolchain-preflight.md",
         "../.agents/handoffs/0114-cbbs-react-native-windows-w3a-toolchain-to-qa.md",
+        "../.agents/TASK_LOG/0155-cbbs-react-native-windows-w3b-native-generation.md",
+        "../.agents/handoffs/0115-cbbs-react-native-windows-w3b-native-generation-to-qa.md",
     ]:
         if marker not in docs_index:
             failures.append(f"docs index missing React Native link: {marker}")

@@ -22,9 +22,22 @@ class ReactNativeScaffoldAuditTests(unittest.TestCase):
         for marker in [*rn_audit.EXPECTED_ROLES, *rn_audit.EXPECTED_VIEWS, *rn_audit.EXPECTED_INTENTS]:
             self.assertIn(marker, protocol)
 
-    def test_native_project_directories_are_absent(self) -> None:
+    def test_non_windows_native_project_directories_are_absent(self) -> None:
         for rel in rn_audit.NATIVE_DIRS:
             self.assertFalse((ROOT / rel).exists(), rel.as_posix())
+
+    def test_package_lock_outputs_are_absent(self) -> None:
+        for rel in ["package-lock.json", "apps/cbbs-client/package-lock.json", "apps/cbbs-windows/package-lock.json"]:
+            self.assertFalse((ROOT / rel).exists(), rel)
+
+    def test_windows_native_surface_is_w3b_gated(self) -> None:
+        windows_dir = ROOT / rn_audit.WINDOWS_NATIVE_DIR
+        if not windows_dir.exists():
+            return
+
+        for rel in rn_audit.W3B_RECORD_FILES:
+            self.assertTrue((ROOT / rel).exists(), rel.as_posix())
+        self.assertEqual([], rn_audit._inspect_windows_native_surface(ROOT))
 
     def test_windows_dependency_lane_is_scoped(self) -> None:
         windows_package = rn_audit._load_json(ROOT / "apps/cbbs-windows/package.json")

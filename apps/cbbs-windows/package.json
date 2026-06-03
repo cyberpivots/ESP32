@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "typecheck": "tsc --noEmit --pretty false"
+    "typecheck": "tsc --noEmit --pretty false",
+    "test:windows": "jest --config jest.config.windows.js"
   },
   "dependencies": {
     "@cbbs/protocol": "workspace:*",
@@ -12,6 +13,14 @@
     "react-native-windows": "0.83.0"
   },
   "devDependencies": {
-    "typescript": "*"
+    "typescript": "*",
+    "@rnx-kit/jest-preset": "^0.3.1"
+  },
+  "react-native-windows": {
+    "init-windows": {
+      "name": "CbbsWindows",
+      "namespace": "Cbbs.Windows",
+      "template": "cpp-app"
+    }
   }
 }

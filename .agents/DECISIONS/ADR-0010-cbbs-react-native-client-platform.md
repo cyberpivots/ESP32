@@ -212,6 +212,34 @@ generated native surface, state the exact no-overwrite `init-windows
 --no-telemetry` command, stop if the CLI requires `--overwrite`, and preserve
 all live, release, signing, and hardware gates.
 
+## Windows W3B Native Generation Gate Amendment
+
+Accepted on 2026-06-03.
+
+The Windows lane may advance to W3B native project generation only after the
+same-session W3B record/audit boundary and a fresh no-P1/P2 reviewer
+disposition. W3B authorizes only:
+
+- W3B governance/source/handoff records and a W3-aware scaffold audit that
+  allows and inspects the generated `apps/cbbs-windows/windows` native surface.
+- The app-scoped no-overwrite/no-telemetry command:
+  `NPM_CONFIG_PACKAGE_LOCK=false pnpm --dir apps/cbbs-windows exec react-native init-windows --template cpp-app --name CbbsWindows --namespace Cbbs.Windows --no-telemetry`.
+- RNW `cpp-app` generated files under `apps/cbbs-windows/windows`, generated
+  app-root RNW config files, `apps/cbbs-windows/package.json`, and
+  `pnpm-lock.yaml` reconciliation through pnpm only.
+- Removal or neutralization of RNW-generated `run-windows` package scripts
+  before W3B acceptance, because W4 build/run/deploy remains closed.
+- Inspection of generated `Package.appxmanifest` as a template fact only. The
+  reviewed template defaults are `internetClient` and restricted
+  `runFullTrust`; any additional capability stops W3B.
+
+W3B still does not authorize RNW `run-windows`, Visual Studio/MSBuild build,
+deploy, package identity acceptance, capability use, signing, installer/store
+packaging, App Center, EAS, simulator/device launch, live network, BLE,
+Web Serial, Web Bluetooth, local-network discovery, SoftAP, serial, RF/XBee,
+firmware/bridge/serial ABI changes, flash, erase, monitor, relay, load, mains,
+release, commit, push, PR, or deploy.
+
 ## Assumptions
 
 - The first app slice is host-only and fixture-backed.

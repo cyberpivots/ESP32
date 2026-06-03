@@ -21,8 +21,12 @@
 - W3A proves the Windows host/toolchain prerequisites for the RNW 0.83
   package-local dependency check; it still does not generate a native Windows
   project or prove build/run behavior.
-- The first scaffold is host-only and fixture-backed. No native `android/`,
-  `ios/`, or `windows/` project folders are part of this phase.
+- W3B generated the app-local RNW `cpp-app` native project for
+  `apps/cbbs-windows` only. It used an app-scoped no-overwrite/no-telemetry
+  command, package-lock suppression, pnpm lock reconciliation, generated
+  `run-windows` script removal, and manifest capability inspection before
+  acceptance.
+- The Android/iOS/browser scaffold remains host-only and fixture-backed.
 
 ## App Contract
 
@@ -80,9 +84,9 @@ or start network/file-transfer behavior.
 ## Current Scaffold
 
 - `apps/cbbs-client/`: Expo Router Android/iOS/browser fixture app.
-- `apps/cbbs-windows/`: Windows Client/Sysop host source model with W2 RNW
-  package dependencies, W2.1 local shell source/tests, and W3A Windows
-  prerequisite proof only; no generated Windows project.
+- `apps/cbbs-windows/`: Windows Client/Sysop source model with W2 RNW package
+  dependencies, W2.1 local shell source/tests, W3A Windows prerequisite proof,
+  and W3B generated native project files. W3B is not build/run/runtime proof.
 - `packages/cbbs-protocol/`: shared role, view, intent, and safety contract.
 - `packages/cbbs-fixtures/`: redacted fixture data.
 - `packages/cbbs-state/`: local reducer for fixture-only UI intents.
@@ -93,16 +97,16 @@ or start network/file-transfer behavior.
 
 ## Closed Surfaces
 
-No native prebuild, native folder generation, EAS, App Center, signing,
-release, deploy, simulator/device run, Expo Go proof, live network, BLE, Web
+No native prebuild outside the accepted Windows W3B gate, EAS, App Center,
+signing, release, deploy, simulator/device run, Expo Go proof, live network, BLE, Web
 Bluetooth, Web Serial, SoftAP, serial write, RF/XBee action, relay, flash,
 erase, monitor, persistent config, router/admin mutation, MicroSD, TFT, wiring,
 load, or mains action is authorized by this project page.
 
-Windows W3A authorizes only host/toolchain prerequisite checks and remediation.
-It does not authorize RNW CLI `init-windows`, generated native project files,
-Visual Studio/MSBuild build, Package.appxmanifest capability declarations,
-package identity, installer/store packaging, or Windows runtime proof.
+Windows W3B authorizes only reviewed native generation for
+`apps/cbbs-windows`. It does not authorize RNW `run-windows`,
+Visual Studio/MSBuild build, Package.appxmanifest capability use, package
+identity acceptance, installer/store packaging, or Windows runtime proof.
 
 ## Sources
 
@@ -115,9 +119,11 @@ package identity, installer/store packaging, or Windows runtime proof.
 - `SRC-REACT-NATIVE-WINDOWS-GETTING-STARTED-2026-06-02`
 - `SRC-REACT-NATIVE-WINDOWS-CLI-2026-06-02`
 - `SRC-REACT-NATIVE-WINDOWS-PACKAGE-DEPS-2026-06-03`
+- `SRC-REACT-NATIVE-WINDOWS-CPP-APP-TEMPLATE-2026-06-03`
 - `SRC-WINDOWS-APP-CAPABILITIES-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W0-W1-2026-06-02`
 - `SRC-NPM-RNW-DEPENDENCY-METADATA-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W2-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W21-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3A-2026-06-03`
+- `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3B-2026-06-03`

@@ -40,6 +40,10 @@
 - The `CbbsWindows` compatibility entry now defaults to the Sysop product
   surface in source. Earlier local Debug x64 Hardware Tools compatibility
   evidence is historical only; it is not current split-product runtime proof.
+- The split native generation gate may generate app-local RNW `cpp-app` source
+  projects for `CbbsClientWindows`, `CbbsSysopWindows`, and
+  `CbbsHardwareToolsWindows`. Generated manifest identities and capabilities
+  remain local debug template facts only.
 - The Android/iOS/browser scaffold remains host-only and fixture-backed.
 
 ## App Contract
@@ -91,7 +95,7 @@ or start network/file-transfer behavior.
 - Live transport, BLE UUIDs, local-network mode, credentials, native
   distribution, and update policy remain unresolved.
 - No Android/iOS permission prompt, BLE pairing, local-network discovery,
-  split-product native build, accepted Windows package identity/capability
+  split-product native runtime, accepted Windows package identity/capability
   use, signing, release packaging, or EAS build has been proven.
 - CBBS live acceptance remains a separate proof lane.
 

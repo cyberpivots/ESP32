@@ -38,6 +38,23 @@
 - Confirm Heltec WiFi LoRa 32(V2) physical revision and radio chip variant.
 - Verify Waveshare XBee USB Adapter serial port, UART voltage, DIN/DOUT routing,
   and whether it is only a PC dock or also a possible ESP32-mounted carrier.
+- CBBS RNW split native generation is recorded under
+  `SRC-LOCAL-CBBS-RNW-SPLIT-NATIVE-GENERATION-2026-06-04`; split native runtime
+  behavior, final Windows package identities, accepted capability use, signing,
+  Store/App Installer packaging, and release path remain open.
+- CBBS RNW split local debug build/install/launch is being recorded under
+  `SRC-LOCAL-CBBS-RNW-SPLIT-BUILD-INSTALL-LAUNCH-2026-06-04`; final Windows
+  package identities, accepted capability use, signing, Store/App Installer
+  packaging, release path, live bridge dispatch, and hardware actions remain
+  open unless a later source record accepts them.
+- CBBS HostCommandBridge live dispatch is blocked under
+  `SRC-LOCAL-CBBS-HOST-COMMAND-BRIDGE-LIVE-GATE-BLOCKED-2026-06-04`; v1 remains
+  unavailable-only until a separate live ABI, adapter evidence, recovery path,
+  transcript proof, and cleanup proof are accepted.
+- CBBS XBee known-profile writes are blocked under
+  `SRC-LOCAL-CBBS-XBEE-KNOWN-PROFILE-WRITE-GATE-BLOCKED-2026-06-04`; future
+  writes need same-session port identity, readback backup, voltage/isolation/
+  antenna evidence, local-only key handling, rollback, redaction, and cleanup.
 - Run the XBee read-only bench proof Tier A, then optionally Tier B with
   `--confirm-sends-read-commands`, to capture `VR`, `HV`, `SH`, `SL`, `AP`,
   `AO`, `BD`, and `NP` without setting writes.

@@ -286,6 +286,37 @@ local-network discovery, SoftAP, serial/RF/XBee action,
 firmware/bridge/serial ABI change, flash, erase, monitor, relay, load, mains,
 release, commit, push, PR, or deploy.
 
+## Windows W5 Split Native Generation Amendment
+
+Accepted on 2026-06-04.
+
+The Windows lane may advance to split-product native source generation for the
+three product app packages after a fresh no-P1/P2 reviewer disposition. W5
+authorizes only:
+
+- W5 governance/source/handoff records and React Native scaffold audit coverage
+  for the generated split native surfaces.
+- App-scoped no-overwrite/no-telemetry commands for
+  `CbbsClientWindows`, `CbbsSysopWindows`, and `CbbsHardwareToolsWindows`.
+- RNW `cpp-app` generated files under
+  `apps/cbbs-client-windows/windows`,
+  `apps/cbbs-sysop-windows/windows`, and
+  `apps/cbbs-hardware-tools-windows/windows`.
+- App package metadata and `pnpm-lock.yaml` reconciliation through pnpm only.
+- Removal or neutralization of RNW-generated `run-windows` package scripts
+  before W5 acceptance.
+- Inspection of generated `Package.appxmanifest` files as template facts only.
+  The reviewed template defaults remain `internetClient` and restricted
+  `runFullTrust`; any additional capability stops W5.
+
+W5 does not authorize RNW `run-windows`, Visual Studio/MSBuild build, deploy,
+launch, package identity acceptance, capability use, signing, installer/store
+packaging, App Center, EAS, simulator/device launch, live network, BLE,
+Web Serial, Web Bluetooth, local-network discovery, SoftAP, native
+HostCommandBridge implementation, live bridge dispatch, serial/RF/XBee action,
+firmware/bridge/serial ABI changes, flash, erase, monitor, relay, load, mains,
+release, commit, push, PR, or deploy.
+
 ## Assumptions
 
 - The first app slice is host-only and fixture-backed.
@@ -377,11 +408,14 @@ remain for this boundary.
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3A-2026-06-03`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3B-2026-06-03`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W4-PRE-RELEASE-2026-06-03`
+- `SRC-LOCAL-CBBS-RNW-SPLIT-NATIVE-GENERATION-2026-06-04`
+- `SRC-LOCAL-CBBS-HOST-COMMAND-BRIDGE-LIVE-GATE-BLOCKED-2026-06-04`
+- `SRC-LOCAL-CBBS-XBEE-KNOWN-PROFILE-WRITE-GATE-BLOCKED-2026-06-04`
 
 ## Stop Gates
 
 This ADR does not authorize native Android/iOS project generation, native
-Windows project generation outside the accepted W3B boundary, RNW
+Windows project generation outside the accepted W3B and W5 boundaries, RNW
 `run-windows`, Visual Studio/MSBuild build, deploy, launch, package creation,
 signing, package identity acceptance, capability use, Store association, App
 Installer publishing, simulator/device runs, Expo Go claims, EAS Build, EAS

@@ -53,6 +53,10 @@ REQUIRED_SOURCE_IDS = [
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W4-PRE-RELEASE-2026-06-03",
     "SRC-LOCAL-CBBS-RNW-SOURCE-UI-MUTATION-2026-06-03",
     "SRC-LOCAL-CBBS-RNW-SPLIT-RUNTIME-PROOF-AND-AGENTS-2026-06-03",
+    "SRC-LOCAL-CBBS-RNW-SPLIT-NATIVE-GENERATION-2026-06-04",
+    "SRC-LOCAL-CBBS-RNW-SPLIT-BUILD-INSTALL-LAUNCH-2026-06-04",
+    "SRC-LOCAL-CBBS-HOST-COMMAND-BRIDGE-LIVE-GATE-BLOCKED-2026-06-04",
+    "SRC-LOCAL-CBBS-XBEE-KNOWN-PROFILE-WRITE-GATE-BLOCKED-2026-06-04",
 ]
 
 WINDOWS_RNW_DEPENDENCIES = {
@@ -95,6 +99,11 @@ EXPECTED_INTENTS = [
 ]
 
 WINDOWS_NATIVE_DIR = Path("apps/cbbs-windows/windows")
+SPLIT_WINDOWS_NATIVE_DIRS = [
+    Path("apps/cbbs-client-windows/windows"),
+    Path("apps/cbbs-sysop-windows/windows"),
+    Path("apps/cbbs-hardware-tools-windows/windows"),
+]
 NATIVE_DIRS = [
     Path("apps/cbbs-client/android"),
     Path("apps/cbbs-client/ios"),
@@ -103,6 +112,9 @@ NATIVE_DIRS = [
     Path("apps/cbbs-windows/android"),
     Path("apps/cbbs-windows/ios"),
     Path("apps/cbbs-windows/macos"),
+    *[Path(app) / "android" for app in PRODUCT_WINDOWS_APPS],
+    *[Path(app) / "ios" for app in PRODUCT_WINDOWS_APPS],
+    *[Path(app) / "macos" for app in PRODUCT_WINDOWS_APPS],
 ]
 W3B_RECORD_FILES = [
     Path(".agents/TASK_LOG/0155-cbbs-react-native-windows-w3b-native-generation.md"),
@@ -114,11 +126,33 @@ W4_RECORD_FILES = [
     Path(".agents/handoffs/0116-cbbs-react-native-windows-w4-pre-release-to-qa-release.md"),
     Path("knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w4-pre-release.md"),
 ]
+SPLIT_NATIVE_RECORD_FILES = [
+    Path(".agents/TASK_LOG/0163-cbbs-rnw-split-native-generation.md"),
+    Path(".agents/handoffs/0122-cbbs-rnw-split-native-generation-to-qa.md"),
+    Path("knowledge-base/source-ledger/2026-06-04-cbbs-rnw-split-native-generation.md"),
+]
 EXPECTED_WINDOWS_NATIVE_FILES = [
     Path("CbbsWindows.sln"),
     Path("CbbsWindows/CbbsWindows.vcxproj"),
     Path("CbbsWindows.Package/Package.appxmanifest"),
 ]
+EXPECTED_SPLIT_WINDOWS_NATIVE_FILES = {
+    Path("apps/cbbs-client-windows/windows"): [
+        Path("CbbsClientWindows.sln"),
+        Path("CbbsClientWindows/CbbsClientWindows.vcxproj"),
+        Path("CbbsClientWindows.Package/Package.appxmanifest"),
+    ],
+    Path("apps/cbbs-sysop-windows/windows"): [
+        Path("CbbsSysopWindows.sln"),
+        Path("CbbsSysopWindows/CbbsSysopWindows.vcxproj"),
+        Path("CbbsSysopWindows.Package/Package.appxmanifest"),
+    ],
+    Path("apps/cbbs-hardware-tools-windows/windows"): [
+        Path("CbbsHardwareToolsWindows.sln"),
+        Path("CbbsHardwareToolsWindows/CbbsHardwareToolsWindows.vcxproj"),
+        Path("CbbsHardwareToolsWindows.Package/Package.appxmanifest"),
+    ],
+}
 ALLOWED_WINDOWS_TEMPLATE_CAPABILITIES = {"internetClient", "runFullTrust"}
 FORBIDDEN_WINDOWS_OUTPUT_DIRS = {
     ".vs",
@@ -320,58 +354,88 @@ def _manifest_capabilities(path: Path) -> set[str]:
     return capabilities
 
 
-def _inspect_windows_native_surface(root: Path) -> list[str]:
+def _inspect_single_windows_native_surface(
+    root: Path,
+    native_dir_rel: Path,
+    expected_files: list[Path],
+    record_files: list[Path],
+    label: str,
+) -> list[str]:
     failures: list[str] = []
-    native_dir = root / WINDOWS_NATIVE_DIR
+    native_dir = root / native_dir_rel
     if not native_dir.exists():
         return failures
 
-    for rel in W3B_RECORD_FILES:
+    for rel in record_files:
         if not (root / rel).exists():
-            failures.append(f"W3B native surface exists without record: {rel.as_posix()}")
-    for rel in EXPECTED_WINDOWS_NATIVE_FILES:
+            failures.append(f"{label} native surface exists without record: {rel.as_posix()}")
+    for rel in expected_files:
         if not (native_dir / rel).exists():
-            failures.append(f"W3B Windows native surface missing expected file: {rel.as_posix()}")
+            failures.append(f"{label} Windows native surface missing expected file: {rel.as_posix()}")
 
     for path in sorted(native_dir.rglob("*")):
         rel = path.relative_to(native_dir)
         if any(part in FORBIDDEN_WINDOWS_OUTPUT_DIRS for part in rel.parts):
-            failures.append(f"W3B Windows native surface contains build output dir: {rel.as_posix()}")
+            failures.append(f"{label} Windows native surface contains build output dir: {rel.as_posix()}")
         if path.is_file():
             if path.name in FORBIDDEN_WINDOWS_OUTPUT_NAMES:
-                failures.append(f"W3B Windows native surface contains store/signing file: {rel.as_posix()}")
+                failures.append(f"{label} Windows native surface contains store/signing file: {rel.as_posix()}")
             if path.suffix.lower() in FORBIDDEN_WINDOWS_OUTPUT_SUFFIXES:
-                failures.append(f"W3B Windows native surface contains package/signing artifact: {rel.as_posix()}")
+                failures.append(f"{label} Windows native surface contains package/signing artifact: {rel.as_posix()}")
 
     manifests = sorted(native_dir.rglob("Package.appxmanifest"))
     if len(manifests) != 1:
-        failures.append(f"W3B Windows native surface must contain exactly one Package.appxmanifest, found {len(manifests)}")
+        failures.append(f"{label} Windows native surface must contain exactly one Package.appxmanifest, found {len(manifests)}")
         return failures
 
     manifest = manifests[0]
     try:
         capabilities = _manifest_capabilities(manifest)
     except ET.ParseError as exc:
-        failures.append(f"W3B Package.appxmanifest is not valid XML: {exc}")
+        failures.append(f"{label} Package.appxmanifest is not valid XML: {exc}")
         return failures
     extra_capabilities = capabilities - ALLOWED_WINDOWS_TEMPLATE_CAPABILITIES
     missing_capabilities = ALLOWED_WINDOWS_TEMPLATE_CAPABILITIES - capabilities
     if extra_capabilities:
         failures.append(
-            "W3B Package.appxmanifest has unapproved capabilities: "
+            f"{label} Package.appxmanifest has unapproved capabilities: "
             + ", ".join(sorted(extra_capabilities))
         )
     if missing_capabilities:
         failures.append(
-            "W3B Package.appxmanifest missing reviewed template capabilities: "
+            f"{label} Package.appxmanifest missing reviewed template capabilities: "
             + ", ".join(sorted(missing_capabilities))
         )
 
     manifest_text = _read(manifest)
     for marker in ["Identity", "Publisher=", "TargetDeviceFamily", "internetClient", "runFullTrust"]:
         if marker not in manifest_text:
-            failures.append(f"W3B Package.appxmanifest missing marker: {marker}")
+            failures.append(f"{label} Package.appxmanifest missing marker: {marker}")
 
+    return failures
+
+
+def _inspect_windows_native_surface(root: Path) -> list[str]:
+    failures: list[str] = []
+    failures.extend(
+        _inspect_single_windows_native_surface(
+            root,
+            WINDOWS_NATIVE_DIR,
+            EXPECTED_WINDOWS_NATIVE_FILES,
+            W3B_RECORD_FILES,
+            "W3B",
+        )
+    )
+    for native_dir, expected_files in EXPECTED_SPLIT_WINDOWS_NATIVE_FILES.items():
+        failures.extend(
+            _inspect_single_windows_native_surface(
+                root,
+                native_dir,
+                expected_files,
+                SPLIT_NATIVE_RECORD_FILES,
+                "split-native",
+            )
+        )
     return failures
 
 
@@ -437,6 +501,15 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0162-cbbs-rnw-split-runtime-proof-and-agents.md",
         ".agents/handoffs/0121-cbbs-rnw-split-runtime-proof-and-agents-to-qa.md",
         "knowledge-base/source-ledger/2026-06-03-cbbs-rnw-split-runtime-proof-and-agents.md",
+        ".agents/TASK_LOG/0163-cbbs-rnw-split-native-generation.md",
+        ".agents/handoffs/0122-cbbs-rnw-split-native-generation-to-qa.md",
+        "knowledge-base/source-ledger/2026-06-04-cbbs-rnw-split-native-generation.md",
+        ".agents/TASK_LOG/0164-cbbs-host-command-bridge-live-gate-blocked.md",
+        ".agents/handoffs/0123-cbbs-host-command-bridge-live-gate-blocked-to-qa.md",
+        "knowledge-base/source-ledger/2026-06-04-cbbs-host-command-bridge-live-gate-blocked.md",
+        ".agents/TASK_LOG/0165-cbbs-xbee-known-profile-write-gate-blocked.md",
+        ".agents/handoffs/0124-cbbs-xbee-known-profile-write-gate-blocked-to-qa.md",
+        "knowledge-base/source-ledger/2026-06-04-cbbs-xbee-known-profile-write-gate-blocked.md",
     ]:
         if not (root / rel).exists():
             failures.append(f"missing React Native scaffold file: {rel}")
@@ -659,6 +732,15 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
     ]:
         if marker not in windows_text:
             failures.append(f"Windows product migration shell missing marker: {marker}")
+    for app_rel, component_name in {
+        "apps/cbbs-client-windows/src/index.tsx": "CbbsClientWindows",
+        "apps/cbbs-sysop-windows/src/index.tsx": "CbbsSysopWindows",
+        "apps/cbbs-hardware-tools-windows/src/index.tsx": "CbbsHardwareToolsWindows",
+    }.items():
+        app_text = _read(root / app_rel)
+        for marker in ["AppRegistry.registerComponent", component_name, "ProductWindowsShell"]:
+            if marker not in app_text:
+                failures.append(f"{app_rel} missing split native marker: {marker}")
     windows_readme = _read(root / "apps" / "cbbs-windows" / "README.md")
     for marker in [
         "package-only RNW dependency selection",
@@ -674,6 +756,10 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "generated template facts only",
         "Azure Artifact Signing",
         "Future Tier 3 runtime command stays closed",
+        "split native generation",
+        "CbbsClientWindows",
+        "CbbsSysopWindows",
+        "CbbsHardwareToolsWindows",
     ]:
         if marker not in windows_readme:
             failures.append(f"Windows README missing W2 marker: {marker}")
@@ -735,6 +821,15 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "../.agents/TASK_LOG/0162-cbbs-rnw-split-runtime-proof-and-agents.md",
         "../.agents/handoffs/0121-cbbs-rnw-split-runtime-proof-and-agents-to-qa.md",
         "../knowledge-base/source-ledger/2026-06-03-cbbs-rnw-split-runtime-proof-and-agents.md",
+        "../.agents/TASK_LOG/0163-cbbs-rnw-split-native-generation.md",
+        "../.agents/handoffs/0122-cbbs-rnw-split-native-generation-to-qa.md",
+        "../knowledge-base/source-ledger/2026-06-04-cbbs-rnw-split-native-generation.md",
+        "../.agents/TASK_LOG/0164-cbbs-host-command-bridge-live-gate-blocked.md",
+        "../.agents/handoffs/0123-cbbs-host-command-bridge-live-gate-blocked-to-qa.md",
+        "../knowledge-base/source-ledger/2026-06-04-cbbs-host-command-bridge-live-gate-blocked.md",
+        "../.agents/TASK_LOG/0165-cbbs-xbee-known-profile-write-gate-blocked.md",
+        "../.agents/handoffs/0124-cbbs-xbee-known-profile-write-gate-blocked-to-qa.md",
+        "../knowledge-base/source-ledger/2026-06-04-cbbs-xbee-known-profile-write-gate-blocked.md",
     ]:
         if marker not in docs_index:
             failures.append(f"docs index missing React Native link: {marker}")

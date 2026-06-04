@@ -24,14 +24,17 @@
 - The legacy `CbbsWindows` entry now opens the Sysop compatibility surface
   while the forward source model is split across `CBBS Client`, `CBBS Sysop`,
   and `CBBS Hardware Tools` product apps.
+- The split native generation gate records app-local `cpp-app` source
+  generation for `CbbsClientWindows`, `CbbsSysopWindows`, and
+  `CbbsHardwareToolsWindows` as source facts only.
 - Earlier local Debug x64 build/deploy/run evidence remains a historical
   compatibility-entry fact only. It is not split-product runtime proof and is
   not accepted as current Tier 2 runtime authority.
 
 ## Unknowns
 
-- Native Windows project layout and installed identities for the three split
-  product apps.
+- Native runtime behavior and installed identities for the three split product
+  apps.
 - Accepted Windows package identity, capability-use policy, signing, packaging,
   and distribution path.
 
@@ -77,6 +80,11 @@ Future Tier 3 runtime command stays closed until a same-session gate records
 authority, prerequisites, cleanup, and reviewer approval. This README does not
 publish a current build, deploy, launch, signing, package, Store, App Installer,
 or release command.
+
+The split native generation source gate does not change that runtime boundary.
+It records generated `CbbsClientWindows`, `CbbsSysopWindows`, and
+`CbbsHardwareToolsWindows` native source projects, but does not accept package
+identity, capability use, signing, packaging, launch, or runtime proof.
 
 ## Hardware Tools Contract
 

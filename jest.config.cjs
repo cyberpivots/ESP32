@@ -13,6 +13,8 @@ module.exports = {
   moduleNameMapper: {
     "^@cbbs/evidence$": "<rootDir>/packages/cbbs-evidence/src",
     "^@cbbs/fixtures$": "<rootDir>/packages/cbbs-fixtures/src",
+    "^@cbbs/product$": "<rootDir>/packages/cbbs-product/src",
+    "^@cbbs/product-ui$": "<rootDir>/packages/cbbs-product-ui/src",
     "^@cbbs/protocol$": "<rootDir>/packages/cbbs-protocol/src",
     "^@cbbs/state$": "<rootDir>/packages/cbbs-state/src",
     "^@cbbs/theme$": "<rootDir>/packages/cbbs-theme/src",

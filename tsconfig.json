@@ -2,12 +2,17 @@
   "files": [],
   "references": [
     { "path": "packages/cbbs-protocol" },
+    { "path": "packages/cbbs-product" },
     { "path": "packages/cbbs-fixtures" },
     { "path": "packages/cbbs-theme" },
     { "path": "packages/cbbs-evidence" },
     { "path": "packages/cbbs-state" },
     { "path": "packages/cbbs-ui" },
+    { "path": "packages/cbbs-product-ui" },
     { "path": "apps/cbbs-client" },
-    { "path": "apps/cbbs-windows" }
+    { "path": "apps/cbbs-windows" },
+    { "path": "apps/cbbs-client-windows" },
+    { "path": "apps/cbbs-sysop-windows" },
+    { "path": "apps/cbbs-hardware-tools-windows" }
   ]
 }

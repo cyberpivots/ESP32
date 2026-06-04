@@ -15,7 +15,7 @@ describe("OperatorShell", () => {
     );
 
     expect(screen.getByText("CBBS")).toBeTruthy();
-    expect(screen.getByText("Serial writes")).toBeTruthy();
+    expect(screen.getByText("Transport write gate")).toBeTruthy();
     expect(screen.getByText(/Transcript-first fixture evidence/)).toBeTruthy();
   });
 

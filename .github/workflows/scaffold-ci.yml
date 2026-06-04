@@ -52,6 +52,12 @@ jobs:
           pnpm test
           pnpm --filter @cbbs/client exec expo-doctor
           pnpm --filter @cbbs/windows-spike typecheck
+          pnpm --filter @cbbs/client-windows typecheck
+          pnpm --filter @cbbs/client-windows test:windows
+          pnpm --filter @cbbs/sysop-windows typecheck
+          pnpm --filter @cbbs/sysop-windows test:windows
+          pnpm --filter @cbbs/hardware-tools-windows typecheck
+          pnpm --filter @cbbs/hardware-tools-windows test:windows
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/scaffold_audit_react_native.py
 
       - name: Run scaffold-audit unittest discovery

@@ -109,8 +109,71 @@ importers:
         specifier: '*'
         version: 6.0.3
 
+  apps/cbbs-client-windows:
+    dependencies:
+      '@cbbs/product-ui':
+        specifier: workspace:*
+        version: link:../../packages/cbbs-product-ui
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-native:
+        specifier: 0.83.9
+        version: 0.83.9(@babel/core@7.29.7)(@react-native-community/cli@20.0.0(typescript@6.0.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)
+      react-native-windows:
+        specifier: 0.83.0
+        version: 0.83.0(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react-native@0.83.9(@babel/core@7.29.7)(@react-native-community/cli@20.0.0(typescript@6.0.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3))(react@19.2.3)(tslib@2.8.1)(typescript@6.0.3)
+    devDependencies:
+      typescript:
+        specifier: '*'
+        version: 6.0.3
+
+  apps/cbbs-hardware-tools-windows:
+    dependencies:
+      '@cbbs/product-ui':
+        specifier: workspace:*
+        version: link:../../packages/cbbs-product-ui
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-native:
+        specifier: 0.83.9
+        version: 0.83.9(@babel/core@7.29.7)(@react-native-community/cli@20.0.0(typescript@6.0.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)
+      react-native-windows:
+        specifier: 0.83.0
+        version: 0.83.0(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react-native@0.83.9(@babel/core@7.29.7)(@react-native-community/cli@20.0.0(typescript@6.0.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3))(react@19.2.3)(tslib@2.8.1)(typescript@6.0.3)
+    devDependencies:
+      typescript:
+        specifier: '*'
+        version: 6.0.3
+
+  apps/cbbs-sysop-windows:
+    dependencies:
+      '@cbbs/product-ui':
+        specifier: workspace:*
+        version: link:../../packages/cbbs-product-ui
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-native:
+        specifier: 0.83.9
+        version: 0.83.9(@babel/core@7.29.7)(@react-native-community/cli@20.0.0(typescript@6.0.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)
+      react-native-windows:
+        specifier: 0.83.0
+        version: 0.83.0(@babel/core@7.29.7)(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react-native@0.83.9(@babel/core@7.29.7)(@react-native-community/cli@20.0.0(typescript@6.0.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3))(react@19.2.3)(tslib@2.8.1)(typescript@6.0.3)
+    devDependencies:
+      typescript:
+        specifier: '*'
+        version: 6.0.3
+
   apps/cbbs-windows:
     dependencies:
+      '@cbbs/product':
+        specifier: workspace:*
+        version: link:../../packages/cbbs-product
+      '@cbbs/product-ui':
+        specifier: workspace:*
+        version: link:../../packages/cbbs-product-ui
       '@cbbs/protocol':
         specifier: workspace:*
         version: link:../../packages/cbbs-protocol
@@ -138,6 +201,35 @@ importers:
       '@cbbs/protocol':
         specifier: workspace:*
         version: link:../cbbs-protocol
+
+  packages/cbbs-product:
+    dependencies:
+      '@cbbs/protocol':
+        specifier: workspace:*
+        version: link:../cbbs-protocol
+    devDependencies:
+      typescript:
+        specifier: '*'
+        version: 6.0.3
+
+  packages/cbbs-product-ui:
+    dependencies:
+      '@cbbs/product':
+        specifier: workspace:*
+        version: link:../cbbs-product
+      '@cbbs/protocol':
+        specifier: workspace:*
+        version: link:../cbbs-protocol
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-native:
+        specifier: '>=0.83.9 <0.86.0'
+        version: 0.85.3(@babel/core@7.29.7)(@react-native-community/cli@20.0.0(typescript@6.0.3))(@react-native/jest-preset@0.85.3(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.7))(@types/react@19.2.16)(react@19.2.3)
+    devDependencies:
+      typescript:
+        specifier: '*'
+        version: 6.0.3
 
   packages/cbbs-protocol: {}
 

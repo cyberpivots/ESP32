@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -34,7 +35,14 @@ REQUIRED_SOURCE_IDS = [
     "SRC-REACT-NATIVE-WINDOWS-GETTING-STARTED-2026-06-02",
     "SRC-REACT-NATIVE-WINDOWS-CLI-2026-06-02",
     "SRC-REACT-NATIVE-WINDOWS-PACKAGE-DEPS-2026-06-03",
+    "SRC-REACT-NATIVE-WINDOWS-RUN-WINDOWS-2026-06-03",
+    "SRC-REACT-NATIVE-WINDOWS-STORE-PUBLISHING-2026-06-03",
     "SRC-WINDOWS-APP-CAPABILITIES-2026-06-02",
+    "SRC-MICROSOFT-MSIX-SIGNING-2026-06-03",
+    "SRC-MICROSOFT-WINDOWS-CODE-SIGNING-OPTIONS-2026-06-03",
+    "SRC-MICROSOFT-WINDOWS-SIDELOADING-2026-06-03",
+    "SRC-MICROSOFT-MSIX-UNSIGNED-2026-06-03",
+    "SRC-MICROSOFT-MSIX-APP-INSTALLER-2026-06-03",
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W0-W1-2026-06-02",
     "SRC-NPM-RNW-DEPENDENCY-METADATA-2026-06-02",
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W2-2026-06-02",
@@ -42,6 +50,9 @@ REQUIRED_SOURCE_IDS = [
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3A-2026-06-03",
     "SRC-REACT-NATIVE-WINDOWS-CPP-APP-TEMPLATE-2026-06-03",
     "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3B-2026-06-03",
+    "SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W4-PRE-RELEASE-2026-06-03",
+    "SRC-LOCAL-CBBS-RNW-SOURCE-UI-MUTATION-2026-06-03",
+    "SRC-LOCAL-CBBS-RNW-SPLIT-RUNTIME-PROOF-AND-AGENTS-2026-06-03",
 ]
 
 WINDOWS_RNW_DEPENDENCIES = {
@@ -49,6 +60,15 @@ WINDOWS_RNW_DEPENDENCIES = {
     "react-native": "0.83.9",
     "react-native-windows": "0.83.0",
 }
+PRODUCT_WINDOWS_APPS = [
+    "apps/cbbs-client-windows",
+    "apps/cbbs-sysop-windows",
+    "apps/cbbs-hardware-tools-windows",
+]
+RNW_WINDOWS_APP_PACKAGES = [
+    "apps/cbbs-windows",
+    *PRODUCT_WINDOWS_APPS,
+]
 
 EXPECTED_ROLES = ["client", "sysop", "monitor", "devconfig"]
 EXPECTED_VIEWS = [
@@ -88,6 +108,11 @@ W3B_RECORD_FILES = [
     Path(".agents/TASK_LOG/0155-cbbs-react-native-windows-w3b-native-generation.md"),
     Path(".agents/handoffs/0115-cbbs-react-native-windows-w3b-native-generation-to-qa.md"),
     Path("knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3b.md"),
+]
+W4_RECORD_FILES = [
+    Path(".agents/TASK_LOG/0156-cbbs-react-native-windows-w4-pre-release.md"),
+    Path(".agents/handoffs/0116-cbbs-react-native-windows-w4-pre-release-to-qa-release.md"),
+    Path("knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w4-pre-release.md"),
 ]
 EXPECTED_WINDOWS_NATIVE_FILES = [
     Path("CbbsWindows.sln"),
@@ -129,6 +154,12 @@ FORBIDDEN_CONFIG_FILES = [
     Path("apps/cbbs-windows/Package.appxmanifest"),
     Path("apps/cbbs-windows/AndroidManifest.xml"),
     Path("apps/cbbs-windows/Info.plist"),
+    *[Path(app) / "eas.json" for app in PRODUCT_WINDOWS_APPS],
+    *[Path(app) / "appcenter-config.json" for app in PRODUCT_WINDOWS_APPS],
+    *[Path(app) / "AppCenter-Config.plist" for app in PRODUCT_WINDOWS_APPS],
+    *[Path(app) / "Package.appxmanifest" for app in PRODUCT_WINDOWS_APPS],
+    *[Path(app) / "AndroidManifest.xml" for app in PRODUCT_WINDOWS_APPS],
+    *[Path(app) / "Info.plist" for app in PRODUCT_WINDOWS_APPS],
 ]
 FORBIDDEN_PACKAGE_TERMS = [
     "appcenter",
@@ -145,6 +176,11 @@ FORBIDDEN_SCRIPT_RE = re.compile(
     r"msbuild|devenv|MakeAppx|signtool|gradlew|xcodebuild|pod\s+install|appcenter|store\s+upload)\b",
     re.IGNORECASE,
 )
+FORBIDDEN_CURRENT_DOC_COMMAND_RE = re.compile(
+    r"\breact-native\s+run-windows\b|\bW4B\b.*\bactive\b|\bW4C\b.*\bactive\b|"
+    r"\blocal build and launch command\b",
+    re.IGNORECASE | re.DOTALL,
+)
 FORBIDDEN_LIVE_SOURCE_RE = re.compile(
     r"\b(fetch\s*\(|new\s+WebSocket|navigator\.bluetooth|navigator\.serial|"
     r"BluetoothDevice|SerialPort|BLEManager|writeFlash)\b",
@@ -155,6 +191,31 @@ SECRET_FIXTURE_RE = re.compile(
     r"messageBody|fileContent|preciseLocation)\b",
     re.IGNORECASE,
 )
+DOSC_ROOT = Path(os.environ.get("DOSC_ROOT", "/mnt/h/dos-c"))
+DOSC_RNW_SOURCE_MARKERS = {
+    Path("software/win31-operator/README.md"): [
+        "OG Communication Retro3.1",
+        "Two-row view selector with plain primary tasks",
+        "Operator Protocol",
+        "maint_intent",
+        "otap_intent",
+    ],
+    Path("software/win31-operator/include/operator_protocol.h"): [
+        "OPCON_REQ_HELLO",
+        "OPCON_REQ_MAINT_INTENT",
+        "OPCON_REQ_OTAP_INTENT",
+    ],
+    Path("software/win31-operator/src/operator_protocol.c"): [
+        '\\"type\\":\\"state_get\\"',
+        '\\"type\\":\\"maint_intent\\"',
+        '\\"type\\":\\"otap_intent\\"',
+    ],
+    Path("docs/architecture/win31-dashboard-vision-gate.md"): [
+        "vision gate",
+        "OCR",
+        "CV",
+    ],
+}
 
 
 def _read(path: Path) -> str:
@@ -191,6 +252,19 @@ def _require_text(path: Path, markers: list[str], label: str) -> list[str]:
     return [f"{label} missing marker: {marker}" for marker in markers if marker not in text]
 
 
+def _inspect_dosc_rnw_sources(dosc_root: Path = DOSC_ROOT) -> list[str]:
+    failures: list[str] = []
+    if not dosc_root.exists():
+        return [f"DOS-C source root missing for RNW parity audit: {dosc_root}"]
+    for rel, markers in DOSC_RNW_SOURCE_MARKERS.items():
+        path = dosc_root / rel
+        if not path.exists():
+            failures.append(f"DOS-C RNW parity source missing: {rel.as_posix()}")
+            continue
+        failures.extend(_require_text(path, markers, f"DOS-C RNW parity source {rel.as_posix()}"))
+    return failures
+
+
 def _package_json_paths(root: Path) -> list[Path]:
     return sorted([root / "package.json", *root.glob("apps/*/package.json"), *root.glob("packages/*/package.json")])
 
@@ -216,6 +290,14 @@ def _repo_ts_files(root: Path, rel: str) -> list[Path]:
         and not path.name.endswith(".tsbuildinfo")
         and not ignored_parts.intersection(path.relative_to(base).parts)
     )
+
+
+def _repo_source_ts_files(root: Path, rel: str) -> list[Path]:
+    return [
+        path
+        for path in _repo_ts_files(root, rel)
+        if "__tests__" not in path.relative_to(root).parts
+    ]
 
 
 def _has_package_reference(text: str, package_name: str) -> bool:
@@ -300,6 +382,7 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
     for source_id in REQUIRED_SOURCE_IDS:
         if source_id not in source_index:
             failures.append(f"source index missing {source_id}")
+    failures.extend(_inspect_dosc_rnw_sources())
 
     adr = root / ".agents" / "DECISIONS" / "ADR-0010-cbbs-react-native-client-platform.md"
     if not adr.exists():
@@ -315,12 +398,20 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "apps/cbbs-windows/README.md",
         "apps/cbbs-windows/src/index.tsx",
         "packages/cbbs-protocol/src/index.ts",
+        "packages/cbbs-product/src/index.ts",
+        "packages/cbbs-product/src/hardwareToolsMenu.generated.ts",
+        "packages/cbbs-product/src/win31Parity.generated.ts",
+        "packages/cbbs-product-ui/src/index.tsx",
         "packages/cbbs-fixtures/src/index.ts",
         "packages/cbbs-state/src/index.ts",
         "packages/cbbs-ui/src/index.tsx",
         "docs/projects/cbbs-react-native/README.md",
         "research/cbbs-react-native/README.md",
         "tools/react-native/README.md",
+        "tools/react-native/cbbs_rnw_menu.v1.xml",
+        "tools/react-native/generate_rnw_menu.py",
+        "tools/react-native/cbbs_rnw_win31_parity.v1.xml",
+        "tools/react-native/generate_win31_parity.py",
         ".codex/skills/react-native-client-development/SKILL.md",
         ".agents/TASK_LOG/0150-cbbs-react-native-windows-client-sysop-w0-w1.md",
         ".agents/handoffs/0111-cbbs-react-native-windows-client-sysop-w0-w1-to-qa.md",
@@ -337,9 +428,22 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0155-cbbs-react-native-windows-w3b-native-generation.md",
         ".agents/handoffs/0115-cbbs-react-native-windows-w3b-native-generation-to-qa.md",
         "knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3b.md",
+        ".agents/TASK_LOG/0156-cbbs-react-native-windows-w4-pre-release.md",
+        ".agents/handoffs/0116-cbbs-react-native-windows-w4-pre-release-to-qa-release.md",
+        "knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w4-pre-release.md",
+        ".agents/TASK_LOG/0161-cbbs-rnw-source-ui-mutation.md",
+        ".agents/handoffs/0120-cbbs-rnw-source-ui-mutation-to-qa.md",
+        "knowledge-base/source-ledger/2026-06-03-cbbs-rnw-source-ui-mutation.md",
+        ".agents/TASK_LOG/0162-cbbs-rnw-split-runtime-proof-and-agents.md",
+        ".agents/handoffs/0121-cbbs-rnw-split-runtime-proof-and-agents-to-qa.md",
+        "knowledge-base/source-ledger/2026-06-03-cbbs-rnw-split-runtime-proof-and-agents.md",
     ]:
         if not (root / rel).exists():
             failures.append(f"missing React Native scaffold file: {rel}")
+    for rel in PRODUCT_WINDOWS_APPS:
+        for package_rel in ["package.json", "index.js", "src/index.tsx", "tsconfig.json"]:
+            if not (root / rel / package_rel).exists():
+                failures.append(f"missing React Native product app file: {rel}/{package_rel}")
 
     workspace = _read(root / "pnpm-workspace.yaml")
     for marker in ["apps/*", "packages/*"]:
@@ -371,19 +475,39 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
     if FORBIDDEN_SCRIPT_RE.search(_package_script_blob(root)):
         failures.append("package scripts contain native, EAS, App Center, or release commands")
 
-    windows_package = _load_json(root / "apps" / "cbbs-windows" / "package.json")
-    windows_deps = _deps(windows_package)
-    for name, version in WINDOWS_RNW_DEPENDENCIES.items():
-        if windows_deps.get(name) != version:
-            failures.append(f"apps/cbbs-windows/package.json must pin {name} to {version}")
-    for forbidden in ["@cbbs/ui", "expo", "expo-router", "react-native-web"]:
-        if forbidden in windows_deps:
-            failures.append(f"apps/cbbs-windows/package.json must not depend on {forbidden}")
+    for rel in RNW_WINDOWS_APP_PACKAGES:
+        package_rel = f"{rel}/package.json"
+        windows_package = _load_json(root / package_rel)
+        windows_deps = _deps(windows_package)
+        for name, version in WINDOWS_RNW_DEPENDENCIES.items():
+            if windows_deps.get(name) != version:
+                failures.append(f"{package_rel} must pin {name} to {version}")
+        for forbidden in ["@cbbs/ui", "expo", "expo-router", "react-native-web"]:
+            if forbidden in windows_deps:
+                failures.append(f"{package_rel} must not depend on {forbidden}")
+
+    product_ui_package = _load_json(root / "packages" / "cbbs-product-ui" / "package.json")
+    product_ui_runtime_deps = product_ui_package.get("dependencies")
+    if not isinstance(product_ui_runtime_deps, dict):
+        failures.append("packages/cbbs-product-ui/package.json must declare dependencies")
+        product_ui_runtime_deps = {}
+    for forbidden in ["react", "react-native", "react-native-windows", "expo", "expo-router", "react-native-web"]:
+        if forbidden in product_ui_runtime_deps:
+            failures.append(f"packages/cbbs-product-ui/package.json must keep {forbidden} out of dependencies")
+    product_ui_peer_deps = product_ui_package.get("peerDependencies")
+    if not isinstance(product_ui_peer_deps, dict):
+        failures.append("packages/cbbs-product-ui/package.json must declare React Native peerDependencies")
+        product_ui_peer_deps = {}
+    if product_ui_peer_deps.get("react") != "19.2.3":
+        failures.append("packages/cbbs-product-ui/package.json peerDependencies.react must be 19.2.3")
+    if product_ui_peer_deps.get("react-native") != ">=0.83.9 <0.86.0":
+        failures.append("packages/cbbs-product-ui/package.json peerDependencies.react-native must cover RNW 0.83 and Expo RN 0.85")
 
     for path in _package_json_paths(root):
         rel = path.relative_to(root).as_posix()
         deps = _deps(_load_json(path))
-        if rel != "apps/cbbs-windows/package.json":
+        allowed_rnw_package_jsons = {f"{package_path}/package.json" for package_path in RNW_WINDOWS_APP_PACKAGES}
+        if rel not in allowed_rnw_package_jsons:
             for name in ["react-native-windows", "@rnx-kit/jest-preset"]:
                 if name in deps:
                     failures.append(f"{rel} must not depend on {name}")
@@ -392,10 +516,11 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
                 failures.append(f"{rel} must not use the Windows RN {WINDOWS_RNW_DEPENDENCIES['react-native']} lane")
 
     importers = _lockfile_importers(root)
-    windows_importer = importers.get("apps/cbbs-windows")
-    if not isinstance(windows_importer, dict):
-        failures.append("pnpm-lock.yaml missing apps/cbbs-windows importer")
-    else:
+    for importer_name in RNW_WINDOWS_APP_PACKAGES:
+        windows_importer = importers.get(importer_name)
+        if not isinstance(windows_importer, dict):
+            failures.append(f"pnpm-lock.yaml missing {importer_name} importer")
+            continue
         importer_deps: dict[str, str] = {}
         for section in ["dependencies", "devDependencies", "peerDependencies"]:
             values = windows_importer.get(section)
@@ -405,9 +530,26 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
                         importer_deps[str(name)] = str(meta["specifier"])
         for name, version in WINDOWS_RNW_DEPENDENCIES.items():
             if importer_deps.get(name) != version:
-                failures.append(f"pnpm-lock.yaml apps/cbbs-windows importer must pin {name} to {version}")
+                failures.append(f"pnpm-lock.yaml {importer_name} importer must pin {name} to {version}")
+
+    product_ui_importer = importers.get("packages/cbbs-product-ui")
+    if isinstance(product_ui_importer, dict):
+        runtime_deps = product_ui_importer.get("dependencies")
+        if isinstance(runtime_deps, dict):
+            for forbidden in ["react", "react-native", "react-native-windows", "expo", "expo-router", "react-native-web"]:
+                if forbidden in runtime_deps:
+                    entry = runtime_deps.get(forbidden)
+                    peer_specifier = product_ui_peer_deps.get(forbidden)
+                    if (
+                        forbidden in {"react", "react-native"}
+                        and peer_specifier is not None
+                        and isinstance(entry, dict)
+                        and entry.get("specifier") == peer_specifier
+                    ):
+                        continue
+                    failures.append(f"pnpm-lock.yaml packages/cbbs-product-ui runtime deps must not include {forbidden}")
     for importer_name, importer in importers.items():
-        if importer_name == "apps/cbbs-windows" or not isinstance(importer, dict):
+        if importer_name in RNW_WINDOWS_APP_PACKAGES or not isinstance(importer, dict):
             continue
         for section in ["dependencies", "devDependencies", "peerDependencies"]:
             values = importer.get(section)
@@ -420,6 +562,11 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         *EXPECTED_VIEWS,
         *EXPECTED_INTENTS,
         "MAX_UI_INTENT_BYTES = 512",
+        "HOST_COMMAND_BRIDGE_SCHEMA",
+        "HOST_COMMAND_ACTION_IDS",
+        "validateHostCommandBridgeRequest",
+        "createUnavailableHostCommandResult",
+        "adapter_unavailable",
         "LOCAL_ONLY_REASON",
         "ALLOWED_UI_INTENT_KEYS",
         "findForbiddenMetadataFields",
@@ -438,8 +585,44 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         if marker not in protocol_text:
             failures.append(f"protocol closed-surface contract missing marker: {marker}")
 
-    app_source = "\n".join(_read(path) for path in _repo_ts_files(root, "apps"))
-    package_source = "\n".join(_read(path) for path in _repo_ts_files(root, "packages"))
+    product_text = "\n".join(
+        [
+            _read(root / "packages" / "cbbs-product" / "src" / "index.ts"),
+            _read(root / "packages" / "cbbs-product" / "src" / "hardwareToolsMenu.generated.ts"),
+            _read(root / "packages" / "cbbs-product" / "src" / "win31Parity.generated.ts"),
+        ]
+    )
+    for marker in [
+        "CBBS_PRODUCT_WINDOWS_APP_IDS",
+        "CBBS Client",
+        "CBBS Sysop",
+        "CBBS Hardware Tools",
+        "CBBS_RNW_MENU_SCHEMA",
+        "CBBS_RNW_WIN31_PARITY_SCHEMA",
+        "win31ParityContract",
+        "OG Communication Retro3.1",
+        "PRODUCT_EXECUTION_MODES",
+        "hardwareToolsMenu",
+        "radio.queryPreview",
+        "firmware.installPreview",
+    ]:
+        if marker not in product_text:
+            failures.append(f"product contract missing marker: {marker}")
+    product_ui_text = _read(root / "packages" / "cbbs-product-ui" / "src" / "index.tsx")
+    for marker in [
+        "ProductWindowsShell",
+        "windows-${appId}-shell",
+        "windows-${appId}-action-",
+        "windows-${appId}-menubar",
+        "windows-${appId}-transcript",
+        "Gate phrase records notes but does not unlock closed work.",
+        "HOST_COMMAND_UNAVAILABLE_REASON",
+    ]:
+        if marker not in product_ui_text:
+            failures.append(f"product UI missing marker: {marker}")
+
+    app_source = "\n".join(_read(path) for path in _repo_source_ts_files(root, "apps"))
+    package_source = "\n".join(_read(path) for path in _repo_source_ts_files(root, "packages"))
     for label, text in [("app source", app_source), ("package source", package_source)]:
         if FORBIDDEN_LIVE_SOURCE_RE.search(text):
             failures.append(f"{label} contains forbidden live transport/native API marker")
@@ -464,26 +647,18 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
 
     windows_text = _read(root / "apps" / "cbbs-windows" / "src" / "index.tsx")
     for marker in [
-        "package-only-rnw-dependency-lane",
-        "WindowsClientSysopShell",
-        "createWindowsLocalIntent",
-        "single-role-aware-windows-app",
-        "nativeDependencySelected: true",
-        "react-native-windows",
-        "0.83.0",
-        "native_windows_project",
-        "live_transport",
-        "LOCAL_ONLY_REASON",
-        "CLOSED_SURFACE_IDS",
-        "localIntent(",
-        "windows-view-",
-        "windows-action-",
-        "windows-closed-surface-",
-        "accessibilityState={{ disabled: true }}",
-        "Transcript-first Windows fixture evidence",
+        "AppRegistry.registerComponent",
+        "WINDOWS_APP_COMPONENT_NAME",
+        "legacyWindowsMigrationStatus",
+        "ProductWindowsShell",
+        "CBBS_PRODUCT_WINDOWS_APP_IDS",
+        'defaultProductApp: "sysop"',
+        "packageIdentityAccepted: false",
+        "capabilityUseAccepted: false",
+        "liveExecutionAvailable: false",
     ]:
         if marker not in windows_text:
-            failures.append(f"Windows spike missing W0/W1 marker: {marker}")
+            failures.append(f"Windows product migration shell missing marker: {marker}")
     windows_readme = _read(root / "apps" / "cbbs-windows" / "README.md")
     for marker in [
         "package-only RNW dependency selection",
@@ -492,12 +667,20 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "react-native` `0.83.9",
         "19.2.3",
         "W3B native generation gate",
-        "build/run remains closed",
+        "W4 Pre-Release Planning",
+        "Runtime Gate",
+        "Mesh And XBee Integration",
+        "AppRegistry",
+        "generated template facts only",
+        "Azure Artifact Signing",
+        "Future Tier 3 runtime command stays closed",
     ]:
         if marker not in windows_readme:
             failures.append(f"Windows README missing W2 marker: {marker}")
     if "No RNW dependency" in windows_readme:
         failures.append("Windows README must not claim W2 has no RNW dependency")
+    if FORBIDDEN_CURRENT_DOC_COMMAND_RE.search(windows_readme):
+        failures.append("Windows README must not expose active run-windows/build/launch command surface")
     windows_source = "\n".join(_read(path) for path in _repo_ts_files(root, "apps/cbbs-windows"))
     for forbidden in ["@cbbs/ui", "expo", "expo-router", "react-native-web"]:
         if _has_package_reference(windows_source, forbidden):
@@ -511,6 +694,12 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "pnpm test",
         "pnpm --filter @cbbs/client exec expo-doctor",
         "pnpm --filter @cbbs/windows-spike typecheck",
+        "pnpm --filter @cbbs/client-windows typecheck",
+        "pnpm --filter @cbbs/client-windows test:windows",
+        "pnpm --filter @cbbs/sysop-windows typecheck",
+        "pnpm --filter @cbbs/sysop-windows test:windows",
+        "pnpm --filter @cbbs/hardware-tools-windows typecheck",
+        "pnpm --filter @cbbs/hardware-tools-windows test:windows",
     ]:
         if marker not in ci_text:
             failures.append(f"scaffold CI missing React Native validation marker: {marker}")
@@ -525,6 +714,8 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "../knowledge-base/source-ledger/2026-06-02-cbbs-react-native-windows-w21.md",
         "../knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3a.md",
         "../knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w3b.md",
+        "../knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-w4-pre-release.md",
+        "../knowledge-base/source-ledger/2026-06-03-cbbs-rnw-source-ui-mutation.md",
         "../research/cbbs-react-native/README.md",
         "../.agents/TASK_LOG/0150-cbbs-react-native-windows-client-sysop-w0-w1.md",
         "../.agents/handoffs/0111-cbbs-react-native-windows-client-sysop-w0-w1-to-qa.md",
@@ -536,6 +727,14 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "../.agents/handoffs/0114-cbbs-react-native-windows-w3a-toolchain-to-qa.md",
         "../.agents/TASK_LOG/0155-cbbs-react-native-windows-w3b-native-generation.md",
         "../.agents/handoffs/0115-cbbs-react-native-windows-w3b-native-generation-to-qa.md",
+        "../.agents/TASK_LOG/0156-cbbs-react-native-windows-w4-pre-release.md",
+        "../.agents/handoffs/0116-cbbs-react-native-windows-w4-pre-release-to-qa-release.md",
+        "../.agents/TASK_LOG/0161-cbbs-rnw-source-ui-mutation.md",
+        "../.agents/handoffs/0120-cbbs-rnw-source-ui-mutation-to-qa.md",
+        "../knowledge-base/source-ledger/2026-06-03-cbbs-rnw-source-ui-mutation.md",
+        "../.agents/TASK_LOG/0162-cbbs-rnw-split-runtime-proof-and-agents.md",
+        "../.agents/handoffs/0121-cbbs-rnw-split-runtime-proof-and-agents-to-qa.md",
+        "../knowledge-base/source-ledger/2026-06-03-cbbs-rnw-split-runtime-proof-and-agents.md",
     ]:
         if marker not in docs_index:
             failures.append(f"docs index missing React Native link: {marker}")

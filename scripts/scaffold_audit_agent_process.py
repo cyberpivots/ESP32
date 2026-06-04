@@ -42,7 +42,15 @@ DEVELOPMENT_PANEL_AGENT_PROFILES = [
     "protocol-bridge-abi-reviewer",
     "power-wiring-isolation-reviewer",
 ]
+RNW_AGENT_PROFILES = [
+    "rnw-runtime-operations-coordinator",
+    "rnw-split-native-devex-reviewer",
+    "rnw-product-ui-layout-reviewer",
+    "rnw-protocol-bridge-safety-reviewer",
+    "rnw-qa-evidence-reviewer",
+]
 REQUIRED_AGENT_PROFILES.extend(DEVELOPMENT_PANEL_AGENT_PROFILES)
+REQUIRED_AGENT_PROFILES.extend(RNW_AGENT_PROFILES)
 REQUIRED_SOURCE_IDS = [
     "SRC-CODEX-HOOKS-2026-05-27",
     "SRC-CODEX-SUBAGENTS-2026-05-27",
@@ -497,7 +505,7 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
                 "Do not run live hardware",
                 "Do not commit or push",
             ], profile))
-        if profile in DEVELOPMENT_PANEL_AGENT_PROFILES:
+        if profile in DEVELOPMENT_PANEL_AGENT_PROFILES or profile in RNW_AGENT_PROFILES:
             if data.get("sandbox_mode") != "read-only":
                 failures.append(f"{path.relative_to(root)} must be read-only")
             failures.extend(_require_markers(text, [
@@ -512,6 +520,22 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
                 "Validation method:",
                 "Tier boundaries:",
             ], profile))
+        if profile in RNW_AGENT_PROFILES:
+            failures.extend(_require_markers(text, [
+                "RNW",
+                "Tier 3",
+                "read-only",
+                "Stop conditions:",
+                "Validation method:",
+            ], profile))
+        if profile == "rnw-protocol-bridge-safety-reviewer":
+            failures.extend(_require_markers(text, [
+                "HostCommandBridge",
+                "boundsProof.actualBytes",
+                "no-dispatch",
+            ], profile))
+        if profile in {"rnw-runtime-operations-coordinator", "rnw-split-native-devex-reviewer"}:
+            failures.extend(_require_markers(text, ["run-windows"], profile))
 
     hooks_config = json.loads(_read(root / ".codex/hooks.json"))
     hooks = hooks_config.get("hooks", {})

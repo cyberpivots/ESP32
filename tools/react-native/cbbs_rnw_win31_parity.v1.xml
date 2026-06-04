@@ -1,0 +1,131 @@
+<parity schema="cbbs_rnw_win31_parity.v1" visiblePlatform="OG Communication Retro3.1" moduleName="CBBS" internalEvidenceRef="OPCON.EXE">
+  <sources>
+    <sourceRef id="branding" path="knowledge-base/og-communication-retro31-branding-2026-05-28.md">
+      <marker>Versioned platform references use `OG Communication Retro3.1`.</marker>
+      <marker>BBS module: CBBS</marker>
+      <marker>OPCON.EXE</marker>
+    </sourceRef>
+    <sourceRef id="operator-readme" path="software/win31-operator/README.md">
+      <marker>Two-row view selector with plain primary tasks</marker>
+      <marker>Devices, and Help.</marker>
+      <marker>Peers, Link, Updates, Setup, Diagnostics, and Locks are</marker>
+      <marker>Operator Protocol</marker>
+    </sourceRef>
+    <sourceRef id="operator-menu" path="software/win31-operator/src/operator.rc">
+      <marker>POPUP "&amp;Session"</marker>
+      <marker>POPUP "&amp;Views"</marker>
+      <marker>POPUP "&amp;Messages"</marker>
+      <marker>POPUP "&amp;Files"</marker>
+      <marker>POPUP "&amp;Devices"</marker>
+      <marker>POPUP "&amp;Style"</marker>
+      <marker>POPUP "&amp;Help"</marker>
+    </sourceRef>
+    <sourceRef id="operator-source" path="software/win31-operator/src/operator.c">
+      <marker>#define APP_TITLE "OG Communication"</marker>
+      <marker>add_owner_button(hwnd, "STATUS"</marker>
+      <marker>add_owner_button(hwnd, "LOCKS"</marker>
+      <marker>Link wait</marker>
+      <marker>Queue 0</marker>
+    </sourceRef>
+    <sourceRef id="operator-protocol-h" path="software/win31-operator/include/operator_protocol.h">
+      <marker>OPCON_REQ_HELLO</marker>
+      <marker>OPCON_REQ_OTAP_INTENT</marker>
+    </sourceRef>
+    <sourceRef id="operator-protocol-c" path="software/win31-operator/src/operator_protocol.c">
+      <marker>{\"type\":\"maint_intent\",\"action\":</marker>
+      <marker>{\"type\":\"otap_intent\",\"action\":</marker>
+    </sourceRef>
+  </sources>
+  <status sourceRef="operator-source" label="Link wait" counters="In 0|Out 0 Err 0|Queue 0" />
+  <menus sourceRef="operator-menu">
+    <menu menuId="session" label="Session" />
+    <menu menuId="views" label="Views" />
+    <menu menuId="messages" label="Messages" />
+    <menu menuId="files" label="Files" />
+    <menu menuId="devices" label="Devices" />
+    <menu menuId="style" label="Style" />
+    <menu menuId="help" label="Help" />
+  </menus>
+  <pages sourceRef="operator-readme">
+    <page pageId="status" label="Status" viewId="home" summary="Readiness, link wait, counters, and queue depth." />
+    <page pageId="messages" label="Messages" viewId="messages" summary="Message pull, post, search, and acknowledge views." />
+    <page pageId="files" label="Files" viewId="downloads" summary="Catalog, queue, and transfer-intent views." />
+    <page pageId="devices" label="Devices" viewId="diagnostics" summary="Status and intent views for gated device work." />
+    <page pageId="help" label="Help" viewId="evidence" summary="First-run help and operator orientation." />
+    <page pageId="peers" label="Peers" viewId="peers" summary="Known station summaries." />
+    <page pageId="link" label="Link" viewId="network" summary="Advanced link readiness and discovery summaries." />
+    <page pageId="updates" label="Updates" viewId="config" summary="Status, readiness, and update intent." />
+    <page pageId="setup" label="Setup" viewId="config" summary="Layout and style setup." />
+    <page pageId="diagnostics" label="Diagnostics" viewId="diagnostics" summary="Backend, sequence, and inventory summaries." />
+    <page pageId="locks" label="Locks" viewId="safety" summary="Closed gate and external authority explanations." />
+  </pages>
+  <actions sourceRef="operator-menu">
+    <action actionId="sysop.connect" label="Connect" menuId="session" pageId="status" viewId="home" intent="refresh" executionMode="localOnly" state="ready" summary="Review link wait state and readiness counters." requestName="hello" />
+    <action actionId="sysop.refreshStatus" label="Refresh Status" menuId="session" pageId="status" viewId="home" intent="refresh" executionMode="localOnly" state="ready" summary="Update readiness, counters, queues, and summaries." requestName="state_get" />
+    <action actionId="sysop.pullMessages" label="Pull Messages" menuId="messages" pageId="messages" viewId="messages" intent="open_detail" executionMode="localOnly" state="ready" summary="Review queued message pull results." requestName="msg_pull" />
+    <action actionId="sysop.postMessage" label="Post Message" menuId="messages" pageId="messages" viewId="messages" intent="compose_draft" executionMode="localOnly" state="ready" summary="Stage a bounded message note." requestName="msg_post" />
+    <action actionId="sysop.searchBoard" label="Search Board" menuId="messages" pageId="messages" viewId="messages" intent="filter" executionMode="localOnly" state="ready" summary="Review bounded message search results." requestName="msg_search" />
+    <action actionId="sysop.ackMessage" label="Acknowledge Message" menuId="messages" pageId="messages" viewId="messages" intent="ack_local" executionMode="localOnly" state="ready" summary="Mark a message note as locally acknowledged." requestName="msg_ack" />
+    <action actionId="sysop.refreshCatalog" label="Refresh Catalog" menuId="files" pageId="files" viewId="downloads" intent="refresh" executionMode="localOnly" state="ready" summary="Review catalog and queue depth." requestName="download_list" />
+    <action actionId="sysop.queueSelectedFile" label="Queue Selected File" menuId="files" pageId="files" viewId="downloads" intent="queue_file_request" executionMode="localOnly" state="ready" summary="Stage a store-and-forward transfer intent." requestName="download_queue" />
+    <action actionId="sysop.updateGateStatus" label="Update Gate Status" menuId="devices" pageId="updates" viewId="config" intent="view_proof" executionMode="localOnly" state="ready" summary="Review update status, readiness, and rollback notes." requestName="otap_status" />
+    <action actionId="sysop.recordUpdateIntent" label="Record Update Intent" menuId="devices" pageId="updates" viewId="config" intent="view_proof" executionMode="localOnly" state="ready" summary="Record review intent while external gates stay closed." requestName="otap_intent" />
+  </actions>
+  <requests sourceRef="operator-protocol-h">
+    <request name="hello" />
+    <request name="state_get" />
+    <request name="peer_list" />
+    <request name="msg_pull" />
+    <request name="msg_search" />
+    <request name="msg_post" />
+    <request name="msg_ack" />
+    <request name="diag_get" />
+    <request name="fw_inventory" />
+    <request name="coordinator_state" />
+    <request name="maint_intent" />
+    <request name="download_list" />
+    <request name="download_queue" />
+    <request name="download_status" />
+    <request name="discovery_snapshot" />
+    <request name="discovery_events" />
+    <request name="service_catalog" />
+    <request name="capability_report" />
+    <request name="otap_status" />
+    <request name="otap_intent" />
+  </requests>
+  <roleCoverage role="sysop" sourceRef="operator-readme">
+    <coverage pageId="status" disposition="represented" reason="Win31 primary category." />
+    <coverage pageId="messages" disposition="represented" reason="Win31 primary category." />
+    <coverage pageId="files" disposition="represented" reason="Win31 primary category." />
+    <coverage pageId="devices" disposition="represented" reason="Win31 primary category." />
+    <coverage pageId="help" disposition="represented" reason="Win31 primary category." />
+    <coverage pageId="peers" disposition="represented" reason="Win31 secondary category." />
+    <coverage pageId="link" disposition="represented" reason="Win31 secondary category." />
+    <coverage pageId="updates" disposition="represented" reason="Win31 secondary category." />
+    <coverage pageId="setup" disposition="represented" reason="Win31 secondary category." />
+    <coverage pageId="diagnostics" disposition="represented" reason="Win31 secondary category." />
+    <coverage pageId="locks" disposition="represented" reason="Win31 secondary category." />
+  </roleCoverage>
+  <roleCoverage role="client" sourceRef="operator-readme">
+    <coverage pageId="status" disposition="represented" reason="Client shows readiness and queue summaries." />
+    <coverage pageId="messages" disposition="represented" reason="Client keeps message drafting and reading." />
+    <coverage pageId="files" disposition="represented" reason="Client keeps file request staging." />
+    <coverage pageId="devices" disposition="notRenderedRoleBoundary" reason="Device intent views stay sysop-oriented in DOS-C source." />
+    <coverage pageId="help" disposition="represented" reason="Help remains user-facing." />
+    <coverage pageId="peers" disposition="represented" reason="Known station summaries remain useful to callers." />
+    <coverage pageId="link" disposition="evidenceOnly" reason="Advanced link details are not part of the primary user path." />
+    <coverage pageId="updates" disposition="notRenderedRoleBoundary" reason="Update intent stays sysop-oriented in DOS-C source." />
+    <coverage pageId="setup" disposition="evidenceOnly" reason="Layout and style setup is represented as evidence notes." />
+    <coverage pageId="diagnostics" disposition="notRenderedRoleBoundary" reason="Diagnostics retain operator backend detail." />
+    <coverage pageId="locks" disposition="evidenceOnly" reason="Closed gate explanations remain evidence-only for callers." />
+  </roleCoverage>
+  <hardwareAdjacency sourceRef="operator-readme">
+    <surface pageId="bench" adjacentTo="devices" reason="Target readiness supports device views." />
+    <surface pageId="radio" adjacentTo="devices" reason="Radio planning supports device views." />
+    <surface pageId="mesh" adjacentTo="link" reason="Mesh summaries support link views." />
+    <surface pageId="firmware" adjacentTo="updates" reason="Firmware review supports update views." />
+    <surface pageId="fabrication" adjacentTo="setup" reason="Fixture notes support setup views." />
+    <surface pageId="safety" adjacentTo="locks" reason="Safety gates support lock views." />
+    <surface pageId="activity" adjacentTo="diagnostics" reason="Evidence packets support diagnostic review." />
+  </hardwareAdjacency>
+</parity>

@@ -21,6 +21,10 @@
   `--overwrite`, `--no-telemetry`, package-lock suppression, pnpm
   reconciliation, generated `run-windows` script removal, and manifest
   capability inspection.
+- Windows W4A is a pre-release source/record refresh only: JS `AppRegistry`
+  registration for `CbbsWindows`, corrected W3B-aware status fields, app-local
+  RNW project metadata, source coverage for signing/distribution alternatives,
+  and closed build/run/package/signing/release surfaces.
 - App Center is not selected for build, test, distribution, hosted CodePush, or
   analytics in this scaffold.
 
@@ -42,7 +46,8 @@
 1. Keep Phase 1 scaffold validation green.
 2. Add browser export proof under a host-only gate.
 3. Plan Android/iOS permissions before any simulator/device work.
-4. Plan Windows W4 build-only proof only after separate authority, source
-   refresh, reviewer quorum, no-secret/package-artifact review, and command
-   logs that avoid launch, deploy, signing, release, and live connectivity.
+4. Open Windows W4B build-only proof only after separate authority, source
+   refresh, reviewer quorum, ignored/evidence output policy,
+   no-secret/package-artifact review, and command logs that avoid launch,
+   deploy, signing, release, and live connectivity.
 5. Open a separate Tier 3 gate for any live connectivity.

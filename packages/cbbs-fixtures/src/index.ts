@@ -128,7 +128,7 @@ export const cbbsFixtureSnapshot: CbbsFixtureSnapshot = {
       view: "safety",
       title: "Unsafe actions disabled",
       status: "disabled",
-      detail: "Serial, RF, flash, relay, load, and mains actions are closed."
+      detail: "Transport, radio, device-update, output-power, and high-energy actions are closed."
     }
   ],
   evidence: [
@@ -149,22 +149,22 @@ export const cbbsFixtureSnapshot: CbbsFixtureSnapshot = {
 function closedSurfaceLabel(id: ClosedSurfaceId): string {
   const labels: Record<ClosedSurfaceId, string> = {
     bridge_abi: "Bridge ABI changes",
-    serial_abi: "Serial ABI changes",
+    serial_abi: "Transport ABI changes",
     firmware_abi: "Firmware ABI changes",
     gate_f_service_code: "Gate F service-code changes",
-    serial_write: "Serial writes",
-    rf_xbee_write: "RF/XBee writes",
+    serial_write: "Transport write gate",
+    rf_xbee_write: "Radio change gate",
     ble_pairing: "BLE pairing",
     web_bluetooth: "Web Bluetooth",
-    web_serial: "Web Serial",
+    web_serial: "Browser transport gate",
     softap_probe: "SoftAP probing",
     local_network_discovery: "Local-network discovery",
-    flash_erase_monitor: "Flash, erase, or monitor",
-    relay_or_load: "Relay, load, or mains action",
+    flash_erase_monitor: "Device update tools",
+    relay_or_load: "Output power action",
     persistent_config_write: "Persistent config writes",
     native_prebuild: "Native prebuild",
     native_windows_project: "Windows native project generation",
-    external_service_build: "EAS, App Center, signing, or release automation"
+    external_service_build: "External build automation"
   };
   return labels[id];
 }

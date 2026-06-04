@@ -37,13 +37,38 @@ class ReactNativeScaffoldAuditTests(unittest.TestCase):
 
         for rel in rn_audit.W3B_RECORD_FILES:
             self.assertTrue((ROOT / rel).exists(), rel.as_posix())
+        for rel in rn_audit.W4_RECORD_FILES:
+            self.assertTrue((ROOT / rel).exists(), rel.as_posix())
         self.assertEqual([], rn_audit._inspect_windows_native_surface(ROOT))
 
+    def test_windows_entrypoint_status_is_build_launch_ready(self) -> None:
+        source = (ROOT / "apps/cbbs-windows/src/index.tsx").read_text(encoding="utf-8")
+        for marker in [
+            'WINDOWS_APP_COMPONENT_NAME = "CbbsWindows"',
+            "AppRegistry.registerComponent(WINDOWS_APP_COMPONENT_NAME",
+            "legacyWindowsMigrationStatus",
+            'defaultProductApp: "sysop"',
+            "packageIdentityAccepted: false",
+            "capabilityUseAccepted: false",
+            "liveExecutionAvailable: false",
+            "ProductWindowsShell",
+        ]:
+            self.assertIn(marker, source)
+
+    def test_product_windows_apps_are_split(self) -> None:
+        product = (ROOT / "packages/cbbs-product/src/index.ts").read_text(encoding="utf-8")
+        for marker in ["CBBS Client", "CBBS Sysop", "CBBS Hardware Tools"]:
+            self.assertIn(marker, product)
+        for app in rn_audit.PRODUCT_WINDOWS_APPS:
+            for rel in ["package.json", "index.js", "src/index.tsx", "tsconfig.json"]:
+                self.assertTrue((ROOT / app / rel).exists(), f"{app}/{rel}")
+
     def test_windows_dependency_lane_is_scoped(self) -> None:
-        windows_package = rn_audit._load_json(ROOT / "apps/cbbs-windows/package.json")
-        windows_deps = rn_audit._deps(windows_package)
-        for name, version in rn_audit.WINDOWS_RNW_DEPENDENCIES.items():
-            self.assertEqual(version, windows_deps.get(name))
+        for app in rn_audit.RNW_WINDOWS_APP_PACKAGES:
+            windows_package = rn_audit._load_json(ROOT / app / "package.json")
+            windows_deps = rn_audit._deps(windows_package)
+            for name, version in rn_audit.WINDOWS_RNW_DEPENDENCIES.items():
+                self.assertEqual(version, windows_deps.get(name), f"{app}:{name}")
 
         for rel in [
             "package.json",
@@ -53,6 +78,23 @@ class ReactNativeScaffoldAuditTests(unittest.TestCase):
         ]:
             deps = rn_audit._deps(rn_audit._load_json(ROOT / rel))
             self.assertNotIn("react-native-windows", deps, rel)
+
+    def test_product_ui_uses_peer_react_native_boundary(self) -> None:
+        package = rn_audit._load_json(ROOT / "packages/cbbs-product-ui/package.json")
+        runtime_deps = package.get("dependencies")
+        self.assertIsInstance(runtime_deps, dict)
+        for name in ["react", "react-native", "react-native-windows", "expo", "expo-router", "react-native-web"]:
+            self.assertNotIn(name, runtime_deps)
+
+        peer_deps = package.get("peerDependencies")
+        self.assertIsInstance(peer_deps, dict)
+        self.assertEqual("19.2.3", peer_deps.get("react"))
+        self.assertEqual(">=0.83.9 <0.86.0", peer_deps.get("react-native"))
+
+    def test_current_windows_docs_do_not_expose_runtime_command_surface(self) -> None:
+        readme = (ROOT / "apps/cbbs-windows/README.md").read_text(encoding="utf-8")
+        self.assertIn("Future Tier 3 runtime command stays closed", readme)
+        self.assertIsNone(rn_audit.FORBIDDEN_CURRENT_DOC_COMMAND_RE.search(readme))
 
     def test_windows_source_does_not_import_expo_ui_lane(self) -> None:
         source = "\n".join(

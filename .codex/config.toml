@@ -112,6 +112,26 @@ config_file = "agents/react-native-devex-ci-reviewer.toml"
 description = "Read-only reviewer for CBBS React Native secrets, permissions, external services, live connectivity, and hardware authority boundaries."
 config_file = "agents/react-native-safety-security-reviewer.toml"
 
+[agents.rnw-runtime-operations-coordinator]
+description = "Read-only coordinator for RNW split-app runtime-operation gates, cleanup, process evidence, and Tier 3 authority checks."
+config_file = "agents/rnw-runtime-operations-coordinator.toml"
+
+[agents.rnw-split-native-devex-reviewer]
+description = "Read-only reviewer for RNW split native app package boundaries, dependency lanes, generated project surfaces, and DevEx validation."
+config_file = "agents/rnw-split-native-devex-reviewer.toml"
+
+[agents.rnw-product-ui-layout-reviewer]
+description = "Read-only reviewer for RNW product UI, layout, overflow, menu/page/action behavior, and split-app host-only operation proof."
+config_file = "agents/rnw-product-ui-layout-reviewer.toml"
+
+[agents.rnw-protocol-bridge-safety-reviewer]
+description = "Read-only reviewer for RNW HostCommandBridge safety, bounded payloads, secret rejection, no-dispatch UI behavior, and live-surface separation."
+config_file = "agents/rnw-protocol-bridge-safety-reviewer.toml"
+
+[agents.rnw-qa-evidence-reviewer]
+description = "Read-only reviewer for RNW screenshots, hashes, host-only tests, records, cleanup proof, and final evidence acceptance."
+config_file = "agents/rnw-qa-evidence-reviewer.toml"
+
 [agents.governance-doc-worker]
 description = "Worker for bounded governance documentation edits after coordinator triage and reviewer quorum."
 config_file = "agents/governance-doc-worker.toml"

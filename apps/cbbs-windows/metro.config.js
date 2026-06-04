@@ -1,10 +1,32 @@
 const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
 
-const fs = require('fs');
 const path = require('node:path');
 
-const rnwPath = fs.realpathSync(
+const appRoot = path.resolve(__dirname);
+const workspaceRoot = path.resolve(appRoot, '../..');
+const appNodeModules = path.resolve(appRoot, 'node_modules');
+const workspaceNodeModules = path.resolve(workspaceRoot, 'node_modules');
+const cbbsProtocolPath = path.resolve(
+  path.resolve(workspaceRoot, 'packages/cbbs-protocol'),
+);
+const cbbsProductPath = path.resolve(
+  path.resolve(workspaceRoot, 'packages/cbbs-product'),
+);
+const cbbsProductUiPath = path.resolve(
+  path.resolve(workspaceRoot, 'packages/cbbs-product-ui'),
+);
+const rnwPath = path.resolve(
   path.resolve(require.resolve('react-native-windows/package.json'), '..'),
+);
+const reactDevToolsSettingsManagerPath = path.resolve(
+  appRoot,
+  'metro-shims/reactDevToolsSettingsManager.windows.js',
+);
+const reactPath = path.resolve(
+  path.resolve(require.resolve('react/package.json'), '..'),
+);
+const reactNativePath = path.resolve(
+  path.resolve(require.resolve('react-native/package.json'), '..'),
 );
 
 //
@@ -17,12 +39,61 @@ const rnwPath = fs.realpathSync(
  */
 
 const config = {
+  watchFolders: [
+    workspaceNodeModules,
+    cbbsProductPath,
+    cbbsProductUiPath,
+    cbbsProtocolPath,
+  ],
   //
   resolver: {
+    disableHierarchicalLookup: true,
+    resolveRequest: (context, moduleName, platform) => {
+      if (platform === 'windows' && moduleName === 'react-native') {
+        return {
+          type: 'sourceFile',
+          filePath: path.join(rnwPath, 'index.windows.js'),
+        };
+      }
+
+      if (platform === 'windows' && moduleName.startsWith('react-native/')) {
+        return context.resolveRequest(
+          context,
+          path.join(rnwPath, moduleName.slice('react-native/'.length)),
+          platform,
+        );
+      }
+
+      if (
+        platform === 'windows' &&
+        moduleName
+          .replace(/\\/g, '/')
+          .endsWith('src/private/devsupport/rndevtools/ReactDevToolsSettingsManager')
+      ) {
+        return {
+          type: 'sourceFile',
+          filePath: reactDevToolsSettingsManagerPath,
+        };
+      }
+
+      return context.resolveRequest(context, moduleName, platform);
+    },
+    extraNodeModules: {
+      react: reactPath,
+      'react-native': reactNativePath,
+      'react-native-windows': rnwPath,
+      '@cbbs/product': cbbsProductPath,
+      '@cbbs/product-ui': cbbsProductUiPath,
+      '@cbbs/protocol': cbbsProtocolPath,
+    },
+    nodeModulesPaths: [
+      appNodeModules,
+      workspaceNodeModules,
+    ],
     blockList: [
       // This stops "npx @react-native-community/cli run-windows" from causing the metro server to crash if its already running
       new RegExp(
-        `${path.resolve(__dirname, 'windows').replace(/[/\\]/g, '/')}.*`,
+        `${path.resolve(appRoot, 'windows').replace(/[/\\]/g, '/')}.*`,
       ),
       // This prevents "npx @react-native-community/cli run-windows" from hitting: EBUSY: resource busy or locked, open msbuild.ProjectImports.zip or other files produced by msbuild
       new RegExp(`${rnwPath}/build/.*`),
@@ -41,4 +112,4 @@ const config = {
   },
 };
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+module.exports = mergeConfig(getDefaultConfig(appRoot), config);

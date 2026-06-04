@@ -1,0 +1,19 @@
+{
+  "name": "@cbbs/hardware-tools-windows",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.tsx",
+  "scripts": {
+    "typecheck": "tsc --noEmit --pretty false",
+    "test:windows": "jest --config ../../jest.config.cjs apps/cbbs-hardware-tools-windows/__tests__"
+  },
+  "dependencies": {
+    "@cbbs/product-ui": "workspace:*",
+    "react": "19.2.3",
+    "react-native": "0.83.9",
+    "react-native-windows": "0.83.0"
+  },
+  "devDependencies": {
+    "typescript": "*"
+  }
+}

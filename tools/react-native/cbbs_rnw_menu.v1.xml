@@ -1,0 +1,44 @@
+<menu schema="cbbs_rnw_menu.v1" appId="hardware-tools" menuId="hardware-tools-main" label="CBBS Hardware Tools">
+  <page pageId="bench" label="Bench" targetPage="bench" capabilityGroup="bench" executionMode="bridgePreviewUnavailable" state="needsDevice" viewId="diagnostics" evidenceRef="bench-readiness">
+    <section sectionId="bench-targets" label="Targets" pageId="bench" targetPage="bench" capabilityGroup="bench" executionMode="bridgePreviewUnavailable" state="needsDevice" summary="Target aliases and readiness notes stay visible before any equipment contact." evidenceRef="bench-readiness">
+      <item itemId="bench-target-readiness" actionId="hardware.benchTargetReview" label="Target Readiness" pageId="bench" targetPage="bench" capabilityGroup="bench" executionMode="artifactReview" state="ready" viewId="diagnostics" intent="view_proof" summary="Review target aliases, required evidence, and closed work gates." bridgeActionId="device.readinessCheck" evidenceRef="bench-readiness" />
+    </section>
+  </page>
+  <page pageId="radio" label="Radio" targetPage="radio" capabilityGroup="radio" executionMode="artifactReview" state="ready" viewId="network" evidenceRef="radio-study">
+    <section sectionId="radio-review" label="Planning" pageId="radio" targetPage="radio" capabilityGroup="radio" executionMode="artifactReview" state="ready" summary="Radio review uses hidden identifiers and saved profile classes." evidenceRef="radio-study">
+      <item itemId="radio-inventory" actionId="hardware.radioInventory" label="Radio Inventory" pageId="radio" targetPage="radio" capabilityGroup="radio" executionMode="artifactReview" state="ready" viewId="diagnostics" intent="view_proof" summary="Review radio family, tool presence, and profile class records with identifiers hidden." bridgeActionId="radio.inventorySummary" evidenceRef="radio-study" />
+      <item itemId="radio-read-status-plan" actionId="hardware.radioReadStatusPlan" label="Read Status Plan" pageId="radio" targetPage="radio" capabilityGroup="radio" executionMode="artifactReview" state="ready" viewId="network" intent="view_proof" summary="Review the status-read checklist without contacting equipment." bridgeActionId="radio.queryPreview" evidenceRef="radio-study" />
+      <item itemId="radio-profile-compare" actionId="hardware.radioProfileCompare" label="Profile Compare" pageId="radio" targetPage="radio" capabilityGroup="radio" executionMode="artifactReview" state="ready" viewId="config" intent="view_proof" summary="Compare saved profile classes while private values stay hidden." bridgeActionId="radio.profileCompare" evidenceRef="radio-study" />
+      <item itemId="radio-change-plan" actionId="hardware.radioChangePlan" label="Change Plan" pageId="radio" targetPage="radio" capabilityGroup="radio" executionMode="tier3Closed" state="needsSafetyCheck" viewId="safety" intent="view_proof" summary="Requires target review, recovery steps, and fresh authority." bridgeActionId="radio.changePreview" evidenceRef="radio-study" />
+    </section>
+  </page>
+  <page pageId="mesh" label="Mesh" targetPage="mesh" capabilityGroup="mesh" executionMode="artifactReview" state="ready" viewId="peers" evidenceRef="mesh-records">
+    <section sectionId="mesh-previews" label="Previews" pageId="mesh" targetPage="mesh" capabilityGroup="mesh" executionMode="artifactReview" state="ready" summary="Mesh summaries come from recorded service views." evidenceRef="mesh-records">
+      <item itemId="mesh-summary" actionId="hardware.meshSummary" label="Mesh Summary" pageId="mesh" targetPage="mesh" capabilityGroup="mesh" executionMode="artifactReview" state="ready" viewId="network" intent="view_proof" summary="Review mesh health from recorded summaries." bridgeActionId="mesh.statusSnapshot" evidenceRef="mesh-records" />
+      <item itemId="mesh-service-summary" actionId="hardware.meshServices" label="Service Summary" pageId="mesh" targetPage="mesh" capabilityGroup="mesh" executionMode="artifactReview" state="ready" viewId="peers" intent="view_proof" summary="Review station service availability from recorded summaries." bridgeActionId="mesh.serviceList" evidenceRef="mesh-records" />
+    </section>
+  </page>
+  <page pageId="firmware" label="Firmware" targetPage="firmware" capabilityGroup="firmware" executionMode="artifactReview" state="ready" viewId="config" evidenceRef="firmware-records">
+    <section sectionId="firmware-review" label="Review" pageId="firmware" targetPage="firmware" capabilityGroup="firmware" executionMode="artifactReview" state="ready" summary="Firmware records show image identity and update readiness." evidenceRef="firmware-records">
+      <item itemId="firmware-build-review" actionId="hardware.firmwareBuildReview" label="Build Review" pageId="firmware" targetPage="firmware" capabilityGroup="firmware" executionMode="artifactReview" state="ready" viewId="config" intent="view_proof" summary="Review image identity, compatibility notes, and acceptance status." bridgeActionId="firmware.artifactReview" evidenceRef="firmware-records" />
+      <item itemId="firmware-device-update-plan" actionId="hardware.deviceUpdatePlan" label="Device Update Plan" pageId="firmware" targetPage="firmware" capabilityGroup="firmware" executionMode="tier3Closed" state="needsConfirmation" viewId="safety" intent="view_proof" summary="Requires selected target, recovery steps, and fresh authority." bridgeActionId="firmware.installPreview" evidenceRef="firmware-records" />
+    </section>
+  </page>
+  <page pageId="fabrication" label="Fabrication" targetPage="fabrication" capabilityGroup="fabrication" executionMode="artifactReview" state="ready" viewId="config" evidenceRef="fixture-plate">
+    <section sectionId="fabrication-assets" label="Assets" pageId="fabrication" targetPage="fabrication" capabilityGroup="fabrication" executionMode="artifactReview" state="ready" summary="Fixture assets stay provisional until measurement records are complete." evidenceRef="fixture-plate">
+      <item itemId="fabrication-print-asset" actionId="hardware.fabricationPrintAsset" label="Print Asset" pageId="fabrication" targetPage="fabrication" capabilityGroup="fabrication" executionMode="artifactReview" state="ready" viewId="config" intent="view_proof" summary="Review provisional plate parameters, label zones, and measurement grid notes." evidenceRef="fixture-plate" />
+      <item itemId="fabrication-enclosure-checklist" actionId="hardware.enclosureChecklist" label="Enclosure Checklist" pageId="fabrication" targetPage="fabrication" capabilityGroup="fabrication" executionMode="localOnly" state="ready" viewId="safety" intent="view_proof" summary="Review clearance, ventilation, material, and fit evidence gaps." evidenceRef="fixture-plate" />
+    </section>
+  </page>
+  <page pageId="safety" label="Safety" targetPage="safety" capabilityGroup="safety" executionMode="localOnly" state="needsSafetyCheck" viewId="safety" evidenceRef="safety-gates">
+    <section sectionId="safety-gates" label="Gates" pageId="safety" targetPage="safety" capabilityGroup="safety" executionMode="localOnly" state="needsSafetyCheck" summary="Safety gates separate ready reviews from closed work." evidenceRef="safety-gates">
+      <item itemId="safety-gate-dashboard" actionId="hardware.safetyGates" label="Safety Gates" pageId="safety" targetPage="safety" capabilityGroup="safety" executionMode="localOnly" state="ready" viewId="safety" intent="view_proof" summary="Review target, recovery, isolation, and authority status." evidenceRef="safety-gates" />
+      <item itemId="safety-recovery-checklist" actionId="hardware.recoveryChecklist" label="Recovery Checklist" pageId="safety" targetPage="safety" capabilityGroup="safety" executionMode="localOnly" state="ready" viewId="safety" intent="view_proof" summary="Review rollback notes, cleanup status, and unresolved gaps." evidenceRef="safety-gates" />
+    </section>
+  </page>
+  <page pageId="activity" label="Activity" targetPage="activity" capabilityGroup="activity" executionMode="localOnly" state="complete" viewId="evidence" evidenceRef="activity-records">
+    <section sectionId="activity-evidence" label="Evidence" pageId="activity" targetPage="activity" capabilityGroup="activity" executionMode="localOnly" state="complete" summary="Evidence packet and transcript rows show what was reviewed." evidenceRef="activity-records">
+      <item itemId="activity-evidence-packet" actionId="hardware.evidencePacket" label="Evidence Packet" pageId="activity" targetPage="activity" capabilityGroup="activity" executionMode="localOnly" state="ready" viewId="evidence" intent="view_proof" summary="Review the bounded evidence packet and current transcript rows." evidenceRef="activity-records" />
+    </section>
+  </page>
+</menu>

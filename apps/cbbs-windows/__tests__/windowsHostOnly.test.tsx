@@ -1,107 +1,111 @@
+import type { ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { CLOSED_SURFACE_IDS, LOCAL_ONLY_REASON, validateUiIntent, type UiIntentRecord } from "@cbbs/protocol";
+import { AppRegistry } from "react-native";
+import { validateUiIntent, type UiIntentRecord } from "@cbbs/protocol";
 import {
-  WindowsClientSysopShell,
-  WindowsDependencyProof,
-  createWindowsLocalIntent,
-  windowsClientSysopPlan,
-  windowsDependencyLane,
-  windowsRoleProfiles,
-  windowsSpikeStatus
+  CBBS_PRODUCT_WINDOWS_APP_IDS,
+  WINDOWS_APP_COMPONENT_NAME,
+  WindowsProductMigrationShell,
+  legacyWindowsMigrationStatus,
+  windowsProductAppProfiles
 } from "../src";
 
-describe("CBBS Windows host-only spike", () => {
-  test("keeps native Windows generation closed while selecting package-only RNW deps", () => {
-    expect(windowsSpikeStatus).toEqual({
-      status: "package-only-rnw-dependency-lane",
-      nativeProjectGenerated: false,
-      nativeDependencySelected: true,
-      requiredGate: "windows-runner-toolchain-review"
-    });
-    expect(windowsDependencyLane).toEqual({
-      react: "19.2.3",
-      reactNative: "0.83.9",
-      reactNativeWindows: "0.83.0",
-      reactNativeWindowsPackage: "react-native-windows",
-      packageOnly: true,
-      nativeProjectGenerated: false
-    });
-  });
+type MockNativeProps = {
+  children?: ReactNode;
+  disabled?: boolean;
+  onChangeText?: (text: string) => void;
+  onPress?: () => void;
+  value?: string;
+  [key: string]: unknown;
+};
 
-  test("models one role-aware client/sysop app with shared protocol constants", () => {
-    expect(windowsClientSysopPlan.appShape).toBe("single-role-aware-windows-app");
-    expect(windowsClientSysopPlan.localOnlyReason).toBe(LOCAL_ONLY_REASON);
-    expect(windowsClientSysopPlan.modes.map((mode) => mode.role)).toEqual(["client", "sysop"]);
-    expect(windowsClientSysopPlan.protocolClosedSurfaces).toEqual(CLOSED_SURFACE_IDS);
-    expect(windowsClientSysopPlan.closedGates).toContain("native_windows_project");
-    expect(windowsClientSysopPlan.closedGates).toContain("live_transport");
-    expect(windowsClientSysopPlan.closedGates).toContain("signing_release");
-  });
-
-  test("renders Client and Sysop local shells without native runtime claims", () => {
-    for (const profile of windowsRoleProfiles) {
-      const rendered = render(<WindowsClientSysopShell activeRole={profile.role} />);
-
-      expect(screen.getByText(`Fixture-only ${profile.label} Windows console`)).toBeTruthy();
-      expect(screen.getByText("Package-only RNW lane; no Windows native runtime proof.")).toBeTruthy();
-      expect(screen.getByText(`Local-only marker: ${LOCAL_ONLY_REASON}`)).toBeTruthy();
-      for (const view of profile.views) {
-        expect(screen.getByTestId(`windows-view-${profile.role}-${view}`)).toBeTruthy();
-      }
-
-      rendered.unmount();
-    }
-  });
-
-  test("emits valid local-only intents from view and action controls", () => {
-    const intents: UiIntentRecord[] = [];
-    render(
-      <WindowsClientSysopShell
-        activeRole="client"
-        activeView="messages"
-        onIntent={(intent) => intents.push(intent)}
-      />
+jest.mock("react-native", () => {
+  const React = jest.requireActual<typeof import("react")>("react");
+  const registry: Record<string, unknown> = {};
+  const createHost = (name: string) => {
+    const Host = React.forwardRef<unknown, MockNativeProps>(({ children, ...props }, ref) =>
+      React.createElement(name, { ...props, ref }, children)
     );
+    Host.displayName = name;
+    return Host;
+  };
 
-    fireEvent.press(screen.getByTestId("windows-view-client-downloads"));
-    fireEvent.press(screen.getByTestId("windows-action-client-compose_draft"));
-    fireEvent.press(screen.getByTestId("windows-action-client-queue_file_request"));
-    fireEvent.press(screen.getByTestId("windows-action-client-view_proof"));
+  return {
+    AppRegistry: {
+      getAppKeys: () => Object.keys(registry),
+      registerComponent: (name: string, componentProvider: unknown) => {
+        registry[name] = componentProvider;
+        return name;
+      }
+    },
+    Pressable: createHost("Pressable"),
+    ScrollView: createHost("ScrollView"),
+    StyleSheet: {
+      create: <T extends Record<string, unknown>>(styles: T) => styles,
+      flatten: (style: unknown): Record<string, unknown> => {
+        if (Array.isArray(style)) {
+          return Object.assign({}, ...style.map((entry) => (entry == null ? {} : entry)));
+        }
+        return typeof style === "object" && style !== null ? (style as Record<string, unknown>) : {};
+      }
+    },
+    Text: createHost("Text"),
+    TextInput: createHost("TextInput"),
+    View: createHost("View")
+  };
+});
 
-    expect(intents.map((intent) => intent.intent)).toEqual([
-      "navigate",
-      "compose_draft",
-      "queue_file_request",
-      "view_proof"
+describe("CBBS Windows product migration shell", () => {
+  test("registers the legacy component as a Sysop parity compatibility entry", () => {
+    expect(WINDOWS_APP_COMPONENT_NAME).toBe("CbbsWindows");
+    expect(AppRegistry.getAppKeys()).toContain("CbbsWindows");
+    expect(legacyWindowsMigrationStatus).toMatchObject({
+      defaultProductApp: "sysop",
+      packageIdentityAccepted: false,
+      capabilityUseAccepted: false,
+      signingConfigured: false,
+      releaseConfigured: false,
+      liveExecutionAvailable: false
+    });
+    expect(legacyWindowsMigrationStatus.productApps).toEqual(CBBS_PRODUCT_WINDOWS_APP_IDS);
+  });
+
+  test("renders Sysop parity without the old developer cockpit wording", () => {
+    render(<WindowsProductMigrationShell />);
+
+    expect(screen.getByText("OG Communication Retro3.1")).toBeTruthy();
+    expect(screen.getByText("CBBS Sysop")).toBeTruthy();
+    expect(screen.getByTestId("windows-sysop-shell")).toBeTruthy();
+    expect(screen.getByTestId("windows-sysop-page-status")).toBeTruthy();
+    expect(screen.getByTestId("windows-sysop-page-locks")).toBeTruthy();
+    expect(screen.queryByText(/RNW|fixture-only|local-only|source evidence|developer|Dev Config|schema|ADR|task log|Advanced Details|Confirmation text/i)).toBeNull();
+  });
+
+  test("exports the three product profiles", () => {
+    expect(windowsProductAppProfiles.map((app) => app.id)).toEqual(["client", "sysop", "hardware-tools"]);
+    expect(windowsProductAppProfiles.map((app) => app.title)).toEqual([
+      "OG Communication Retro3.1",
+      "OG Communication Retro3.1",
+      "OG Communication Retro3.1"
     ]);
+    expect(windowsProductAppProfiles.map((app) => app.subtitle)).toEqual([
+      "CBBS Client",
+      "CBBS Sysop",
+      "CBBS Hardware Tools"
+    ]);
+  });
+
+  test("Hardware Tools preview actions emit only local UI intents", () => {
+    const intents: UiIntentRecord[] = [];
+    render(<WindowsProductMigrationShell appId="hardware-tools" onIntent={(intent) => intents.push(intent)} />);
+
+    fireEvent.press(screen.getByTestId("windows-hardware-tools-page-radio"));
+    fireEvent.press(screen.getByTestId("windows-hardware-tools-action-hardware.radioInventory"));
+
+    expect(intents).toHaveLength(2);
     for (const intent of intents) {
       expect(validateUiIntent(intent)).toEqual({ ok: true, errors: [] });
-      expect(intent.localOnlyReason).toBe(LOCAL_ONLY_REASON);
+      expect(JSON.stringify(intent)).not.toMatch(/HostCommandBridge|serial|xbee|rf|flash|relay|COM\d+|child_process|exec|spawn/i);
     }
-  });
-
-  test("renders every closed surface as disabled", () => {
-    render(<WindowsClientSysopShell activeRole="sysop" activeView="safety" />);
-
-    for (const surface of CLOSED_SURFACE_IDS) {
-      const control = screen.getByTestId(`windows-closed-surface-${surface}`);
-      expect(control.props.accessibilityState).toMatchObject({ disabled: true });
-    }
-  });
-
-  test("keeps transcript-first evidence visible", () => {
-    render(<WindowsClientSysopShell activeRole="client" activeView="evidence" />);
-
-    expect(screen.getByText("Transcript-first Windows fixture evidence")).toBeTruthy();
-    expect(screen.getByText("proof-local-transcript-note")).toBeTruthy();
-    expect(screen.getByText(/No native device, Windows runner, transport, or CBBS hardware proof/)).toBeTruthy();
-  });
-
-  test("exports local intent helper and proof component without native runtime claims", () => {
-    expect(validateUiIntent(createWindowsLocalIntent("refresh", "sysop", "home"))).toEqual({
-      ok: true,
-      errors: []
-    });
-    expect(typeof WindowsDependencyProof).toBe("function");
   });
 });

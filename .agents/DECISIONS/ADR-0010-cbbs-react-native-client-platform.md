@@ -240,6 +240,52 @@ Web Serial, Web Bluetooth, local-network discovery, SoftAP, serial, RF/XBee,
 firmware/bridge/serial ABI changes, flash, erase, monitor, relay, load, mains,
 release, commit, push, PR, or deploy.
 
+## Windows W4 Pre-Release Planning Amendment
+
+Accepted on 2026-06-03.
+
+The Windows lane may advance to W4 pre-release planning and readiness metadata
+only after W3B native generation. This amendment authorizes only:
+
+- W4A source, task, handoff, and docs refresh for a pre-release Windows
+  validation lane.
+- Registering the generated native component name `CbbsWindows` with
+  `AppRegistry` in the app-local Windows source.
+- Correcting stale W2/W3 status fields so the app source records that the W3B
+  native project exists while W4 build/run/runtime proof is absent.
+- App-local metadata that records generated solution/manifest paths, generated
+  manifest identity, generated manifest capabilities, and W4 subgate status.
+- Audit and test guards that reject package-lock output, package/signing
+  artifacts, Store association files, package scripts for build/run/signing,
+  and release/deploy command surfaces.
+
+W4 is split into subgates:
+
+- W4A: source/record refresh and package identity/capability review.
+- W4B: future build-only proof; no deploy, launch, package, signing, or
+  runtime claim.
+- W4C: future local deploy/run proof against fixture-only UI; no live
+  transport.
+- W4D: future pre-release packaging choice.
+- W4E: future Store or production release gate.
+
+W4A does not accept the generated manifest identity
+`Name="CbbsWindows"`, `Publisher="CN=cyber"`, or `Version="1.0.0.0"` as final
+package identity. W4A does not accept `internetClient` or restricted
+`runFullTrust` for capability use. Self-signed MSIX, unsigned Windows 11 MSIX
+smoke testing, App Installer, Microsoft Store, Azure Artifact Signing, and OV
+certificate paths are planning alternatives only until a later gate accepts an
+exact artifact, credential, trust, install, uninstall, and distribution
+boundary.
+
+W4A still does not authorize RNW `run-windows`, Visual Studio/MSBuild build,
+deploy, launch, package creation, signing, package identity acceptance,
+capability use, Store association, App Installer publishing, EAS, App Center,
+simulator/device launch, live network, BLE, Web Bluetooth, Web Serial,
+local-network discovery, SoftAP, serial/RF/XBee action,
+firmware/bridge/serial ABI change, flash, erase, monitor, relay, load, mains,
+release, commit, push, PR, or deploy.
+
 ## Assumptions
 
 - The first app slice is host-only and fixture-backed.
@@ -317,16 +363,28 @@ remain for this boundary.
 - `SRC-REACT-NATIVE-WINDOWS-GETTING-STARTED-2026-06-02`
 - `SRC-REACT-NATIVE-WINDOWS-CLI-2026-06-02`
 - `SRC-REACT-NATIVE-WINDOWS-PACKAGE-DEPS-2026-06-03`
+- `SRC-REACT-NATIVE-WINDOWS-RUN-WINDOWS-2026-06-03`
+- `SRC-REACT-NATIVE-WINDOWS-STORE-PUBLISHING-2026-06-03`
 - `SRC-WINDOWS-APP-CAPABILITIES-2026-06-02`
+- `SRC-MICROSOFT-MSIX-SIGNING-2026-06-03`
+- `SRC-MICROSOFT-WINDOWS-CODE-SIGNING-OPTIONS-2026-06-03`
+- `SRC-MICROSOFT-WINDOWS-SIDELOADING-2026-06-03`
+- `SRC-MICROSOFT-MSIX-UNSIGNED-2026-06-03`
+- `SRC-MICROSOFT-MSIX-APP-INSTALLER-2026-06-03`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W0-W1-2026-06-02`
 - `SRC-NPM-RNW-DEPENDENCY-METADATA-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W2-2026-06-02`
 - `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3A-2026-06-03`
+- `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W3B-2026-06-03`
+- `SRC-LOCAL-CBBS-REACT-NATIVE-WINDOWS-W4-PRE-RELEASE-2026-06-03`
 
 ## Stop Gates
 
-This ADR does not authorize native prebuild, native Android/iOS/Windows
-project generation, simulator/device runs, Expo Go claims, EAS Build, EAS
+This ADR does not authorize native Android/iOS project generation, native
+Windows project generation outside the accepted W3B boundary, RNW
+`run-windows`, Visual Studio/MSBuild build, deploy, launch, package creation,
+signing, package identity acceptance, capability use, Store association, App
+Installer publishing, simulator/device runs, Expo Go claims, EAS Build, EAS
 Submit, EAS Update, EAS Hosting, App Center SDKs or automation, signing
 credentials, store upload, GitHub publication, release, BLE pairing, Web
 Bluetooth, Web Serial, local-network discovery, SoftAP probing, live bridge

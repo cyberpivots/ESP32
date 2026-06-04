@@ -7,6 +7,11 @@ description: Use for CBBS React Native client/operator app work in this ESP32 wo
 
 1. Re-read `AGENTS.md`, `ADR-0010`, `docs/projects/cbbs-react-native/README.md`,
    and `knowledge-base/source-ledger/2026-06-02-cbbs-react-native-client-platform.md`.
+   Before CBBS RNW view, action, or protocol changes, also check the current
+   local DOS-C Win31 sources: `/mnt/h/dos-c/software/win31-operator/README.md`,
+   `/mnt/h/dos-c/software/win31-operator/include/operator_protocol.h`,
+   `/mnt/h/dos-c/software/win31-operator/src/operator_protocol.c`, and the
+   DOS-C Win31 dashboard vision-gate source.
 2. Keep verified facts, assumptions, and unknowns separate in records.
 3. Confirm source IDs before changing React Native, Expo, RNW, App Center,
    Android/iOS permission, or EAS claims.

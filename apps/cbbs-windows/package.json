@@ -7,6 +7,8 @@
     "test:windows": "jest --config jest.config.windows.js"
   },
   "dependencies": {
+    "@cbbs/product": "workspace:*",
+    "@cbbs/product-ui": "workspace:*",
     "@cbbs/protocol": "workspace:*",
     "react": "19.2.3",
     "react-native": "0.83.9",

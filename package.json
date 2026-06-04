@@ -9,7 +9,7 @@
   "scripts": {
     "audit:react-native": "python3 scripts/scaffold_audit_react_native.py",
     "doctor:expo": "pnpm --filter @cbbs/client exec expo-doctor",
-    "lint": "eslint apps/cbbs-client/app apps/cbbs-windows/src apps/cbbs-windows/__tests__ packages --ext .ts,.tsx --max-warnings=0",
+    "lint": "eslint apps/cbbs-client/app apps/cbbs-client-windows/src apps/cbbs-client-windows/__tests__ apps/cbbs-hardware-tools-windows/src apps/cbbs-hardware-tools-windows/__tests__ apps/cbbs-sysop-windows/src apps/cbbs-sysop-windows/__tests__ apps/cbbs-windows/src apps/cbbs-windows/__tests__ packages --ext .ts,.tsx --max-warnings=0",
     "test": "jest --runInBand",
     "typecheck": "tsc -p tsconfig.typecheck.json --pretty false"
   },

@@ -508,6 +508,9 @@ export function validateHostCommandBridgeResult(value: unknown): ValidationResul
   if (value.available !== false) {
     errors.push("available must remain false while the bridge is unavailable");
   }
+  if (value.noSecretScan !== true) {
+    errors.push("noSecretScan must remain true while the bridge is unavailable");
+  }
   if (value.status !== "unavailable") {
     errors.push("status must remain unavailable while the bridge is unavailable");
   }

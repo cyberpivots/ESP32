@@ -354,6 +354,25 @@ def _manifest_capabilities(path: Path) -> set[str]:
     return capabilities
 
 
+def _forbidden_output_group(rel: Path) -> Path | None:
+    """Return the shortest generated-output directory represented by rel."""
+    parts = rel.parts
+    for index, part in enumerate(parts):
+        if part in FORBIDDEN_WINDOWS_OUTPUT_DIRS:
+            return Path(*parts[: index + 1])
+    return None
+
+
+def summarize_forbidden_output_groups(paths: list[Path]) -> list[tuple[Path, int]]:
+    groups: dict[Path, int] = {}
+    for rel in paths:
+        group = _forbidden_output_group(rel)
+        if group is None:
+            continue
+        groups[group] = groups.get(group, 0) + 1
+    return sorted(groups.items(), key=lambda item: item[0].as_posix())
+
+
 def _inspect_single_windows_native_surface(
     root: Path,
     native_dir_rel: Path,
@@ -373,15 +392,21 @@ def _inspect_single_windows_native_surface(
         if not (native_dir / rel).exists():
             failures.append(f"{label} Windows native surface missing expected file: {rel.as_posix()}")
 
+    forbidden_output_paths: list[Path] = []
     for path in sorted(native_dir.rglob("*")):
         rel = path.relative_to(native_dir)
-        if any(part in FORBIDDEN_WINDOWS_OUTPUT_DIRS for part in rel.parts):
-            failures.append(f"{label} Windows native surface contains build output dir: {rel.as_posix()}")
+        if _forbidden_output_group(rel) is not None:
+            forbidden_output_paths.append(rel)
         if path.is_file():
             if path.name in FORBIDDEN_WINDOWS_OUTPUT_NAMES:
                 failures.append(f"{label} Windows native surface contains store/signing file: {rel.as_posix()}")
             if path.suffix.lower() in FORBIDDEN_WINDOWS_OUTPUT_SUFFIXES:
                 failures.append(f"{label} Windows native surface contains package/signing artifact: {rel.as_posix()}")
+    for group, count in summarize_forbidden_output_groups(forbidden_output_paths):
+        failures.append(
+            f"{label} Windows native surface contains generated output group: "
+            f"{group.as_posix()} ({count} entries)"
+        )
 
     manifests = sorted(native_dir.rglob("Package.appxmanifest"))
     if len(manifests) != 1:

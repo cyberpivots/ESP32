@@ -6,6 +6,7 @@ import {
   DOSC_WIN31_REQUEST_NAMES_AUDIT_ONLY,
   HOST_COMMAND_ACTION_IDS,
   HOST_COMMAND_BRIDGE_SCHEMA,
+  HOST_COMMAND_RESULT_STATUSES,
   HOST_COMMAND_UNAVAILABLE_REASON,
   INTENT_IDS,
   LOCAL_ONLY_REASON,
@@ -355,6 +356,41 @@ describe("CBBS client protocol contract", () => {
       const validation = validateHostCommandBridgeResult(stale);
       expect(validation.ok).toBe(false);
       expect(validation.errors.join(" ")).toContain("boundsProof.actualBytes must match encoded result bytes");
+    }
+  });
+
+  test("rejects unavailable HostCommandBridge results without positive secret-scan proof", () => {
+    const unavailable = createUnavailableHostCommandResult({ requestId: "request-secret-scan" }, "2026-06-03T00:00:00.000Z");
+    const missingProof = withExactBoundsProof({
+      ...unavailable,
+      noSecretScan: false,
+      boundsProof: {
+        ...unavailable.boundsProof,
+        actualBytes: 0
+      }
+    });
+
+    const result = validateHostCommandBridgeResult(missingProof);
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(" ")).toContain("noSecretScan must remain true");
+  });
+
+  test("rejects all non-unavailable HostCommandBridge result statuses", () => {
+    const unavailable = createUnavailableHostCommandResult({ requestId: "request-status-proof" }, "2026-06-03T00:00:00.000Z");
+
+    for (const status of HOST_COMMAND_RESULT_STATUSES.filter((candidate) => candidate !== "unavailable")) {
+      const result = validateHostCommandBridgeResult(
+        withExactBoundsProof({
+          ...unavailable,
+          status,
+          boundsProof: {
+            ...unavailable.boundsProof,
+            actualBytes: 0
+          }
+        })
+      );
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(" ")).toContain("status must remain unavailable");
     }
   });
 

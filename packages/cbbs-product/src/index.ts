@@ -1,4 +1,18 @@
-import type { HostCommandActionClass, HostCommandActionId, IntentId, ViewId } from "@cbbs/protocol";
+import {
+  CLOSED_SURFACE_IDS,
+  HOST_COMMAND_BRIDGE_SCHEMA,
+  createUnavailableHostCommandResult,
+  validateHostCommandBridgeRequest,
+  validateHostCommandBridgeResult,
+  type ClosedSurfaceId,
+  type HostCommandActionClass,
+  type HostCommandActionId,
+  type HostCommandBridgeRequest,
+  type HostCommandBridgeResult,
+  type IntentId,
+  type ValidationResult,
+  type ViewId
+} from "@cbbs/protocol";
 import { CBBS_RNW_MENU_SCHEMA, hardwareToolsMenu as generatedHardwareToolsMenu } from "./hardwareToolsMenu.generated";
 import { CBBS_RNW_WIN31_PARITY_SCHEMA, win31ParityContract as generatedWin31ParityContract } from "./win31Parity.generated";
 
@@ -32,6 +46,25 @@ export type Win31ParityPageId = (typeof generatedWin31ParityContract.pages)[numb
 export type Win31ParityCategoryDisposition =
   (typeof generatedWin31ParityContract.roleCoverage.client)[number]["disposition"];
 export type DoscWin31RequestName = (typeof generatedWin31ParityContract.requestNames)[number];
+export const HARDWARE_TOOLS_EVIDENCE_REFS = [
+  "bench-readiness",
+  "radio-study",
+  "mesh-records",
+  "firmware-records",
+  "fixture-plate",
+  "safety-gates",
+  "activity-records"
+] as const;
+export const HARDWARE_TOOLS_EVIDENCE_PROVENANCE = [
+  "transcript",
+  "source-ledger",
+  "fixture-artifact",
+  "runtime-screenshot",
+  "blocked-gate"
+] as const;
+
+export type HardwareToolsEvidenceRef = (typeof HARDWARE_TOOLS_EVIDENCE_REFS)[number];
+export type HardwareToolsEvidenceProvenance = (typeof HARDWARE_TOOLS_EVIDENCE_PROVENANCE)[number];
 export type ProductActionState =
   | "ready"
   | "needsDevice"
@@ -122,6 +155,46 @@ export interface ProductAction {
   doscRequestName?: DoscWin31RequestName;
 }
 
+export interface HardwareToolsEvidenceEntry {
+  ref: HardwareToolsEvidenceRef;
+  title: string;
+  provenance: HardwareToolsEvidenceProvenance;
+  redactionNote: string;
+  authorityNote: string;
+}
+
+export interface HardwareToolsClosedWorkRow {
+  id: ClosedSurfaceId;
+  label: string;
+  state: "closed";
+  disabled: true;
+  evidenceRef: HardwareToolsEvidenceRef;
+  authorityNote: string;
+}
+
+export interface HardwareToolsBridgePreview {
+  kind: "bridgeDryRun";
+  actionId: string;
+  bridgeActionId: HostCommandActionId;
+  request: HostCommandBridgeRequest;
+  requestValidation: ValidationResult;
+  unavailableResult: HostCommandBridgeResult;
+  resultValidation: ValidationResult;
+  dispatchPath: "none";
+  evidence: HardwareToolsEvidenceEntry;
+}
+
+export interface HardwareToolsBlockedGatePreview {
+  kind: "blockedGate";
+  actionId: string;
+  bridgeActionId?: HostCommandActionId;
+  blockedReason: "tier3-closed";
+  dispatchPath: "none";
+  evidence: HardwareToolsEvidenceEntry;
+}
+
+export type HardwareToolsActionPreview = HardwareToolsBridgePreview | HardwareToolsBlockedGatePreview;
+
 export interface ProductPanel {
   id: string;
   title: string;
@@ -193,6 +266,67 @@ const sysopViews: ProductView[] = win31ParityContract.pages.map((page) => ({
 }));
 
 export const hardwareToolsMenu = normalizeGeneratedMenu(generatedHardwareToolsMenu);
+
+export const hardwareToolsEvidenceCatalog: Record<HardwareToolsEvidenceRef, HardwareToolsEvidenceEntry> = {
+  "bench-readiness": {
+    ref: "bench-readiness",
+    title: "Bench Readiness",
+    provenance: "blocked-gate",
+    redactionNote: "Target aliases only",
+    authorityNote: "Review only; gate authority required"
+  },
+  "radio-study": {
+    ref: "radio-study",
+    title: "Radio Study",
+    provenance: "source-ledger",
+    redactionNote: "Identifiers hidden",
+    authorityNote: "Review only; saved profile classes only"
+  },
+  "mesh-records": {
+    ref: "mesh-records",
+    title: "Mesh Records",
+    provenance: "transcript",
+    redactionNote: "Station aliases only",
+    authorityNote: "Review only; recorded summaries only"
+  },
+  "firmware-records": {
+    ref: "firmware-records",
+    title: "Firmware Records",
+    provenance: "fixture-artifact",
+    redactionNote: "Image identifiers summarized",
+    authorityNote: "Review only; install gate remains closed"
+  },
+  "fixture-plate": {
+    ref: "fixture-plate",
+    title: "Fixture Plate",
+    provenance: "fixture-artifact",
+    redactionNote: "Measurements summarized",
+    authorityNote: "Review only; fabrication evidence remains provisional"
+  },
+  "safety-gates": {
+    ref: "safety-gates",
+    title: "Safety Gates",
+    provenance: "blocked-gate",
+    redactionNote: "Private target details hidden",
+    authorityNote: "Review only; recovery and authority required"
+  },
+  "activity-records": {
+    ref: "activity-records",
+    title: "Activity Records",
+    provenance: "transcript",
+    redactionNote: "Transcript rows are bounded",
+    authorityNote: "Review only; no dispatch path"
+  }
+} as const;
+
+export const hardwareToolsClosedWorkMatrix: readonly HardwareToolsClosedWorkRow[] = CLOSED_SURFACE_IDS.map((id) => ({
+  id,
+  label: closedSurfaceLabel(id),
+  state: "closed",
+  disabled: true,
+  evidenceRef: "safety-gates",
+  authorityNote: "Gate authority required"
+}));
 
 const hardwareViews: ProductView[] = hardwareToolsMenu.pages.map((page) => ({
   id: `hardware-${page.id}`,
@@ -430,6 +564,69 @@ export function productExecutionModeLabel(mode: ProductExecutionMode): string {
   }
 }
 
+export function getHardwareToolsEvidenceEntry(ref: string | undefined): HardwareToolsEvidenceEntry | undefined {
+  if (!isHardwareToolsEvidenceRef(ref)) {
+    return undefined;
+  }
+  return hardwareToolsEvidenceCatalog[ref];
+}
+
+export function getHardwareToolsClosedWorkMatrix(): readonly HardwareToolsClosedWorkRow[] {
+  return hardwareToolsClosedWorkMatrix;
+}
+
+export function buildHardwareToolsActionPreview(action: ProductAction): HardwareToolsActionPreview | undefined {
+  const evidence = getHardwareToolsEvidenceEntry(action.evidenceRef) ?? hardwareToolsEvidenceCatalog["activity-records"];
+
+  if (action.executionMode === "tier3Closed") {
+    return {
+      kind: "blockedGate",
+      actionId: action.id,
+      bridgeActionId: action.bridgeActionId,
+      blockedReason: "tier3-closed",
+      dispatchPath: "none",
+      evidence
+    };
+  }
+
+  if (action.executionMode !== "artifactReview" || !action.bridgeActionId || !isProductActionEnabled(action)) {
+    return undefined;
+  }
+
+  const requestId = `${aliasForAction(action.id)}-dry-run`.slice(0, 64);
+  const request: HostCommandBridgeRequest = {
+    schema: HOST_COMMAND_BRIDGE_SCHEMA,
+    requestId,
+    appId: "hardware-tools",
+    actorRole: "sysop",
+    actionId: action.bridgeActionId,
+    actionClass: action.actionClass ?? "read",
+    targetRef: "review-target",
+    params: {
+      review: "artifact",
+      provenance: evidence.provenance
+    },
+    dryRun: true,
+    gateRef: "future-review",
+    timeoutMs: 1000,
+    redactionProfile: "primary",
+    idempotencyKey: requestId
+  };
+  const unavailableResult = createUnavailableHostCommandResult({ requestId }, "2026-06-03T00:00:00.000Z");
+
+  return {
+    kind: "bridgeDryRun",
+    actionId: action.id,
+    bridgeActionId: action.bridgeActionId,
+    request,
+    requestValidation: validateHostCommandBridgeRequest(request),
+    unavailableResult,
+    resultValidation: validateHostCommandBridgeResult(unavailableResult),
+    dispatchPath: "none",
+    evidence
+  };
+}
+
 function normalizeGeneratedMenu(value: typeof generatedHardwareToolsMenu): ProductMenu {
   return {
     schema: value.schema,
@@ -489,4 +686,56 @@ function actionClassForItem(actionId: string, mode: ProductExecutionMode): HostC
     return "change";
   }
   return "read";
+}
+
+function isHardwareToolsEvidenceRef(value: string | undefined): value is HardwareToolsEvidenceRef {
+  return typeof value === "string" && HARDWARE_TOOLS_EVIDENCE_REFS.includes(value as HardwareToolsEvidenceRef);
+}
+
+function aliasForAction(value: string): string {
+  return value
+    .replace(/([a-z])([A-Z])/g, "$1-$2")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase()
+    .slice(0, 48);
+}
+
+function closedSurfaceLabel(id: ClosedSurfaceId): string {
+  switch (id) {
+    case "bridge_abi":
+      return "Bridge contract";
+    case "serial_abi":
+      return "Transport contract";
+    case "firmware_abi":
+      return "Firmware contract";
+    case "gate_f_service_code":
+      return "Service code contract";
+    case "serial_write":
+      return "Transport mutation";
+    case "rf_xbee_write":
+      return "Radio profile mutation";
+    case "ble_pairing":
+      return "Wireless pairing";
+    case "web_bluetooth":
+      return "Browser wireless";
+    case "web_serial":
+      return "Browser transport";
+    case "softap_probe":
+      return "Access point probe";
+    case "local_network_discovery":
+      return "Network discovery";
+    case "flash_erase_monitor":
+      return "Device image operations";
+    case "relay_or_load":
+      return "Power output work";
+    case "persistent_config_write":
+      return "Persistent settings";
+    case "native_prebuild":
+      return "Native project generation";
+    case "native_windows_project":
+      return "Windows native project";
+    case "external_service_build":
+      return "External build service";
+  }
 }

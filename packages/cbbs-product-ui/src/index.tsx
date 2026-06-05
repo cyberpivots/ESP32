@@ -1,14 +1,19 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import {
+  buildHardwareToolsActionPreview,
   canAppendProductTranscript,
   getCbbsProductWindowsAppProfile,
+  getHardwareToolsClosedWorkMatrix,
+  getHardwareToolsEvidenceEntry,
   getProductActionsForPage,
   getProductPageForView,
   isProductActionEnabled,
   productActionStateLabel,
   productExecutionModeLabel,
   type CbbsProductWindowsAppId,
+  type HardwareToolsActionPreview,
+  type HardwareToolsEvidenceEntry,
   type ProductAction,
   type ProductActionState,
   type ProductSection,
@@ -16,7 +21,6 @@ import {
 } from "@cbbs/product";
 import {
   HOST_COMMAND_UNAVAILABLE_REASON,
-  createUnavailableHostCommandResult,
   localIntent,
   type AppRole,
   type HostCommandBridgeResult,
@@ -52,6 +56,8 @@ const initialTranscript: TranscriptEntry[] = [
 
 export function ProductWindowsShell({ appId, onIntent = () => undefined }: ProductWindowsShellProps) {
   const profile = getCbbsProductWindowsAppProfile(appId);
+  const { width } = useWindowDimensions();
+  const isCompact = width < 760;
   const [activeViewId, setActiveViewId] = useState(profile.views[0]?.id ?? "home");
   const [selectedActionId, setSelectedActionId] = useState("");
   const [openMenu, setOpenMenu] = useState<MenuName | null>(null);
@@ -61,6 +67,17 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
   const activePageId = activeView?.pageId ?? activeView?.id ?? "home";
   const activePage = activeView ? getProductPageForView(profile, activeView) : undefined;
   const pageActions = getProductActionsForPage(profile, activePageId);
+  const selectedAction = pageActions.find((action) => action.id === selectedActionId);
+  const previewAction =
+    appId === "hardware-tools"
+      ? selectedAction ??
+        pageActions.find((action) => buildHardwareToolsActionPreview(action)?.kind === "bridgeDryRun") ??
+        pageActions.find((action) => buildHardwareToolsActionPreview(action)?.kind === "blockedGate")
+      : undefined;
+  const hardwarePreview = previewAction ? buildHardwareToolsActionPreview(previewAction) : undefined;
+  const hardwareEvidence =
+    appId === "hardware-tools" ? collectHardwareEvidence(activePage, pageActions, profile.panels) : [];
+  const closedWorkRows = appId === "hardware-tools" ? getHardwareToolsClosedWorkMatrix() : [];
 
   const appendTranscript = (entry: Omit<TranscriptEntry, "id">) => {
     setTranscript((entries) => {
@@ -102,16 +119,17 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
         proofId: `${appId}-${aliasForAction(action.id)}-note`
       })
     );
+    const preview = buildHardwareToolsActionPreview(action);
     appendTranscript({
       title: action.label,
       detail: action.summary,
       status: productExecutionModeLabel(action.executionMode),
-      result: action.bridgeActionId ? unavailableResultForAction(action) : undefined
+      result: preview?.kind === "bridgeDryRun" ? preview.unavailableResult : undefined
     });
   };
 
   return (
-    <ScrollView testID={`windows-${appId}-shell`} contentContainerStyle={styles.shell}>
+    <ScrollView testID={`windows-${appId}-shell`} contentContainerStyle={[styles.shell, isCompact ? styles.shellCompact : undefined]}>
       <View testID={`windows-${appId}-banner`} style={styles.titleBar}>
         <View>
           <Text style={styles.eyebrow}>{profile.audience}</Text>
@@ -130,6 +148,7 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
             key={menuName}
             testID={`windows-${appId}-menu-${menuName}`}
             accessibilityLabel={`${menuName} menu`}
+            accessibilityHint="Opens page-scoped commands"
             accessibilityRole="button"
             accessibilityState={{ expanded: openMenu === menuName }}
             onPress={() => setOpenMenu((current) => (current === menuName ? null : menuName))}
@@ -145,14 +164,15 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
         </View>
       ) : null}
 
-      <View testID={`windows-${appId}-body`} style={styles.body}>
-        <View testID={`windows-${appId}-nav`} style={styles.pageList}>
+      <View testID={`windows-${appId}-body`} style={[styles.body, isCompact ? styles.bodyCompact : undefined]}>
+        <View testID={`windows-${appId}-nav`} style={[styles.pageList, isCompact ? styles.pageListCompact : undefined]}>
           <Text style={styles.columnHeader}>Pages</Text>
           {profile.views.map((view) => (
             <Pressable
               key={view.id}
               testID={`windows-${appId}-page-${view.pageId ?? view.id}`}
               accessibilityLabel={`Open ${view.label}`}
+              accessibilityHint="Changes the active page and records a local navigation intent"
               accessibilityRole="button"
               accessibilityState={{ selected: activeView?.id === view.id }}
               onPress={() => selectView(view)}
@@ -166,7 +186,7 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
           ))}
         </View>
 
-        <View testID={`windows-${appId}-workspace`} style={styles.workspace}>
+        <View testID={`windows-${appId}-workspace`} style={[styles.workspace, isCompact ? styles.workspaceCompact : undefined]}>
           <View style={styles.workspaceHeader}>
             <View>
               <Text style={styles.sectionTitle}>{activeView?.label ?? "Home"}</Text>
@@ -209,7 +229,7 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
           )}
         </View>
 
-        <View testID={`windows-${appId}-side-panel`} style={styles.evidenceRail}>
+        <View testID={`windows-${appId}-side-panel`} style={[styles.evidenceRail, isCompact ? styles.evidenceRailCompact : undefined]}>
           <Text style={styles.columnHeader}>Evidence</Text>
           {activePage ? (
             <View testID={`windows-${appId}-evidence-${activePage.id}`} style={styles.railPanel}>
@@ -227,19 +247,26 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
           ))}
 
           {appId === "hardware-tools" ? (
-            <View style={styles.railPanel}>
-              <Text style={styles.panelTitle}>Gate Phrase</Text>
-              <TextInput
-                testID="windows-hardware-tools-gate-phrase"
-                accessibilityLabel="Gate phrase"
-                value={gatePhrase}
-                onChangeText={setGatePhrase}
-                placeholder="Record gate phrase"
-                placeholderTextColor="#93A4B8"
-                style={styles.input}
-              />
-              <Text style={styles.panelBody}>Gate phrase records notes but does not unlock closed work.</Text>
-            </View>
+            <>
+              <HardwareEvidencePanel appId={appId} entries={hardwareEvidence} />
+              <HardwareBridgePreviewPanel appId={appId} preview={hardwarePreview} />
+              <HardwareClosedWorkMatrix appId={appId} rows={closedWorkRows} />
+              <View testID="windows-hardware-tools-gate-panel" style={styles.railPanel}>
+                <Text style={styles.panelTitle}>Gate Phrase</Text>
+                <TextInput
+                  testID="windows-hardware-tools-gate-phrase"
+                  accessibilityLabel="Gate phrase"
+                  accessibilityHint="Records a phrase without unlocking closed work"
+                  accessibilityState={{ disabled: false }}
+                  value={gatePhrase}
+                  onChangeText={setGatePhrase}
+                  placeholder="Record gate phrase"
+                  placeholderTextColor="#93A4B8"
+                  style={styles.input}
+                />
+                <Text style={styles.panelBody}>Gate phrase records notes but does not unlock closed work.</Text>
+              </View>
+            </>
           ) : null}
         </View>
       </View>
@@ -267,6 +294,113 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
         ))}
       </View>
     </ScrollView>
+  );
+}
+
+function HardwareEvidencePanel({
+  appId,
+  entries
+}: {
+  appId: CbbsProductWindowsAppId;
+  entries: readonly HardwareToolsEvidenceEntry[];
+}) {
+  return (
+    <View
+      testID={`windows-${appId}-evidence-provenance`}
+      accessibilityLabel="Evidence provenance"
+      accessibilityHint="Shows the current page evidence before transcript rows"
+      style={styles.railPanel}
+    >
+      <Text style={styles.panelTitle}>Evidence Provenance</Text>
+      {entries.map((entry) => (
+        <View
+          key={entry.ref}
+          testID={`windows-${appId}-evidence-ref-${entry.ref}`}
+          accessibilityLabel={`${entry.title} evidence provenance`}
+          accessibilityHint={entry.authorityNote}
+          style={styles.evidenceRow}
+        >
+          <Text style={styles.panelBody}>{entry.title}</Text>
+          <Text style={styles.panelState}>{provenanceLabel(entry.provenance)}</Text>
+          <Text style={styles.transcriptMeta}>{entry.redactionNote}</Text>
+          <Text style={styles.transcriptMeta}>{entry.authorityNote}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function HardwareBridgePreviewPanel({
+  appId,
+  preview
+}: {
+  appId: CbbsProductWindowsAppId;
+  preview: HardwareToolsActionPreview | undefined;
+}) {
+  return (
+    <View
+      testID={`windows-${appId}-bridge-preview`}
+      accessibilityLabel="Bridge preview"
+      accessibilityHint="Shows validated dry-run metadata without a dispatch path"
+      style={styles.railPanel}
+    >
+      <Text style={styles.panelTitle}>Bridge Preview</Text>
+      {!preview ? (
+        <Text style={styles.panelBody}>No bridge preview for this page.</Text>
+      ) : preview.kind === "bridgeDryRun" ? (
+        <View testID={`windows-${appId}-bridge-preview-${preview.actionId}`} style={styles.previewPanel}>
+          <Text style={styles.panelBody}>{preview.evidence.title}</Text>
+          <Text style={styles.transcriptMeta}>request: {preview.requestValidation.ok ? "valid" : "blocked"}</Text>
+          <Text style={styles.transcriptMeta}>dryRun: {String(preview.request.dryRun)}</Text>
+          <Text style={styles.transcriptMeta}>redaction: {preview.request.redactionProfile}</Text>
+          <Text style={styles.transcriptMeta}>dispatch: {preview.dispatchPath}</Text>
+          <Text style={styles.transcriptMeta}>result: {preview.unavailableResult.reason}</Text>
+          <Text style={styles.transcriptMeta}>noSecretScan: {String(preview.unavailableResult.noSecretScan)}</Text>
+        </View>
+      ) : (
+        <View testID={`windows-${appId}-bridge-preview-${preview.actionId}`} style={styles.previewPanel}>
+          <Text style={styles.panelBody}>{preview.evidence.title}</Text>
+          <Text style={styles.transcriptMeta}>blocked: gate closed</Text>
+          <Text style={styles.transcriptMeta}>dispatch: {preview.dispatchPath}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function HardwareClosedWorkMatrix({
+  appId,
+  rows
+}: {
+  appId: CbbsProductWindowsAppId;
+  rows: ReturnType<typeof getHardwareToolsClosedWorkMatrix>;
+}) {
+  return (
+    <View
+      testID={`windows-${appId}-closed-work-matrix`}
+      accessibilityLabel="Closed work matrix"
+      accessibilityHint="Lists disabled work that needs fresh gate authority"
+      style={styles.railPanel}
+    >
+      <Text style={styles.panelTitle}>Closed Work</Text>
+      <View style={styles.closedMatrix}>
+        {rows.map((row) => (
+          <Pressable
+            key={row.id}
+            testID={`windows-${appId}-closed-${row.id}`}
+            accessibilityLabel={`${row.label} closed`}
+            accessibilityHint={row.authorityNote}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: true }}
+            disabled
+            style={styles.closedRow}
+          >
+            <Text style={styles.closedRowLabel}>{row.label}</Text>
+            <Text style={styles.closedRowMeta}>{row.authorityNote}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -298,6 +432,7 @@ function SectionView({
               key={action.id}
               testID={`windows-${appId}-action-${action.id}`}
               accessibilityLabel={action.label}
+              accessibilityHint={enabled ? "Records a local review intent" : "Requires gate authority before use"}
               accessibilityRole="button"
               accessibilityState={{ disabled: !enabled, selected: selectedActionId === action.id }}
               disabled={!enabled}
@@ -333,6 +468,8 @@ function renderDropdown(
       <Pressable
         key={view.id}
         testID={`windows-${appId}-dropdown-views-${view.pageId ?? view.id}`}
+        accessibilityLabel={`Open ${view.label}`}
+        accessibilityHint="Changes the active page"
         accessibilityRole="menuitem"
         onPress={() => selectView(view)}
         style={styles.dropdownItem}
@@ -365,6 +502,8 @@ function renderDropdown(
       <Pressable
         key={action.id}
         testID={`windows-${appId}-dropdown-${menuName}-${action.id}`}
+        accessibilityLabel={action.label}
+        accessibilityHint={enabled ? "Records a local review intent" : "Requires gate authority before use"}
         accessibilityRole="menuitem"
         accessibilityState={{ disabled: !enabled }}
         disabled={!enabled}
@@ -408,6 +547,50 @@ function actionsForMenu(
   return [];
 }
 
+function collectHardwareEvidence(
+  activePage: ReturnType<typeof getProductPageForView> | undefined,
+  pageActions: readonly ProductAction[],
+  panels: readonly { evidenceRef?: string }[]
+): readonly HardwareToolsEvidenceEntry[] {
+  const refs: string[] = [];
+  const pushRef = (ref: string | undefined) => {
+    if (ref && !refs.includes(ref)) {
+      refs.push(ref);
+    }
+  };
+
+  pushRef(activePage?.evidenceRef);
+  activePage?.sections.forEach((section) => {
+    pushRef(section.evidenceRef);
+    section.items.forEach((item) => pushRef(item.evidenceRef));
+  });
+  pageActions.forEach((action) => pushRef(action.evidenceRef));
+  panels.forEach((panel) => pushRef(panel.evidenceRef));
+
+  const entries = refs
+    .map((ref) => getHardwareToolsEvidenceEntry(ref))
+    .filter((entry): entry is HardwareToolsEvidenceEntry => Boolean(entry));
+
+  return entries.length > 0 ? entries : [getHardwareToolsEvidenceEntry("activity-records")].filter(
+    (entry): entry is HardwareToolsEvidenceEntry => Boolean(entry)
+  );
+}
+
+function provenanceLabel(provenance: HardwareToolsEvidenceEntry["provenance"]): string {
+  switch (provenance) {
+    case "transcript":
+      return "Transcript";
+    case "source-ledger":
+      return "Source ledger";
+    case "fixture-artifact":
+      return "Fixture artifact";
+    case "runtime-screenshot":
+      return "Runtime screenshot";
+    case "blocked-gate":
+      return "Blocked gate";
+  }
+}
+
 function labelForMenu(menuName: MenuName): string {
   switch (menuName) {
     case "session":
@@ -436,13 +619,6 @@ function roleForApp(appId: CbbsProductWindowsAppId): AppRole {
 
 export function firstViewForApp(appId: CbbsProductWindowsAppId): ViewId {
   return getCbbsProductWindowsAppProfile(appId).views[0]?.viewId ?? "home";
-}
-
-function unavailableResultForAction(action: ProductAction): HostCommandBridgeResult {
-  return createUnavailableHostCommandResult(
-    { requestId: `${aliasForAction(action.id)}-preview`.slice(0, 64) },
-    "2026-06-03T00:00:00.000Z"
-  );
 }
 
 function aliasForAction(value: string): string {
@@ -477,6 +653,9 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: "100%",
     padding: 10
+  },
+  shellCompact: {
+    padding: 8
   },
   titleBar: {
     alignItems: "center",
@@ -599,6 +778,9 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8
   },
+  bodyCompact: {
+    flexDirection: "column"
+  },
   pageList: {
     backgroundColor: "#0B1118",
     borderColor: "#2A3B47",
@@ -609,6 +791,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     minWidth: 148,
     padding: 8
+  },
+  pageListCompact: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: "100%"
   },
   columnHeader: {
     color: "#E2E8F0",
@@ -648,6 +835,11 @@ const styles = StyleSheet.create({
     gap: 8,
     minWidth: 280,
     padding: 10
+  },
+  workspaceCompact: {
+    flexBasis: "auto",
+    minWidth: 0,
+    width: "100%"
   },
   workspaceHeader: {
     alignItems: "flex-start",
@@ -750,12 +942,24 @@ const styles = StyleSheet.create({
     minWidth: 260,
     padding: 8
   },
+  evidenceRailCompact: {
+    maxWidth: "100%",
+    minWidth: 0,
+    width: "100%"
+  },
   railPanel: {
     borderColor: "#1F3340",
     borderRadius: 4,
     borderWidth: 1,
     gap: 6,
     padding: 8
+  },
+  evidenceRow: {
+    borderColor: "#263746",
+    borderRadius: 3,
+    borderWidth: 1,
+    gap: 3,
+    padding: 6
   },
   panelTitle: {
     color: "#FFFFFF",
@@ -771,6 +975,39 @@ const styles = StyleSheet.create({
     color: "#C4B5FD",
     fontSize: 11,
     fontWeight: "900"
+  },
+  previewPanel: {
+    borderColor: "#263746",
+    borderRadius: 3,
+    borderWidth: 1,
+    gap: 3,
+    padding: 6
+  },
+  closedMatrix: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6
+  },
+  closedRow: {
+    borderColor: "#3C2530",
+    borderRadius: 3,
+    borderWidth: 1,
+    flexBasis: 132,
+    flexGrow: 1,
+    minHeight: 56,
+    padding: 6
+  },
+  closedRowLabel: {
+    color: "#FDE68A",
+    fontSize: 11,
+    fontWeight: "900",
+    lineHeight: 15
+  },
+  closedRowMeta: {
+    color: "#F9A8D4",
+    fontSize: 10,
+    fontWeight: "800",
+    lineHeight: 14
   },
   input: {
     borderColor: "#64748B",

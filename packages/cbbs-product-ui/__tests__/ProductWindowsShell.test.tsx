@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { validateUiIntent, type UiIntentRecord } from "@cbbs/protocol";
+import { CLOSED_SURFACE_IDS, validateUiIntent, type UiIntentRecord } from "@cbbs/protocol";
 import { CBBS_PRODUCT_WINDOWS_APP_IDS } from "@cbbs/product";
 import { ProductWindowsShell } from "../src";
 
@@ -12,6 +12,8 @@ type MockNativeProps = {
   value?: string;
   [key: string]: unknown;
 };
+
+let mockWindowDimensions = { width: 1280, height: 720, scale: 1, fontScale: 1 };
 
 jest.mock("react-native", () => {
   const React = jest.requireActual<typeof import("react")>("react");
@@ -37,11 +39,16 @@ jest.mock("react-native", () => {
     },
     Text: createHost("Text"),
     TextInput: createHost("TextInput"),
-    View: createHost("View")
+    View: createHost("View"),
+    useWindowDimensions: () => mockWindowDimensions
   };
 });
 
 describe("ProductWindowsShell", () => {
+  beforeEach(() => {
+    mockWindowDimensions = { width: 1280, height: 720, scale: 1, fontScale: 1 };
+  });
+
   test("renders all three product apps without developer-facing labels", () => {
     for (const appId of CBBS_PRODUCT_WINDOWS_APP_IDS) {
       const rendered = render(<ProductWindowsShell appId={appId} />);
@@ -88,6 +95,30 @@ describe("ProductWindowsShell", () => {
       flexShrink: 1,
       maxWidth: 340,
       minWidth: 260
+    });
+  });
+
+  test("switches to compact layout using window dimensions", () => {
+    mockWindowDimensions = { width: 640, height: 720, scale: 1, fontScale: 1 };
+    render(<ProductWindowsShell appId="hardware-tools" />);
+
+    expect(styleOf("windows-hardware-tools-body")).toMatchObject({
+      flexDirection: "column"
+    });
+    expect(styleOf("windows-hardware-tools-nav")).toMatchObject({
+      flexDirection: "row",
+      flexWrap: "wrap",
+      width: "100%"
+    });
+    expect(styleOf("windows-hardware-tools-workspace")).toMatchObject({
+      flexBasis: "auto",
+      minWidth: 0,
+      width: "100%"
+    });
+    expect(styleOf("windows-hardware-tools-side-panel")).toMatchObject({
+      maxWidth: "100%",
+      minWidth: 0,
+      width: "100%"
     });
   });
 
@@ -156,6 +187,43 @@ describe("ProductWindowsShell", () => {
     expect(screen.queryByTestId("windows-hardware-tools-action-hardware.benchTargetReview")).toBeNull();
   });
 
+  test("renders Hardware Tools evidence provenance and bridge preview panels", () => {
+    render(<ProductWindowsShell appId="hardware-tools" />);
+
+    expect(screen.getByTestId("windows-hardware-tools-evidence-provenance").props.accessibilityHint).toMatch(
+      /current page evidence/
+    );
+    expect(screen.getByTestId("windows-hardware-tools-evidence-ref-bench-readiness")).toBeTruthy();
+    expect(screen.getByTestId("windows-hardware-tools-evidence-ref-safety-gates")).toBeTruthy();
+    expect(screen.getByTestId("windows-hardware-tools-evidence-ref-activity-records")).toBeTruthy();
+    expect(screen.getAllByText("Blocked gate").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Transcript").length).toBeGreaterThanOrEqual(1);
+
+    const preview = screen.getByTestId("windows-hardware-tools-bridge-preview");
+    expect(preview.props.accessibilityLabel).toBe("Bridge preview");
+    expect(screen.getByTestId("windows-hardware-tools-bridge-preview-hardware.benchTargetReview")).toBeTruthy();
+    expect(screen.getByText("request: valid")).toBeTruthy();
+    expect(screen.getByText("dryRun: true")).toBeTruthy();
+    expect(screen.getByText("redaction: primary")).toBeTruthy();
+    expect(screen.getByText("dispatch: none")).toBeTruthy();
+    expect(screen.getByText("result: adapter_unavailable")).toBeTruthy();
+  });
+
+  test("renders disabled Hardware Tools closed-work matrix from protocol closed surfaces", () => {
+    const rendered = render(<ProductWindowsShell appId="hardware-tools" />);
+
+    expect(screen.getByTestId("windows-hardware-tools-closed-work-matrix").props.accessibilityHint).toMatch(
+      /fresh gate authority/
+    );
+    for (const surfaceId of CLOSED_SURFACE_IDS) {
+      const row = screen.getByTestId(`windows-hardware-tools-closed-${surfaceId}`);
+      expect(row.props.disabled).toBe(true);
+      expect(row.props.accessibilityState).toMatchObject({ disabled: true });
+      expect(row.props.accessibilityHint).toBe("Gate authority required");
+    }
+    expect(visibleText(rendered.toJSON())).not.toMatch(/serial|xbee|\bRF\b|flash|erase|monitor|relay|COM\d+|mains/i);
+  });
+
   test("emits local UI intents and renders unavailable transcript results for artifact reviews", () => {
     const intents: UiIntentRecord[] = [];
     render(<ProductWindowsShell appId="hardware-tools" onIntent={(intent) => intents.push(intent)} />);
@@ -190,6 +258,15 @@ describe("ProductWindowsShell", () => {
     expect(intents).toHaveLength(2);
     expect(screen.getByTestId("windows-hardware-tools-action-hardware.deviceUpdatePlan").props.accessibilityState).toMatchObject({
       disabled: true
+    });
+    expect(screen.getByTestId("windows-hardware-tools-action-hardware.deviceUpdatePlan").props.accessibilityHint).toMatch(
+      /gate authority/
+    );
+    expect(screen.getByTestId("windows-hardware-tools-gate-phrase").props.accessibilityHint).toMatch(
+      /without unlocking/
+    );
+    expect(screen.getByTestId("windows-hardware-tools-gate-phrase").props.accessibilityState).toMatchObject({
+      disabled: false
     });
     expect(screen.getByText("Gate phrase records notes but does not unlock closed work.")).toBeTruthy();
   });

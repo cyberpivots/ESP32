@@ -132,6 +132,21 @@ or start network/file-transfer behavior.
 - `tools/react-native/`: scaffold validation notes plus the Hardware Tools
   `cbbs_rnw_menu.v1` XML source and generator.
 
+## RNW Debug Review Guardrail
+
+Split RNW Debug packages are not standalone review launch targets by default.
+They load `index` from Metro in Debug mode, so launching an installed package
+from Start menu or `shell:AppsFolder` without the matching app-local Metro
+server can show a React Native load error or loading-only screen.
+
+For review, use the app-local `react-native run-windows --no-telemetry`
+command recorded in the active runtime task. If an installed Debug package is
+being relaunched after proof, first prove the correct app-local Metro server is
+running on `127.0.0.1:8081`, then capture a fresh screenshot that shows the
+loaded target UI with no redbox and no loading-only state. Run only one split
+RNW app/Metro pairing at a time; stop stale Metro/Node workers before switching
+between Client, Sysop, and Hardware Tools.
+
 ## Closed Surfaces
 
 No native prebuild outside the accepted Windows W3B gate, EAS, App Center,

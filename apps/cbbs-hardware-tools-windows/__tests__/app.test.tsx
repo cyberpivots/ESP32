@@ -44,7 +44,8 @@ jest.mock("react-native", () => {
     },
     Text: createHost("Text"),
     TextInput: createHost("TextInput"),
-    View: createHost("View")
+    View: createHost("View"),
+    useWindowDimensions: () => ({ width: 1280, height: 720, scale: 1, fontScale: 1 })
   };
 });
 

@@ -134,8 +134,8 @@ def audit_plugin_cache_inventory(root: Path = ROOT) -> list[str]:
         )
     if "drift-prone" not in text:
         failures.append("research/skills/available-skills.md must mark plugin cache paths as drift-prone")
-    if "SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-06-02" not in text:
-        failures.append("research/skills/available-skills.md missing current skill inventory source ID")
+    if "SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-06-05" not in text:
+        failures.append("research/skills/available-skills.md missing same-session skill inventory source ID")
     return failures
 
 

@@ -1,7 +1,8 @@
 # Available Skills Inventory
 
-Verified on 2026-06-03 from
-`SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-06-03`; prior coverage retained from
+Verified on 2026-06-05 from
+`SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-06-05`; prior coverage retained from
+`SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-06-03` and
 `SRC-LOCAL-CODEX-SKILL-INVENTORY-2026-06-02`.
 
 ## Relevant for XBee radio work
@@ -23,10 +24,10 @@ Verified on 2026-06-03 from
 
 | Skill | Path | Conditional use |
 | --- | --- | --- |
-| github:github | `/home/cyber/.codex/plugins/cache/openai-curated/github/2b564709/skills/github` | Future GitHub repository, PR, issue, or Pages deployment orientation. |
-| github:gh-address-comments | `/home/cyber/.codex/plugins/cache/openai-curated/github/2b564709/skills/gh-address-comments` | Future actionable PR review comment handling. |
-| github:gh-fix-ci | `/home/cyber/.codex/plugins/cache/openai-curated/github/2b564709/skills/gh-fix-ci` | Future GitHub Actions failure investigation. |
-| github:yeet | `/home/cyber/.codex/plugins/cache/openai-curated/github/2b564709/skills/yeet` | Future commit, push, and draft PR publishing when explicitly requested. |
+| github:github | `/home/cyber/.codex/plugins/cache/openai-curated/github/9c1190e4/skills/github` | Future GitHub repository, PR, issue, or Pages deployment orientation. |
+| github:gh-address-comments | `/home/cyber/.codex/plugins/cache/openai-curated/github/9c1190e4/skills/gh-address-comments` | Future actionable PR review comment handling. |
+| github:gh-fix-ci | `/home/cyber/.codex/plugins/cache/openai-curated/github/9c1190e4/skills/gh-fix-ci` | Future GitHub Actions failure investigation. |
+| github:yeet | `/home/cyber/.codex/plugins/cache/openai-curated/github/9c1190e4/skills/yeet` | Future commit, push, and draft PR publishing when explicitly requested. |
 | imagegen | `/home/cyber/.codex/skills/.system/imagegen` | Future generated raster assets only; exact factual labels stay in HTML/Markdown. |
 | openai-docs | `/home/cyber/.codex/skills/.system/openai-docs` | Future OpenAI API, model, Codex, or prompt-upgrade documentation checks. |
 | plugin-creator | `/home/cyber/.codex/skills/.system/plugin-creator` | Future local plugin scaffolding. |
@@ -37,9 +38,9 @@ Verified on 2026-06-03 from
 
 | Skill | Path | Reason |
 | --- | --- | --- |
-| canva:canva-branded-presentation | `/home/cyber/.codex/plugins/cache/openai-curated/canva/2b564709/skills/canva-branded-presentation` | No Canva deck requested. |
-| canva:canva-resize-for-all-social-media | `/home/cyber/.codex/plugins/cache/openai-curated/canva/2b564709/skills/canva-resize-for-all-social-media` | No Canva social resize requested. |
-| canva:canva-translate-design | `/home/cyber/.codex/plugins/cache/openai-curated/canva/2b564709/skills/canva-translate-design` | No Canva localization requested. |
+| canva:canva-branded-presentation | `/home/cyber/.codex/plugins/cache/openai-curated/canva/9c1190e4/skills/canva-branded-presentation` | No Canva deck requested. |
+| canva:canva-resize-for-all-social-media | `/home/cyber/.codex/plugins/cache/openai-curated/canva/9c1190e4/skills/canva-resize-for-all-social-media` | No Canva social resize requested. |
+| canva:canva-translate-design | `/home/cyber/.codex/plugins/cache/openai-curated/canva/9c1190e4/skills/canva-translate-design` | No Canva localization requested. |
 | davinci-resolve-audio-production | `/home/cyber/.codex/skills/davinci-resolve-audio-production` | DaVinci Resolve audio automation is out of scope. |
 | davinci-resolve-automation | `/home/cyber/.codex/skills/davinci-resolve-automation` | DaVinci Resolve diagnostics and scripting are out of scope. |
 | davinci-resolve-color-automation | `/home/cyber/.codex/skills/davinci-resolve-color-automation` | DaVinci Resolve color automation is out of scope. |
@@ -51,10 +52,11 @@ Verified on 2026-06-03 from
 
 ## Notes
 
-- Plugin skill paths currently use cache hash `2b564709` and are drift-prone:
+- Plugin skill paths currently use cache hash `9c1190e4` and are drift-prone:
   future sessions must re-inventory before relying on local plugin cache paths.
-- The prior checked-in `5e86d584`, `bd80d7d9`, `90718987`, `be69e54e`,
-  `004da724`, `36878fcb`, and `eed16198` plugin cache hashes are stale.
+- The prior checked-in `2b564709`, `5e86d584`, `bd80d7d9`, `90718987`,
+  `be69e54e`, `004da724`, `36878fcb`, and `eed16198` plugin cache hashes are
+  stale.
 - ESP32-local skills are present under `/mnt/h/esp32/.codex/skills`.
 - `xbee-radio-integration` is enabled in `.codex/config.toml` for project-local
   routing.

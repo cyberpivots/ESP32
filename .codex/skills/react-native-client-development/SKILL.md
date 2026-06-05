@@ -20,7 +20,18 @@ description: Use for CBBS React Native client/operator app work in this ESP32 wo
    no simulator/device run, and no live connectivity.
 5. Treat UI intents as local-only. Do not map `compose_draft`,
    `queue_file_request`, `ack_local`, or `refresh` to transport side effects.
-6. Run `python3 scripts/scaffold_audit_react_native.py` after scaffold changes.
+6. For RNW Debug apps, do not treat Start menu or `shell:AppsFolder` launch as
+   review acceptance unless the matching app-local Metro server is already
+   proven live and a fresh screenshot shows loaded UI with no redbox and no
+   loading-only state. Preferred debug relaunch is the app-local
+   `pnpm --dir <split-app> exec react-native run-windows ... --no-telemetry`
+   command. If `run-windows` is blocked by toolchain discovery after the debug
+   package is already installed, start the matching app-local Metro server first
+   and then launch the installed app registration.
+7. Run only one split RNW app/Metro pairing at a time. Stop stale Metro/Node
+   workers before switching Client, Sysop, and Hardware Tools; stale Metro has
+   already produced wrong-bundle redbox evidence.
+8. Run `python3 scripts/scaffold_audit_react_native.py` after scaffold changes.
 
 Closed surfaces: BLE pairing, Web Bluetooth, Web Serial, LAN/SoftAP discovery,
 serial writes, RF/XBee, flash, erase, monitor, relay, MicroSD, TFT, wiring,

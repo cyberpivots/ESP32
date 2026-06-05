@@ -54,6 +54,12 @@ This proof has two tiers:
   manifest, and a weighted `ask_user` decision because same-session physical
   evidence is missing. Source ID:
   `SRC-LOCAL-XBEE-TWO-DEVICE-READONLY-STUDY-2026-05-29`.
+- Task 0182 accepts only the no-serial status boundary for XBee identity
+  evidence. It does not complete Tier A or prove current two-adapter identity,
+  current radio settings, Tier B read-query safety, XCTU readiness, voltage/
+  carrier safety, antenna readiness, ESP32 carrier safety, range, throughput,
+  relay payload readiness, or load/mains readiness. Source ID:
+  `SRC-LOCAL-XBEE-TIER-A-NO-SERIAL-IDENTITY-EVIDENCE-2026-06-05`.
 
 ## Assumptions
 
@@ -124,6 +130,19 @@ Tier B AT reads and XCTU selected-port local discovery remain blocked until
 both adapters are mapped by one-at-a-time physical disconnect/reconnect deltas
 and the task record includes same-session physical isolation, antenna,
 voltage/carrier, recovery, and cleanup evidence.
+
+## Task 0182 No-Serial Status Review
+
+Task 0182 records status acceptance for the record-only/no-serial identity
+evidence boundary. The accepted boundary includes no serial open, no Digi GUI
+launch, no Tier B read query, no RF transmit, no setting write, and no ESP32
+carrier action.
+
+This status review does not complete Tier A. The next Tier A action remains the
+second one-at-a-time adapter disconnect/reconnect delta plus same-session
+physical adapter markings, antenna state, isolation notes, voltage/header/
+carrier facts, recovery path, and cleanup evidence. Do not infer exact current
+adapter identity from historical COM records alone.
 
 ## Tier A - Passive Discovery
 

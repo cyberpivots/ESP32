@@ -26,6 +26,10 @@ The simulator covers:
 - Fragmentation, reassembly, missing-fragment detection, duplicate rejection,
   TTL expiry, custody ACKs, retry state, file resume status, telemetry reports,
   node status, reporting frames, and non-executing control intents.
+- Semantic custody ACK handling requires an ASCII JSON body whose `ack` field
+  matches the packet `message_id` and whose `status` field matches the packet
+  custody status. Byte-level packet golden vectors remain header/codec fixtures
+  and do not by themselves prove a runtime ACK can be applied.
 - Simulated bridge request handling for compact OPCON-style `msg_post`,
   `download_queue`, `telemetry_report`, `node_status`, `protocol_report`,
   `state_get`, and `control_intent` frames.

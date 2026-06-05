@@ -136,9 +136,10 @@ are not the source of truth.
 - Gate M1: this host ADR/design/research plus simulator schema.
 - Gate M2: DOS-C companion bridge/operator fixture support and Win31 read-only
   Network/Services summary.
-- Gate M3: firmware-design review for mapping ESP-WIFI-MESH APIs/events to the
-  schema, still no live flash.
-- Gate M4: build-only firmware adapter proof with memory/queue/coexistence
+- Gate M3: firmware-design review for mapping ESP-WIFI-MESH concepts/events to
+  the schema; recorded as design-only in
+  [../../architecture/espnow-bbs-mesh-m3-firmware-mapping.md](../../architecture/espnow-bbs-mesh-m3-firmware-mapping.md).
+- Gate M4: future build-only firmware adapter proof with memory/queue/coexistence
   review.
 - Gate M5: live mesh proof only after fresh identity, backups, hashes,
   router/channel/mesh ID policy, rollback, route-table proof, root/parent

@@ -18,6 +18,9 @@ power-path wiring, pin assignments, or live bench action.
 - Seven private docs-only Git submodules exist under
   `submodules/hardware/`. Source ID:
   `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-PRIVATE-SUBMODULES-2026-05-26`.
+- Task 0183 records a parent repo hardware intake audit with fresh submodule
+  status context and keeps all component identity gaps open. Source ID:
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-HARDWARE-INTAKE-AUDIT-2026-06-05`.
 - ESP-NOW BBS, Gate F, Gate G, Gate H, mesh, BLE, PCAP, Win31/DOS-C bridge,
   flash, erase, monitor, serial-write, relay, load, mains, TFT, MicroSD, and
   network expansion gates are tracked separately in the development status
@@ -84,6 +87,10 @@ Start with source-backed hardware identity intake inside the private
 submodules. Prioritize cell, BMS/protection, charger/power path, panel,
 fuse/protection, enclosure, and current-limit evidence before any board or
 interface bench action.
+
+Task 0183 does not change that next action. It only records that parent
+coordination status has been audited and that exact hardware identities,
+measurements, and safety evidence remain open.
 
 ## Stop gates
 

@@ -191,9 +191,14 @@ UI intents only.
   `ART` page, seventh `art_panel` glyph bank, and fixed 4x20 custom-character
   tile map. COM6 identity, rollback, write/verify, read-only PF0530W readiness
   monitor, transcript scan, and cleanup proof passed; physical ART page visual
-  acceptance and ART render telemetry remain pending. Source IDs:
+  acceptance and ART render telemetry remain pending. Task 0148 adds
+  source/build-only ART-carousel behavior, and Task 0181 accepts host-only
+  simulator/catalog/record validation for that carousel without claiming
+  physical LCD acceptance. Source IDs:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-VISUAL-ART-2026-06-02`,
-  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-LIVE-2026-06-02`.
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-LIVE-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-ART-CAROUSEL-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-HOST-ONLY-VALIDATION-2026-06-05`.
 - Earlier encoder-menu lineage source IDs:
   `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-2026-05-30`,
   `SRC-LOCAL-FOUR-RELAY-KY040-ENCODER-MENU-PF0530F-LIVE-2026-05-30`.

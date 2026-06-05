@@ -425,6 +425,80 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         self.assertEqual(simulator.custody[packet.message_id].status, "acked")
         self.assertFalse(simulator.custody[packet.message_id].should_retry())
 
+    def test_custody_ack_semantic_body_targets_matching_message(self) -> None:
+        simulator = ProtocolSimulator()
+        packet = simulator.queue_direct_message("peer01", "sysop", "semantic ack")[0]
+        simulator.mark_sent(packet)
+
+        ack = make_custody_ack(
+            packet.message_id,
+            "acked",
+            "peer01",
+            "coord01",
+            100,
+            reason="peer-confirmed",
+        )
+        decoded_ack = decode_packet(encode_packet(ack))
+        ack_body = decode_packet_body(decoded_ack)
+
+        self.assertEqual(decoded_ack.message_id, packet.message_id)
+        self.assertEqual(decoded_ack.custody, "acked")
+        self.assertEqual(
+            ack_body,
+            {"ack": packet.message_id, "status": "acked", "reason": "peer-confirmed"},
+        )
+
+        simulator.apply_ack(decoded_ack)
+        self.assertEqual(simulator.custody[packet.message_id].status, "acked")
+        self.assertEqual(simulator.custody[packet.message_id].reason, "peer-confirmed")
+
+    def test_custody_ack_rejects_malformed_or_mismatched_body(self) -> None:
+        simulator = ProtocolSimulator()
+        packet = simulator.queue_direct_message("peer01", "sysop", "semantic ack reject")[0]
+        simulator.mark_sent(packet)
+
+        malformed = WirelessPacket(
+            service="custody_ack",
+            seq=101,
+            source="peer01",
+            destination="coord01",
+            message_id=packet.message_id,
+            body=b"ack",
+            custody="acked",
+        )
+        with self.assertRaisesRegex(ProtocolError, "body_json_invalid"):
+            simulator.apply_ack(malformed)
+
+        mismatched_id = WirelessPacket(
+            service="custody_ack",
+            seq=102,
+            source="peer01",
+            destination="coord01",
+            message_id=packet.message_id + 1,
+            body=json.dumps(
+                {"ack": packet.message_id, "status": "acked", "reason": ""},
+                separators=(",", ":"),
+            ).encode("ascii"),
+            custody="acked",
+        )
+        with self.assertRaisesRegex(ProtocolError, "ack_message_id_mismatch"):
+            simulator.apply_ack(mismatched_id)
+
+        mismatched_status = WirelessPacket(
+            service="custody_ack",
+            seq=103,
+            source="peer01",
+            destination="coord01",
+            message_id=packet.message_id,
+            body=json.dumps(
+                {"ack": packet.message_id, "status": "acked", "reason": ""},
+                separators=(",", ":"),
+            ).encode("ascii"),
+            custody="failed",
+        )
+        with self.assertRaisesRegex(ProtocolError, "ack_status_mismatch"):
+            simulator.apply_ack(mismatched_status)
+
     def test_gate_f_runtime_requirements_pin_custody_retry_and_terminal_states(self) -> None:
         simulator = ProtocolSimulator()
         packet = simulator.queue_direct_message("peer01", "sysop", "runtime custody")[0]

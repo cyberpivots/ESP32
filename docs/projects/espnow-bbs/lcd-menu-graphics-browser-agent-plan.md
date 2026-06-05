@@ -68,9 +68,14 @@ configuration endpoints, release gating, commit, or push.
   custom-character tile map while preserving the PF0530V PCNT input and closed
   safety surfaces. COM6 identity, rollback, write/verify, read-only PF0530W
   readiness monitor, transcript scan, and cleanup proof passed; physical ART
-  page visual acceptance remains pending. Source IDs:
+  page visual acceptance remains pending. Task 0148 adds source/build-only
+  ART-carousel behavior, and Task 0181 accepts host-only simulator/catalog/
+  record validation for that carousel while keeping live behavior and physical
+  readability open. Source IDs:
   `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-VISUAL-ART-2026-06-02`,
-  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-LIVE-2026-06-02`.
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-LIVE-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-ART-CAROUSEL-2026-06-02`,
+  `SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-HOST-ONLY-VALIDATION-2026-06-05`.
 - HD44780 CGRAM planning is limited to eight 5x8 custom-character types.
   Source ID: `SRC-HITACHI-HD44780U-DDRAM-CGRAM-2026-05-31`.
 - The local 20x4 cursor tracker uses row bases `0x00`, `0x40`, `0x14`, and
@@ -208,11 +213,15 @@ The same continuation adds a host-only ART catalog with five candidate panels:
 Every panel still compiles through `bbs_lcd_art.v1`, reuses duplicate tiles,
 and fails closed above eight nonblank custom glyphs per active panel.
 
-This catalog does not change the PF0530W firmware image, does not open PF0530X,
-does not prove physical LCD readability, and does not authorize live flash,
-monitor, serial writes, XBee/RF, ESP-NOW runtime, relay, wiring, load, mains,
-release, commit, or push. Physical ART-page acceptance and ART render telemetry
-remain pending under the PF0530W live handoff.
+This catalog did not by itself change the PF0530W firmware image, open
+PF0530X, prove physical LCD readability, or authorize live flash, monitor,
+serial writes, XBee/RF, ESP-NOW runtime, relay, wiring, load, mains, release,
+commit, or push.
+
+Task 0148 later added a source/build-only ART carousel under the PF0530W
+identity, and Task 0181 accepted host-only simulator/catalog/record validation
+for that carousel. Physical ART-page acceptance and live ART render telemetry
+remain pending under the PF0530W handoffs.
 
 ## Browser Mirror
 

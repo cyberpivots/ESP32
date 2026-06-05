@@ -13,6 +13,11 @@
   identify selected project hardware. Source IDs: `SRC-NXP-PCF8574-74A`,
   `SRC-BOURNS-PEC11R`, `SRC-TI-BQ25185`, `SRC-TI-BQ2970`,
   `SRC-TI-BQ27441-G1`, `SRC-UL-LIION-SAFETY`.
+- Task 0183 records a parent repo hardware intake audit only. It confirms the
+  checklist and submodule lanes are current routing surfaces, but it does not
+  close exact component identity, power safety, pin-risk, XBee carrier, or
+  bench readiness. Source ID:
+  `SRC-LOCAL-REMOTE-LCD-XBEE-SOLAR-CLIENT-HARDWARE-INTAKE-AUDIT-2026-06-05`.
 
 ## Assumptions
 
@@ -43,6 +48,8 @@
 - Whether candidate IC references match any purchased module.
 - Whether the deployment environment needs weatherproofing, UV exposure,
   condensation control, temperature derating, or regulatory review.
+- Whether any private submodule has collected exact selected-part evidence
+  beyond the README-level scaffold visible from the parent repo.
 
 ## Stop gates
 

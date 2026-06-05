@@ -80,6 +80,12 @@ existing fixed AT read-query probe and still requires
   COM6 bridge local-AT readback, COM15 peer readback, and corrected
   bidirectional benign `link_probe` RF proof. Source ID:
   `SRC-LOCAL-ESP32-XBEE-UART-BRIDGE-FLASH-RETEST-2026-05-30`.
+- Task 0182 accepts only a record-only/no-serial XBee identity-evidence status
+  packet. It does not prove current physical adapter identity, current radio
+  settings, Tier B reads, XCTU/XBee Studio readiness, voltage/header/carrier
+  safety, antenna readiness, range, throughput, relay payload readiness, or
+  load/mains readiness. Source ID:
+  `SRC-LOCAL-XBEE-TIER-A-NO-SERIAL-IDENTITY-EVIDENCE-2026-06-05`.
 
 ## Assumptions
 
@@ -188,6 +194,12 @@ same-session physical evidence are recorded.
 Task 0091 supersedes that stop condition only for the user-selected `COM15`
 and `COM6` programming gate. It does not close physical adapter marking,
 voltage, carrier, antenna/regulatory, ESP32 wiring, or RF communication gaps.
+
+Task 0182 supersedes no physical stop condition. It records the no-serial
+status review and preserves the same next physical action: collect the second
+one-at-a-time adapter delta with markings, antenna, isolation, voltage/header/
+carrier, recovery, and cleanup notes before Tier A can complete or before Tier
+B/XCTU discovery can be considered.
 
 ## OTA link proof gate
 

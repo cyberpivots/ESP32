@@ -614,6 +614,10 @@ class ProtocolSimulator:
         ack_id = _require_int(payload, "ack")
         status = _require_str(payload, "status")
         reason = str(payload.get("reason", ""))
+        if packet.message_id != ack_id:
+            raise ProtocolError("ack_message_id_mismatch", str(packet.message_id))
+        if packet.custody != status:
+            raise ProtocolError("ack_status_mismatch", packet.custody)
         record = self.custody.get(ack_id)
         if record is None:
             raise ProtocolError("custody_missing", str(ack_id))

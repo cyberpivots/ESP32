@@ -23,6 +23,10 @@ Verified boundaries:
 - Direct messages, file chunks, interval telemetry, node status, custody ACKs,
   and control intents are modeled as packetized services, not transparent
   streams.
+- Semantic custody ACK handling is host-only simulator behavior: the ACK body
+  must be ASCII JSON, `ack` must match the packet `message_id`, and body
+  `status` must match the packet custody status. Low-level golden packet
+  vectors remain codec fixtures, not live runtime proof.
 - Simulated bridge requests translate compact OPCON-style `msg_post`,
   `download_queue`, `telemetry_report`, `node_status`, `protocol_report`,
   `state_get`, and `control_intent` frames into packetized simulator work or

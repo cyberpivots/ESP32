@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import sys
@@ -57,6 +58,12 @@ REQUIRED_SOURCE_IDS = [
     "SRC-LOCAL-CBBS-RNW-SPLIT-BUILD-INSTALL-LAUNCH-2026-06-04",
     "SRC-LOCAL-CBBS-HOST-COMMAND-BRIDGE-LIVE-GATE-BLOCKED-2026-06-04",
     "SRC-LOCAL-CBBS-XBEE-KNOWN-PROFILE-WRITE-GATE-BLOCKED-2026-06-04",
+    "SRC-REACT-NATIVE-USE-WINDOW-DIMENSIONS-2026-06-05",
+    "SRC-MICROSOFT-WINDOWS-APPWINDOW-DISPLAYAREA-2026-06-05",
+    "SRC-ESPRESSIF-ESPTOOL-FIRMWARE-2026-06-05",
+    "SRC-ESP-IDF-OTA-PLANNING-2026-06-05",
+    "SRC-ESP-IDF-WIFI-SNIFFER-2026-06-05",
+    "SRC-LOCAL-CBBS-RNW-HARDWARE-TOOLS-HOST-ONLY-IMPROVEMENTS-2026-06-05",
 ]
 
 WINDOWS_RNW_DEPENDENCIES = {
@@ -220,6 +227,48 @@ FORBIDDEN_LIVE_SOURCE_RE = re.compile(
     r"BluetoothDevice|SerialPort|BLEManager|writeFlash)\b",
     re.IGNORECASE,
 )
+RNW_BRIDGE_SURFACE_SCAN_DIRS = [
+    Path("apps/cbbs-windows/src"),
+    Path("apps/cbbs-windows/windows"),
+    Path("apps/cbbs-client-windows/src"),
+    Path("apps/cbbs-client-windows/windows"),
+    Path("apps/cbbs-sysop-windows/src"),
+    Path("apps/cbbs-sysop-windows/windows"),
+    Path("apps/cbbs-hardware-tools-windows/src"),
+    Path("apps/cbbs-hardware-tools-windows/windows"),
+]
+RNW_BRIDGE_SURFACE_SCAN_SUFFIXES = {
+    ".c",
+    ".cc",
+    ".cpp",
+    ".cxx",
+    ".h",
+    ".hpp",
+    ".js",
+    ".jsx",
+    ".mm",
+    ".ts",
+    ".tsx",
+}
+RNW_FORBIDDEN_NATIVE_BRIDGE_PATTERNS = [
+    ("NativeModules.HostCommandBridge", re.compile(r"NativeModules\s*\.\s*HostCommandBridge")),
+    ("HostCommandBridge native symbol", re.compile(r"\bHostCommandBridge\b")),
+    ("REACT_MODULE", re.compile(r"\bREACT_MODULE\b")),
+    ("REACT_METHOD", re.compile(r"\bREACT_METHOD\b")),
+    ("CreateProcess", re.compile(r"\bCreateProcess[AW]?\b")),
+    ("ShellExecute", re.compile(r"\bShellExecute(?:Ex)?[AW]?\b")),
+    ("CreateFile", re.compile(r"\bCreateFile[AW]?\b")),
+    ("WriteFile", re.compile(r"\bWriteFile\b")),
+    ("Windows.Devices.SerialCommunication", re.compile(r"\bWindows\.Devices\.SerialCommunication\b")),
+    ("System.IO.Ports", re.compile(r"\bSystem\.IO\.Ports\b")),
+    ("SerialPort", re.compile(r"\bSerialPort\b")),
+    ("child_process", re.compile(r"\bchild_process\b")),
+    ("process exec", re.compile(r"\b(?:exec|spawn|execFile)\s*\(")),
+    ("navigator.serial", re.compile(r"\bnavigator\.serial\b")),
+    ("navigator.bluetooth", re.compile(r"\bnavigator\.bluetooth\b")),
+    ("esptool", re.compile(r"\besptool(?:\.py)?\b", re.IGNORECASE)),
+    ("idf.py", re.compile(r"\bidf\.py\b", re.IGNORECASE)),
+]
 SECRET_FIXTURE_RE = re.compile(
     r"\b(token|secret|pmk|lmk|password|privateKey|deviceId|androidId|macAddress|"
     r"messageBody|fileContent|preciseLocation)\b",
@@ -250,6 +299,30 @@ DOSC_RNW_SOURCE_MARKERS = {
         "CV",
     ],
 }
+TRACKED_GENERATED_EVIDENCE_RECORD_FILES = [
+    Path(".agents/TASK_LOG/0157-cbbs-react-native-windows-build-launch-integrated.md"),
+    Path(".agents/handoffs/0117-cbbs-react-native-windows-build-launch-integrated-to-qa.md"),
+    Path("knowledge-base/source-ledger/2026-06-03-cbbs-react-native-windows-build-launch-integrated.md"),
+    Path(".agents/TASK_LOG/0172-workspace-review-follow-up-hardening.md"),
+    Path("knowledge-base/source-ledger/2026-06-05-workspace-review-follow-up-hardening.md"),
+]
+TRACKED_GENERATED_EVIDENCE = {
+    Path("research/bench-records/react-native-windows/cbbs-windows-index.bundle"): {
+        "bytes": 5_133_785,
+        "max_bytes": 6_000_000,
+        "sha256": "07c301fedfa809e20f8b3b95a891f6090ea2a39d3be2389f18697e0001bbb9a0",
+    },
+    Path("research/bench-records/react-native-windows/cbbs-windows-index.map"): {
+        "bytes": 10_328_346,
+        "max_bytes": 11_000_000,
+        "sha256": "f64c8a6f20763a6bcd55c7684f8600717fe7462e63b011b22401eaab999100bb",
+    },
+    Path("research/bench-records/react-native-windows/live-index.bundle"): {
+        "bytes": 5_133_923,
+        "max_bytes": 6_000_000,
+        "sha256": "fdd80512d04989c0a8f83fc4bd16181a5bcae38acffe0da5d5a944eb72633bc9",
+    },
+}
 
 
 def _read(path: Path) -> str:
@@ -258,6 +331,14 @@ def _read(path: Path) -> str:
 
 def _load_json(path: Path) -> dict[str, object]:
     return json.loads(_read(path))
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _deps(package: dict[str, object]) -> dict[str, str]:
@@ -464,6 +545,72 @@ def _inspect_windows_native_surface(root: Path) -> list[str]:
     return failures
 
 
+def _iter_rnw_bridge_surface_files(root: Path) -> list[Path]:
+    ignored_parts = {"node_modules", "bin", "obj", "Debug", "Release", ".vs"}
+    files: list[Path] = []
+    for rel in RNW_BRIDGE_SURFACE_SCAN_DIRS:
+        base = root / rel
+        if not base.exists():
+            continue
+        for path in sorted(base.rglob("*")):
+            if (
+                path.is_file()
+                and path.suffix in RNW_BRIDGE_SURFACE_SCAN_SUFFIXES
+                and not ignored_parts.intersection(path.relative_to(base).parts)
+                and "__tests__" not in path.relative_to(root).parts
+            ):
+                files.append(path)
+    return files
+
+
+def _inspect_rnw_native_bridge_surfaces(root: Path = ROOT) -> list[str]:
+    failures: list[str] = []
+    for path in _iter_rnw_bridge_surface_files(root):
+        text = _read(path)
+        rel = path.relative_to(root).as_posix()
+        for label, pattern in RNW_FORBIDDEN_NATIVE_BRIDGE_PATTERNS:
+            if pattern.search(text):
+                failures.append(f"RNW native/live surface contains forbidden {label}: {rel}")
+    return failures
+
+
+def _audit_tracked_generated_evidence(root: Path) -> list[str]:
+    failures: list[str] = []
+    record_text = "\n".join(
+        _read(root / rel)
+        for rel in TRACKED_GENERATED_EVIDENCE_RECORD_FILES
+        if (root / rel).exists()
+    )
+    lower_record_text = record_text.lower()
+    for rel, expected in TRACKED_GENERATED_EVIDENCE.items():
+        path = root / rel
+        rel_text = rel.as_posix()
+        if not path.exists():
+            failures.append(f"tracked RNW generated evidence missing: {rel_text}")
+            continue
+        actual_bytes = path.stat().st_size
+        if actual_bytes != expected["bytes"]:
+            failures.append(f"tracked RNW generated evidence byte mismatch: {rel_text}")
+        if actual_bytes > expected["max_bytes"]:
+            failures.append(f"tracked RNW generated evidence exceeds size ceiling: {rel_text}")
+        expected_hash = str(expected["sha256"])
+        actual_hash = _sha256(path)
+        if actual_hash != expected_hash:
+            failures.append(f"tracked RNW generated evidence sha256 mismatch: {rel_text}")
+        if rel_text not in record_text:
+            failures.append(f"tracked RNW generated evidence lacks source-record linkage: {rel_text}")
+        if expected_hash not in lower_record_text:
+            failures.append(f"tracked RNW generated evidence hash missing from records: {rel_text}")
+    for marker in [
+        "tracked generated rnw evidence",
+        "not a publication artifact",
+        "local review evidence",
+    ]:
+        if marker not in lower_record_text:
+            failures.append(f"tracked RNW generated evidence records missing classification marker: {marker}")
+    return failures
+
+
 def audit_react_native(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
 
@@ -535,6 +682,8 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         ".agents/TASK_LOG/0165-cbbs-xbee-known-profile-write-gate-blocked.md",
         ".agents/handoffs/0124-cbbs-xbee-known-profile-write-gate-blocked-to-qa.md",
         "knowledge-base/source-ledger/2026-06-04-cbbs-xbee-known-profile-write-gate-blocked.md",
+        ".agents/TASK_LOG/0174-rnw-hardware-tools-host-only-improvements.md",
+        "knowledge-base/source-ledger/2026-06-05-rnw-hardware-tools-host-only-improvements.md",
     ]:
         if not (root / rel).exists():
             failures.append(f"missing React Native scaffold file: {rel}")
@@ -559,6 +708,8 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         if (root / rel).exists():
             failures.append(f"native project directory must not exist: {rel.as_posix()}")
     failures.extend(_inspect_windows_native_surface(root))
+    failures.extend(_inspect_rnw_native_bridge_surfaces(root))
+    failures.extend(_audit_tracked_generated_evidence(root))
     for rel in FORBIDDEN_CONFIG_FILES:
         if (root / rel).exists():
             failures.append(f"external service/native config file must not exist: {rel.as_posix()}")
@@ -703,6 +854,8 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "hardwareToolsMenu",
         "radio.queryPreview",
         "firmware.installPreview",
+        "hardwareToolsFirmwareCatalog",
+        "hardwareToolsCommunicationAnalysisRecords",
     ]:
         if marker not in product_text:
             failures.append(f"product contract missing marker: {marker}")
@@ -713,6 +866,10 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "windows-${appId}-action-",
         "windows-${appId}-menubar",
         "windows-${appId}-transcript",
+        "deriveProductShellLayout",
+        "windows-${appId}-layout-metadata",
+        "windows-${appId}-firmware-catalog",
+        "windows-${appId}-communications-analysis",
         "Gate phrase records notes but does not unlock closed work.",
         "HOST_COMMAND_UNAVAILABLE_REASON",
     ]:
@@ -855,6 +1012,8 @@ def audit_react_native(root: Path = ROOT) -> list[str]:
         "../.agents/TASK_LOG/0165-cbbs-xbee-known-profile-write-gate-blocked.md",
         "../.agents/handoffs/0124-cbbs-xbee-known-profile-write-gate-blocked-to-qa.md",
         "../knowledge-base/source-ledger/2026-06-04-cbbs-xbee-known-profile-write-gate-blocked.md",
+        "../.agents/TASK_LOG/0174-rnw-hardware-tools-host-only-improvements.md",
+        "../knowledge-base/source-ledger/2026-06-05-rnw-hardware-tools-host-only-improvements.md",
     ]:
         if marker not in docs_index:
             failures.append(f"docs index missing React Native link: {marker}")

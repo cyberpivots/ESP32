@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { CLOSED_SURFACE_IDS, validateUiIntent, type UiIntentRecord } from "@cbbs/protocol";
 import { CBBS_PRODUCT_WINDOWS_APP_IDS } from "@cbbs/product";
-import { ProductWindowsShell } from "../src";
+import { ProductWindowsShell, deriveProductShellLayout } from "../src";
 
 type MockNativeProps = {
   children?: ReactNode;
@@ -96,6 +96,20 @@ describe("ProductWindowsShell", () => {
       maxWidth: 340,
       minWidth: 260
     });
+    expect(screen.getByTestId("windows-hardware-tools-layout-metadata").props.accessibilityValue).toMatchObject({
+      text: "1280x720@1:standard"
+    });
+  });
+
+  test("derives shell layout modes from viewport and font scale", () => {
+    expect(deriveProductShellLayout(640, 720, 1).mode).toBe("compact");
+    expect(deriveProductShellLayout(640, 480, 1).mode).toBe("short");
+    expect(deriveProductShellLayout(800, 600, 1).mode).toBe("short");
+    expect(deriveProductShellLayout(1024, 600, 1).mode).toBe("short");
+    expect(deriveProductShellLayout(1366, 768, 1).mode).toBe("standard");
+    expect(deriveProductShellLayout(1920, 1080, 1).mode).toBe("wide");
+    expect(deriveProductShellLayout(2560, 1080, 1).mode).toBe("wide");
+    expect(deriveProductShellLayout(1366, 768, 1.65).mode).toBe("compact");
   });
 
   test("switches to compact layout using window dimensions", () => {
@@ -119,6 +133,27 @@ describe("ProductWindowsShell", () => {
       maxWidth: "100%",
       minWidth: 0,
       width: "100%"
+    });
+  });
+
+  test("bounds short layout regions with live height metadata", () => {
+    mockWindowDimensions = { width: 1024, height: 600, scale: 1, fontScale: 1 };
+    render(<ProductWindowsShell appId="hardware-tools" />);
+
+    expect(screen.getByTestId("windows-hardware-tools-layout-metadata").props.accessibilityValue).toMatchObject({
+      text: "1024x600@1:short"
+    });
+    expect(styleOf("windows-hardware-tools-body")).toMatchObject({
+      flexDirection: "column"
+    });
+    expect(styleOf("windows-hardware-tools-transcript")).toMatchObject({
+      maxHeight: 180
+    });
+    expect(styleOf("windows-hardware-tools-workspace")).toMatchObject({
+      maxHeight: 340
+    });
+    expect(styleOf("windows-hardware-tools-side-panel")).toMatchObject({
+      maxHeight: 340
     });
   });
 
@@ -205,8 +240,26 @@ describe("ProductWindowsShell", () => {
     expect(screen.getByText("request: valid")).toBeTruthy();
     expect(screen.getByText("dryRun: true")).toBeTruthy();
     expect(screen.getByText("redaction: primary")).toBeTruthy();
-    expect(screen.getByText("dispatch: none")).toBeTruthy();
+    expect(screen.getAllByText("dispatch: none").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("result: adapter_unavailable")).toBeTruthy();
+  });
+
+  test("renders host-only firmware and communications analysis panels", () => {
+    const rendered = render(<ProductWindowsShell appId="hardware-tools" />);
+
+    expect(screen.getByTestId("windows-hardware-tools-firmware-catalog").props.accessibilityHint).toMatch(
+      /without device operation/
+    );
+    expect(screen.getByTestId("windows-hardware-tools-firmware-record-PF0530W")).toBeTruthy();
+    expect(screen.getByTestId("windows-hardware-tools-firmware-record-untrusted-import")).toBeTruthy();
+    expect(screen.getAllByText("dispatch: none").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByTestId("windows-hardware-tools-communications-analysis").props.accessibilityHint).toMatch(
+      /saved analysis records only/i
+    );
+    for (const viewId of ["esp-now", "xbee", "bridge", "usb-serial", "discovery", "queues-custody", "evidence"]) {
+      expect(screen.getByTestId(`windows-hardware-tools-communications-view-${viewId}`)).toBeTruthy();
+    }
+    expect(visibleText(rendered.toJSON())).not.toMatch(/serial|xbee|\bRF\b|flash|erase|monitor|relay|COM\d+|mains/i);
   });
 
   test("renders disabled Hardware Tools closed-work matrix from protocol closed surfaces", () => {

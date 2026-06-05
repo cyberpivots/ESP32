@@ -62,9 +62,25 @@ export const HARDWARE_TOOLS_EVIDENCE_PROVENANCE = [
   "runtime-screenshot",
   "blocked-gate"
 ] as const;
+export const HARDWARE_TOOLS_FIRMWARE_ACCEPTANCE_STATUSES = [
+  "reviewOnly",
+  "requiresManifest",
+  "untrusted"
+] as const;
+export const HARDWARE_TOOLS_COMMUNICATION_ANALYSIS_VIEWS = [
+  "esp-now",
+  "xbee",
+  "bridge",
+  "usb-serial",
+  "discovery",
+  "queues-custody",
+  "evidence"
+] as const;
 
 export type HardwareToolsEvidenceRef = (typeof HARDWARE_TOOLS_EVIDENCE_REFS)[number];
 export type HardwareToolsEvidenceProvenance = (typeof HARDWARE_TOOLS_EVIDENCE_PROVENANCE)[number];
+export type HardwareToolsFirmwareAcceptanceStatus = (typeof HARDWARE_TOOLS_FIRMWARE_ACCEPTANCE_STATUSES)[number];
+export type HardwareToolsCommunicationAnalysisView = (typeof HARDWARE_TOOLS_COMMUNICATION_ANALYSIS_VIEWS)[number];
 export type ProductActionState =
   | "ready"
   | "needsDevice"
@@ -170,6 +186,45 @@ export interface HardwareToolsClosedWorkRow {
   disabled: true;
   evidenceRef: HardwareToolsEvidenceRef;
   authorityNote: string;
+}
+
+export interface HardwareToolsFirmwareCatalogRecord {
+  project: string;
+  firmwareId: string;
+  version: string;
+  sourceId: string;
+  frameworkAdr: string;
+  artifactPaths: readonly string[];
+  sha256: string | null;
+  flashOffsets: readonly string[];
+  flashSettings: readonly string[];
+  compatibilityNotes: readonly string[];
+  acceptanceStatus: HardwareToolsFirmwareAcceptanceStatus;
+  rollbackReference: string;
+  closedSurfaceFlags: readonly ClosedSurfaceId[];
+}
+
+export interface HardwareToolsFirmwareInstallPreview {
+  kind: "installPreview";
+  firmwareId: string;
+  project: string;
+  sourceId: string;
+  installAvailable: false;
+  dispatchPath: "none";
+  trusted: false;
+  sha256Recorded: boolean;
+  blockedReason: "tier3-closed" | "requires-manifest" | "untrusted-import";
+  closedSurfaceFlags: readonly ClosedSurfaceId[];
+}
+
+export interface HardwareToolsCommunicationAnalysisRecord {
+  viewId: HardwareToolsCommunicationAnalysisView;
+  visibleLabel: string;
+  summary: string;
+  fixtureEvidence: readonly string[];
+  sourceIds: readonly string[];
+  liveSurfaceState: "closed";
+  closedSurfaceFlags: readonly ClosedSurfaceId[];
 }
 
 export interface HardwareToolsBridgePreview {
@@ -327,6 +382,114 @@ export const hardwareToolsClosedWorkMatrix: readonly HardwareToolsClosedWorkRow[
   evidenceRef: "safety-gates",
   authorityNote: "Gate authority required"
 }));
+
+export const hardwareToolsFirmwareCatalog: readonly HardwareToolsFirmwareCatalogRecord[] = [
+  {
+    project: "four-relay-xbee-wifi",
+    firmwareId: "PF0530W",
+    version: "source-build-2026-06-02",
+    sourceId: "SRC-LOCAL-FOUR-RELAY-KY040-BBS-LCD-MENU-PF0530W-VISUAL-ART-2026-06-02",
+    frameworkAdr: "unresolved-gap: no firmware run ADR accepted for this catalog",
+    artifactPaths: ["ignored-local-evidence:pf0530w-source-build"],
+    sha256: null,
+    flashOffsets: ["requires-private-manifest"],
+    flashSettings: ["requires-private-manifest"],
+    compatibilityNotes: [
+      "LCD/menu source-build record only",
+      "Artifact hash and target compatibility require a private manifest before any device operation"
+    ],
+    acceptanceStatus: "reviewOnly",
+    rollbackReference: "requires-private-rollback-record",
+    closedSurfaceFlags: ["firmware_abi", "flash_erase_monitor", "serial_write"]
+  },
+  {
+    project: "imported-binary",
+    firmwareId: "untrusted-import",
+    version: "requires-manifest",
+    sourceId: "unresolved-gap",
+    frameworkAdr: "unresolved-gap",
+    artifactPaths: [],
+    sha256: null,
+    flashOffsets: [],
+    flashSettings: [],
+    compatibilityNotes: [
+      "Imported images stay untrusted until source, hash, target compatibility, and provenance are recorded"
+    ],
+    acceptanceStatus: "untrusted",
+    rollbackReference: "unresolved-gap",
+    closedSurfaceFlags: ["firmware_abi", "flash_erase_monitor", "serial_write", "persistent_config_write"]
+  }
+] as const;
+
+export const hardwareToolsCommunicationAnalysisRecords: readonly HardwareToolsCommunicationAnalysisRecord[] = [
+  {
+    viewId: "esp-now",
+    visibleLabel: "ESP-NOW",
+    summary: "Saved frame budgets, custody notes, duplicate drops, and fragment counts only.",
+    fixtureEvidence: ["packet budget", "retry expiry", "fragment count", "duplicate drop"],
+    sourceIds: ["SRC-ESP-IDF-ESPNOW", "SRC-ESP-IDF-WIFI-SNIFFER-2026-06-05"],
+    liveSurfaceState: "closed",
+    closedSurfaceFlags: ["gate_f_service_code", "local_network_discovery"]
+  },
+  {
+    viewId: "xbee",
+    visibleLabel: "Radio Profile",
+    summary: "Redacted inventory, profile diff, hub matrix, and API-frame review from saved records only.",
+    fixtureEvidence: ["inventory summary", "profile diff", "hub matrix", "API frame review"],
+    sourceIds: [
+      "SRC-DIGI-XBEE-900HP-USER-GUIDE-REFRESH-2026-06-05",
+      "SRC-DIGI-XBEE-900HP-TO-2026-06-05",
+      "SRC-LOCAL-XBEE-HUB-SPOKE-HOST-PLAN-2026-06-05"
+    ],
+    liveSurfaceState: "closed",
+    closedSurfaceFlags: ["rf_xbee_write", "serial_write"]
+  },
+  {
+    viewId: "bridge",
+    visibleLabel: "Bridge",
+    summary: "Unavailable-only request and result review with 512-byte fit checks.",
+    fixtureEvidence: ["512-byte request fit", "512-byte result fit", "raw frame rejection"],
+    sourceIds: ["SRC-LOCAL-CBBS-HOST-COMMAND-BRIDGE-LIVE-GATE-BLOCKED-2026-06-04"],
+    liveSurfaceState: "closed",
+    closedSurfaceFlags: ["bridge_abi", "serial_abi"]
+  },
+  {
+    viewId: "usb-serial",
+    visibleLabel: "Transport",
+    summary: "No-port inventory summaries and adapter gap notes only.",
+    fixtureEvidence: ["no-port summary", "adapter gap", "open-path blocked"],
+    sourceIds: ["SRC-LOCAL-CBBS-HOST-COMMAND-BRIDGE-LIVE-GATE-BLOCKED-2026-06-04"],
+    liveSurfaceState: "closed",
+    closedSurfaceFlags: ["serial_abi", "serial_write", "web_serial"]
+  },
+  {
+    viewId: "discovery",
+    visibleLabel: "Discovery",
+    summary: "Saved scan summaries only; local probing stays closed.",
+    fixtureEvidence: ["saved inventory", "alias map", "closed probe list"],
+    sourceIds: ["SRC-DIGI-XCTU-LOCAL-DISCOVERY-2026-05-29"],
+    liveSurfaceState: "closed",
+    closedSurfaceFlags: ["softap_probe", "local_network_discovery"]
+  },
+  {
+    viewId: "queues-custody",
+    visibleLabel: "Queues",
+    summary: "Custody, retry, expiry, and duplicate-drop records from fixtures only.",
+    fixtureEvidence: ["custody", "retry", "expiry", "duplicate drop"],
+    sourceIds: ["SRC-ESP-IDF-ESPNOW"],
+    liveSurfaceState: "closed",
+    closedSurfaceFlags: ["gate_f_service_code", "bridge_abi"]
+  },
+  {
+    viewId: "evidence",
+    visibleLabel: "Evidence",
+    summary: "Source IDs, redaction notes, and unresolved gaps stay review-only.",
+    fixtureEvidence: ["source ID", "redaction note", "unresolved gap"],
+    sourceIds: ["SRC-LOCAL-CBBS-RNW-HARDWARE-TOOLS-HOST-ONLY-IMPROVEMENTS-2026-06-05"],
+    liveSurfaceState: "closed",
+    closedSurfaceFlags: ["bridge_abi", "firmware_abi", "external_service_build"]
+  }
+] as const;
 
 const hardwareViews: ProductView[] = hardwareToolsMenu.pages.map((page) => ({
   id: `hardware-${page.id}`,
@@ -573,6 +736,44 @@ export function getHardwareToolsEvidenceEntry(ref: string | undefined): Hardware
 
 export function getHardwareToolsClosedWorkMatrix(): readonly HardwareToolsClosedWorkRow[] {
   return hardwareToolsClosedWorkMatrix;
+}
+
+export function getHardwareToolsFirmwareCatalog(): readonly HardwareToolsFirmwareCatalogRecord[] {
+  return hardwareToolsFirmwareCatalog;
+}
+
+export function getHardwareToolsCommunicationAnalysisRecords(): readonly HardwareToolsCommunicationAnalysisRecord[] {
+  return hardwareToolsCommunicationAnalysisRecords;
+}
+
+export function buildHardwareToolsFirmwareInstallPreview(
+  record: HardwareToolsFirmwareCatalogRecord
+): HardwareToolsFirmwareInstallPreview {
+  const hasRecordedHash = typeof record.sha256 === "string" && /^[a-f0-9]{64}$/i.test(record.sha256);
+  const hasRequiredManifest =
+    record.artifactPaths.length > 0 &&
+    record.flashOffsets.length > 0 &&
+    record.flashSettings.length > 0 &&
+    record.sourceId.startsWith("SRC-");
+  const blockedReason =
+    record.acceptanceStatus === "untrusted"
+      ? "untrusted-import"
+      : hasRecordedHash && hasRequiredManifest
+        ? "tier3-closed"
+        : "requires-manifest";
+
+  return {
+    kind: "installPreview",
+    firmwareId: record.firmwareId,
+    project: record.project,
+    sourceId: record.sourceId,
+    installAvailable: false,
+    dispatchPath: "none",
+    trusted: false,
+    sha256Recorded: hasRecordedHash,
+    blockedReason,
+    closedSurfaceFlags: record.closedSurfaceFlags
+  };
 }
 
 export function buildHardwareToolsActionPreview(action: ProductAction): HardwareToolsActionPreview | undefined {

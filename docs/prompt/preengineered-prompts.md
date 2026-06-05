@@ -1,5 +1,9 @@
 # Pre-Engineered Prompts
 
+For durable workspace routing, start from
+[../agentic-planning-guide.md](../agentic-planning-guide.md) and then choose
+the smallest prompt below that matches the task.
+
 ## Default multi-agentic process
 
 Use at the start of every ESP32 workspace task:
@@ -19,6 +23,9 @@ recording why the mandatory subagent attempt could not be completed.
 End with a decision footer: continue, ask_user, blocked,
 ready_for_mutation, or handoff; next gate; owner; evidence; approved mutation
 boundary; validation; durable records; and authority limits.
+Use project config `agents.max_depth = 2` only for bounded recursive
+read-only evidence delegation; keep `agents.max_threads = 6`, avoid repeated
+fan-out, and keep the parent thread responsible for decisions and cleanup.
 ```
 
 ## Continuous weighted decision prompt

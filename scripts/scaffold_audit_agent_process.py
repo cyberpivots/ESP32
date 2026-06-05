@@ -464,8 +464,8 @@ def audit_agent_process(root: Path = ROOT) -> list[str]:
     agents = config.get("agents", {})
     if agents.get("max_threads") != 6:
         failures.append(".codex/config.toml agents.max_threads must be 6")
-    if agents.get("max_depth") != 1:
-        failures.append(".codex/config.toml agents.max_depth must be 1")
+    if agents.get("max_depth") != 2:
+        failures.append(".codex/config.toml agents.max_depth must be 2")
     for profile in REQUIRED_AGENT_PROFILES:
         entry = agents.get(profile)
         if not isinstance(entry, dict):

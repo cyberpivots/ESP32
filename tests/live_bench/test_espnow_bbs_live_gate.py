@@ -22,13 +22,17 @@ espnow_bbs_live_gate = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(espnow_bbs_live_gate)
 
 
+def expected_windows_path(path: Path) -> str:
+    return espnow_bbs_live_gate.wsl_path_to_windows(path)
+
+
 class CoordinatorEsptoolSelectionTests(unittest.TestCase):
     def test_windows_peer_file_arguments_use_windows_drive_paths(self) -> None:
         device = {"portKind": "windows"}
         path = ROOT / "example.bin"
         self.assertEqual(
             espnow_bbs_live_gate.local_file_arg(device, path),
-            "H:\\ESP32\\example.bin",
+            expected_windows_path(path),
         )
 
     def test_local_peer_flash_args_translate_build_file_paths(self) -> None:
@@ -41,7 +45,7 @@ class CoordinatorEsptoolSelectionTests(unittest.TestCase):
             build,
             path_arg=lambda path: espnow_bbs_live_gate.local_file_arg(device, path),
         )
-        self.assertEqual(args[-2:], ["0x1000", "H:\\ESP32\\bootloader.bin"])
+        self.assertEqual(args[-2:], ["0x1000", expected_windows_path(ROOT / "bootloader.bin")])
 
     def test_remote_selector_prefers_proven_pi_esptool_runtime(self) -> None:
         script = espnow_bbs_live_gate.remote_esptool_setup_script()

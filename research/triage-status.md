@@ -1,7 +1,13 @@
 # Research Triage Status
 
+Source precedence note: latest accepted ADRs, source-index rows, task records,
+source ledgers, handoffs, and bench records override older summary wording.
+Start agentic continuation with
+[../docs/agentic-planning-guide.md](../docs/agentic-planning-guide.md).
+
 | Area | Status | Next action |
 | --- | --- | --- |
+| Agentic planning guide | Current | Use [agentic planning guide](../docs/agentic-planning-guide.md) for source precedence, lane routing, serialized packets, bounded `agents.max_depth = 2` delegation, and decision footers. |
 | Consolidated development plan | Current | Use [development plan](development-plan.md) for current action routing and [development status ledger](development-status-ledger.md) for detailed evidence/status classifications. |
 | Canonical development status | Current | Use [development status ledger](development-status-ledger.md) for current lane status and superseded blocker links. |
 | Subagent lifecycle cleanup | Implemented-advisory-process | Use `SRC-LOCAL-SUBAGENT-LIFECYCLE-CLEANUP-2026-06-01` for Tier 2/Tier 3 reviewer cleanup: inspect completed agents before spawning, `wait_agent`, `close_agent`, close before fallback/final, and fallback only after cleanup attempt. Repo hooks/audits are advisory; actual runtime slot release still depends on parent `close_agent` calls. |

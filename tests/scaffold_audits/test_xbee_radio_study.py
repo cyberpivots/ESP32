@@ -266,6 +266,28 @@ class XBeeRadioStudyTests(unittest.TestCase):
         self.assertEqual(1, len(record["proposedActions"]))
         self.assertEqual("blocked_pending_tier3", record["proposedActions"][0]["reviewStatus"])
 
+    def test_hub_spoke_plan_is_host_only_and_uses_0x8b(self) -> None:
+        args = argparse.Namespace(spokes=10, np_hex="0100")
+        with (
+            mock.patch.object(study.probe, "open_serial_port", side_effect=AssertionError("serial opened")),
+            mock.patch.object(study.probe, "run_short_command", side_effect=AssertionError("subprocess launched")),
+        ):
+            record = study.command_hub_spoke_plan(args)
+
+        self.assertTrue(record["ok"])
+        self.assertFalse(record["serialOpenAttempted"])
+        self.assertFalse(record["serialWritesAttempted"])
+        self.assertFalse(record["xctuLaunchAttempted"])
+        self.assertFalse(record["xbeeStudioLaunchAttempted"])
+        self.assertFalse(record["apiTransmitGenerated"])
+        self.assertFalse(record["rfTransmitAttempted"])
+        self.assertEqual("0x8B", record["plan"]["topology"]["transmitStatusFrame"])
+        self.assertEqual("0x90", record["plan"]["topology"]["receiveFrame"])
+        self.assertEqual(10, len(record["plan"]["spokes"]))
+        self.assertGreaterEqual(len(record["plan"]["useCases"]), 12)
+        self.assertEqual([], record["plan"]["redaction"]["publicRedactionIssues"])
+        self.assertNotIn("0x89", json.dumps(record))
+
     def test_xctu_discovery_plan_is_locked_and_does_not_touch_serial(self) -> None:
         args = argparse.Namespace(ports=["com13", "COM14"])
         with (
@@ -301,6 +323,7 @@ class XBeeRadioStudyTests(unittest.TestCase):
             "profile-diff",
             "write-plan",
             "xctu-discovery-plan",
+            "hub-spoke-plan",
         ]:
             self.assertIn(command, subparser_action.choices)
         for forbidden in ["apply", "write", "firmware", "update", "recovery", "api-transmit"]:

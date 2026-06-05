@@ -18,6 +18,7 @@ from espnow_bbs_custom_protocol import (  # noqa: E402
     ANALYTICS_SCHEMA_VERSION,
     BLOCKED_LIVE_REQUEST_TYPES,
     BRIDGE_MAX_LINE_BYTES,
+    BRIDGE_ALLOWED_REQUEST_KEYS,
     BRIDGE_PROTOCOL_VERSION,
     BRIDGE_REQUEST_TYPES,
     BRIDGE_STABLE_ERROR_REASONS,
@@ -90,6 +91,7 @@ class CustomWirelessProtocolTests(unittest.TestCase):
                 "json_invalid",
                 "payload_invalid",
                 "field_type_invalid",
+                "field_unknown",
                 "hex_invalid",
                 "message_type_unknown",
                 "state_changing_command_blocked",
@@ -108,6 +110,31 @@ class CustomWirelessProtocolTests(unittest.TestCase):
         )
         self.assertFalse(invalid_version["accepted"])
         self.assertEqual(invalid_version["reason"], "version_invalid")
+
+    def test_bridge_request_valid_types_reject_unknown_fields(self) -> None:
+        simulator = ProtocolSimulator()
+        self.assertIn("msg_post", BRIDGE_ALLOWED_REQUEST_KEYS)
+        response = process_bridge_request(
+            {
+                "v": BRIDGE_PROTOCOL_VERSION,
+                "type": "msg_post",
+                "from": "sysop",
+                "to": "peer01",
+                "body": "hello",
+                "ignored": "must not be accepted",
+            },
+            simulator,
+        )
+        self.assertFalse(response["accepted"])
+        self.assertEqual(response["reason"], "field_unknown")
+        self.assertEqual(response["detail"], "ignored")
+
+        blocked = process_bridge_request(
+            {"v": BRIDGE_PROTOCOL_VERSION, "type": "relay_set", "peer": "peer01"},
+            simulator,
+        )
+        self.assertFalse(blocked["accepted"])
+        self.assertEqual(blocked["reason"], "state_changing_command_blocked")
 
     def test_legacy_gate_b_c_unversioned_request_is_explicit(self) -> None:
         simulator = ProtocolSimulator()

@@ -1,5 +1,9 @@
 # Prompt Triage
 
+Start with [../agentic-planning-guide.md](../agentic-planning-guide.md) when a
+prompt needs durable routing, lane selection, serialized packets, or subagent
+fan-out limits.
+
 ## Goal
 
 Route work requests to the smallest reliable agent/profile that can complete the

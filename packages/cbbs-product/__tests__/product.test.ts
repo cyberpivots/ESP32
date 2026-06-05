@@ -12,8 +12,10 @@ import {
   cbbsProductWindowsApps,
   canAppendProductTranscript,
   getCbbsProductWindowsAppProfile,
+  getHardwareToolsCommunicationAnalysisRecords,
   getHardwareToolsClosedWorkMatrix,
   getHardwareToolsEvidenceEntry,
+  getHardwareToolsFirmwareCatalog,
   getProductActionsForPage,
   hardwareToolsMenu,
   isActionEnabled,
@@ -21,7 +23,8 @@ import {
   win31ParityContract,
   win31StatusLine,
   win31SysopPageOrder,
-  productActionStateLabel
+  productActionStateLabel,
+  buildHardwareToolsFirmwareInstallPreview
 } from "../src";
 
 describe("CBBS product model", () => {
@@ -340,6 +343,49 @@ describe("CBBS product model", () => {
     expect(matrix.every((row) => row.disabled && row.state === "closed")).toBe(true);
     expect(matrix.every((row) => row.evidenceRef === "safety-gates")).toBe(true);
     expect(matrix.map((row) => row.label).join("\n")).not.toMatch(/serial|xbee|\bRF\b|flash|erase|monitor|relay|COM\d+|mains/i);
+  });
+
+  test("keeps Firmware catalog records review-only with no install dispatch", () => {
+    const catalog = getHardwareToolsFirmwareCatalog();
+
+    expect(catalog.map((record) => record.firmwareId)).toEqual(["PF0530W", "untrusted-import"]);
+    for (const record of catalog) {
+      const preview = buildHardwareToolsFirmwareInstallPreview(record);
+      expect(preview).toMatchObject({
+        kind: "installPreview",
+        firmwareId: record.firmwareId,
+        installAvailable: false,
+        dispatchPath: "none",
+        trusted: false
+      });
+      expect(preview.closedSurfaceFlags).toEqual(record.closedSurfaceFlags);
+      expect(preview.closedSurfaceFlags).toContain("flash_erase_monitor");
+      expect(record.frameworkAdr).toMatch(/unresolved-gap/);
+    }
+    const visibleReviewCopy = catalog
+      .map((record) => [record.firmwareId, record.acceptanceStatus, record.compatibilityNotes.join(" ")].join(" "))
+      .join("\n");
+    expect(visibleReviewCopy).not.toMatch(/COM\d+|child_process|exec|spawn|powershell|esptool|idf\.py/i);
+  });
+
+  test("pins host-only communications analysis views to saved evidence", () => {
+    const records = getHardwareToolsCommunicationAnalysisRecords();
+
+    expect(records.map((record) => record.viewId)).toEqual([
+      "esp-now",
+      "xbee",
+      "bridge",
+      "usb-serial",
+      "discovery",
+      "queues-custody",
+      "evidence"
+    ]);
+    expect(records.every((record) => record.liveSurfaceState === "closed")).toBe(true);
+    expect(records.every((record) => record.fixtureEvidence.length > 0)).toBe(true);
+    expect(records.every((record) => record.sourceIds.length > 0)).toBe(true);
+    expect(records.map((record) => [record.visibleLabel, record.summary].join(" ")).join("\n")).not.toMatch(
+      /serial|xbee|\bRF\b|flash|erase|monitor|relay|COM\d+|mains|child_process|exec|spawn|powershell|esptool|idf\.py/i
+    );
   });
 
   test("keeps bridge-preview and Tier 3 modes disabled even when state is ready", () => {

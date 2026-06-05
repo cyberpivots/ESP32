@@ -25,6 +25,12 @@ from typing import Any
 
 import xbee_read_only_probe as probe
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.simulators.xbee_hub_spoke.xbee_hub_spoke import build_hub_spoke_plan
+
 
 READ_ONLY_AT_QUERIES = tuple(probe.DEFAULT_AT_QUERIES)
 OUT_ROOT = probe.OUT_ROOT
@@ -723,6 +729,30 @@ def command_write_plan(args: argparse.Namespace) -> dict[str, Any]:
     return record
 
 
+def command_hub_spoke_plan(args: argparse.Namespace) -> dict[str, Any]:
+    record = base_record("hub-spoke-plan")
+    plan = build_hub_spoke_plan(spoke_count=args.spokes, np_hex=args.np_hex)
+    record.update(
+        {
+            "serialOpenAttempted": False,
+            "serialWritesAttempted": False,
+            "xctuLaunchAttempted": False,
+            "xbeeStudioLaunchAttempted": False,
+            "apiTransmitGenerated": False,
+            "rfTransmitAttempted": False,
+            "firmwareMutationAttempted": False,
+            "relayOrLoadMutationAttempted": False,
+            "plan": plan,
+            "notes": [
+                "hub-spoke-plan is deterministic host-only planning output.",
+                "Synthetic 0x8B/0x90 frame labels are fixture metadata, not live transmit frames.",
+                "The command does not open serial ports, launch XCTU/XBee Studio, or touch hardware.",
+            ],
+        }
+    )
+    return record
+
+
 def add_json_output_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--json", action="store_true", help="Emit JSON. JSON is the only output format.")
     parser.add_argument(
@@ -789,6 +819,24 @@ def build_parser() -> argparse.ArgumentParser:
     xctu_plan.add_argument("--ports", nargs="+", required=True, help="Confirmed Windows COMx ports only.")
     add_json_output_args(xctu_plan)
     xctu_plan.set_defaults(func=command_xctu_discovery_plan)
+
+    hub_spoke_plan = subparsers.add_parser(
+        "hub-spoke-plan",
+        help="Emit a host-only hub-spoke use-case matrix without serial/RF behavior.",
+    )
+    hub_spoke_plan.add_argument(
+        "--spokes",
+        type=int,
+        default=10,
+        help="Number of synthetic spoke aliases. Must be at least 10.",
+    )
+    hub_spoke_plan.add_argument(
+        "--np-hex",
+        default="0100",
+        help="Hex NP payload limit used for host-only budget checks.",
+    )
+    add_json_output_args(hub_spoke_plan)
+    hub_spoke_plan.set_defaults(func=command_hub_spoke_plan)
 
     return parser
 

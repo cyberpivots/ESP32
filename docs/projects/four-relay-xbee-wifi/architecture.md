@@ -123,11 +123,11 @@ Source IDs: `SRC-ESP-IDF-FATFS`, `SRC-ESP-IDF-SDSPI`,
 2. XBee transport serializes the snapshot into the project status message.
 3. Transport sends a Digi API Transmit Request `0x10` to an allowlisted
    destination or hub address.
-4. Transmit Status `0x89` updates the link status field when a matching frame ID
-   is returned.
+4. Extended Transmit Status `0x8B` updates the link status field when a
+   matching frame ID is returned for a `0x10` request.
 
-Source IDs: `SRC-DIGI-XBEE-900HP-USER-GUIDE`,
-`SRC-DIGI-XBEE-900HP-DELIVERY`.
+Source IDs: `SRC-DIGI-XBEE-900HP-USER-GUIDE-REFRESH-2026-06-05`,
+`SRC-DIGI-XBEE-900HP-DELIVERY`, `SRC-DIGI-XBEE-900HP-TO-2026-06-05`.
 
 ## XBee command flow
 

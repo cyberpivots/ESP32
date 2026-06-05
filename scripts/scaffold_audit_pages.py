@@ -52,6 +52,7 @@ def audit_pages_build(root: Path = ROOT) -> list[str]:
         "actions/checkout@v6",
         "actions/configure-pages@v5",
         "actions/upload-pages-artifact@v4",
+        "include-hidden-files: true",
         "actions/deploy-pages@v4",
         "Check JSON and JavaScript syntax",
         "build/github-pages",

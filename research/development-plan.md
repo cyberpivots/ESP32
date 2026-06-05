@@ -11,6 +11,11 @@ thin action layer over the canonical status ledger. Historical task logs,
 handoffs, ADRs, source ledgers, and bench records remain evidence records and
 are not rewritten as current truth.
 
+Source precedence note: latest accepted ADRs, source-index rows, task records,
+source ledgers, handoffs, and bench records override older summary wording in
+this file. Use [../docs/agentic-planning-guide.md](../docs/agentic-planning-guide.md)
+as the start-here route map; do not create a second roadmap.
+
 ## Verified Facts
 
 - Current status truth is recorded in

@@ -119,6 +119,9 @@ current backlog priority, not an implementation approval.
 
 P0:
 
+- Follow-up status: Task 0171 closes the stale skill-inventory and RNW
+  generated-output scaffold blockers listed below. The rest of this backlog
+  remains open until separate task records accept those specific items.
 - RNW scaffold-clean cleanup gate: stop retained app/Metro state as needed,
   remove only ignored generated RNW native build/package outputs under the
   split Windows `windows/` roots, then rerun

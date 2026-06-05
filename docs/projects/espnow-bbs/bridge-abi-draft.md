@@ -21,8 +21,10 @@ Status: Draft Gate E candidate; not accepted as final firmware ABI.
   `SRC-LOCAL-ESPNOW-FULL-SERVICE-MESH-DISCOVERY-2026-05-27`.
 - The draft stable bridge error reasons are `version_required`,
   `version_invalid`, `line_too_long`, `non_ascii`, `json_invalid`,
-  `payload_invalid`, `field_type_invalid`, `hex_invalid`,
+  `payload_invalid`, `field_type_invalid`, `field_unknown`, `hex_invalid`,
   `message_type_unknown`, and `state_changing_command_blocked`.
+- Versioned simulator bridge request types reject unrecognized fields instead
+  of ignoring them.
 - The ESP32 Gate C simulator rejects unversioned bridge requests by default.
   Unversioned frames remain accepted only in the explicitly named legacy
   Gate B/C compatibility test path.

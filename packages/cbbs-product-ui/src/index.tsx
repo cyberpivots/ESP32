@@ -2,10 +2,13 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import {
   buildHardwareToolsActionPreview,
+  buildHardwareToolsFirmwareInstallPreview,
   canAppendProductTranscript,
   getCbbsProductWindowsAppProfile,
+  getHardwareToolsCommunicationAnalysisRecords,
   getHardwareToolsClosedWorkMatrix,
   getHardwareToolsEvidenceEntry,
+  getHardwareToolsFirmwareCatalog,
   getProductActionsForPage,
   getProductPageForView,
   isProductActionEnabled,
@@ -13,7 +16,9 @@ import {
   productExecutionModeLabel,
   type CbbsProductWindowsAppId,
   type HardwareToolsActionPreview,
+  type HardwareToolsCommunicationAnalysisRecord,
   type HardwareToolsEvidenceEntry,
+  type HardwareToolsFirmwareCatalogRecord,
   type ProductAction,
   type ProductActionState,
   type ProductSection,
@@ -42,6 +47,26 @@ interface TranscriptEntry {
 }
 
 type MenuName = "session" | "views" | "messages" | "files" | "devices" | "style" | "help";
+export type ProductShellLayoutMode = "compact" | "standard" | "wide" | "short";
+
+export interface ProductShellLayoutContract {
+  width: number;
+  height: number;
+  fontScale: number;
+  mode: ProductShellLayoutMode;
+  isCompact: boolean;
+  isWide: boolean;
+  isShort: boolean;
+  navBasis: number | "100%";
+  workspaceBasis: number | "auto";
+  workspaceMinWidth: number;
+  workspaceMaxHeight?: number;
+  evidenceBasis: number | "auto";
+  evidenceMaxWidth: number | "100%";
+  evidenceMaxHeight?: number;
+  transcriptMaxHeight: number;
+  metadata: string;
+}
 
 const menuOrder: readonly MenuName[] = ["session", "views", "messages", "files", "devices", "style", "help"];
 
@@ -54,10 +79,52 @@ const initialTranscript: TranscriptEntry[] = [
   }
 ];
 
+export function deriveProductShellLayout(
+  width: number,
+  height: number,
+  fontScale = 1
+): ProductShellLayoutContract {
+  const safeWidth = normalizePositiveDimension(width, 1024);
+  const safeHeight = normalizePositiveDimension(height, 768);
+  const safeFontScale = Number.isFinite(fontScale) && fontScale > 0 ? Math.min(Math.max(fontScale, 0.75), 2) : 1;
+  const shortByHeight = safeHeight < 640 || (safeFontScale >= 1.35 && safeHeight < 760);
+  const compactByWidth = safeWidth < 760 || safeFontScale >= 1.6;
+  const mode: ProductShellLayoutMode = shortByHeight
+    ? "short"
+    : compactByWidth
+      ? "compact"
+      : safeWidth >= 1440
+        ? "wide"
+        : "standard";
+  const isShort = mode === "short";
+  const isCompact = mode === "compact" || isShort;
+  const isWide = mode === "wide";
+  const shortRegionMax = Math.max(220, safeHeight - 260);
+
+  return {
+    width: safeWidth,
+    height: safeHeight,
+    fontScale: safeFontScale,
+    mode,
+    isCompact,
+    isWide,
+    isShort,
+    navBasis: isCompact ? "100%" : isWide ? 172 : 148,
+    workspaceBasis: isCompact ? "auto" : isWide ? 680 : 320,
+    workspaceMinWidth: isCompact ? 0 : 280,
+    workspaceMaxHeight: isShort ? shortRegionMax : undefined,
+    evidenceBasis: isCompact ? "auto" : isWide ? 380 : 260,
+    evidenceMaxWidth: isCompact ? "100%" : isWide ? 460 : 340,
+    evidenceMaxHeight: isShort ? shortRegionMax : undefined,
+    transcriptMaxHeight: isShort ? 180 : isWide ? 260 : 220,
+    metadata: `${safeWidth}x${safeHeight}@${safeFontScale}:${mode}`
+  };
+}
+
 export function ProductWindowsShell({ appId, onIntent = () => undefined }: ProductWindowsShellProps) {
   const profile = getCbbsProductWindowsAppProfile(appId);
-  const { width } = useWindowDimensions();
-  const isCompact = width < 760;
+  const { width, height, fontScale } = useWindowDimensions();
+  const layout = deriveProductShellLayout(width, height, fontScale);
   const [activeViewId, setActiveViewId] = useState(profile.views[0]?.id ?? "home");
   const [selectedActionId, setSelectedActionId] = useState("");
   const [openMenu, setOpenMenu] = useState<MenuName | null>(null);
@@ -78,6 +145,8 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
   const hardwareEvidence =
     appId === "hardware-tools" ? collectHardwareEvidence(activePage, pageActions, profile.panels) : [];
   const closedWorkRows = appId === "hardware-tools" ? getHardwareToolsClosedWorkMatrix() : [];
+  const firmwareCatalog = appId === "hardware-tools" ? getHardwareToolsFirmwareCatalog() : [];
+  const communicationAnalysis = appId === "hardware-tools" ? getHardwareToolsCommunicationAnalysisRecords() : [];
 
   const appendTranscript = (entry: Omit<TranscriptEntry, "id">) => {
     setTranscript((entries) => {
@@ -129,7 +198,21 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
   };
 
   return (
-    <ScrollView testID={`windows-${appId}-shell`} contentContainerStyle={[styles.shell, isCompact ? styles.shellCompact : undefined]}>
+    <ScrollView
+      testID={`windows-${appId}-shell`}
+      contentContainerStyle={[
+        styles.shell,
+        layout.isCompact ? styles.shellCompact : undefined,
+        layout.isWide ? styles.shellWide : undefined,
+        layout.isShort ? styles.shellShort : undefined
+      ]}
+    >
+      <View
+        testID={`windows-${appId}-layout-metadata`}
+        accessibilityLabel="Layout contract"
+        accessibilityValue={{ text: layout.metadata }}
+        style={styles.hiddenMetadata}
+      />
       <View testID={`windows-${appId}-banner`} style={styles.titleBar}>
         <View>
           <Text style={styles.eyebrow}>{profile.audience}</Text>
@@ -164,8 +247,18 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
         </View>
       ) : null}
 
-      <View testID={`windows-${appId}-body`} style={[styles.body, isCompact ? styles.bodyCompact : undefined]}>
-        <View testID={`windows-${appId}-nav`} style={[styles.pageList, isCompact ? styles.pageListCompact : undefined]}>
+      <View
+        testID={`windows-${appId}-body`}
+        style={[styles.body, layout.isCompact ? styles.bodyCompact : undefined, layout.isWide ? styles.bodyWide : undefined]}
+      >
+        <View
+          testID={`windows-${appId}-nav`}
+          style={[
+            styles.pageList,
+            { flexBasis: layout.navBasis },
+            layout.isCompact ? styles.pageListCompact : undefined
+          ]}
+        >
           <Text style={styles.columnHeader}>Pages</Text>
           {profile.views.map((view) => (
             <Pressable
@@ -186,7 +279,18 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
           ))}
         </View>
 
-        <View testID={`windows-${appId}-workspace`} style={[styles.workspace, isCompact ? styles.workspaceCompact : undefined]}>
+        <View
+          testID={`windows-${appId}-workspace`}
+          style={[
+            styles.workspace,
+            {
+              flexBasis: layout.workspaceBasis,
+              minWidth: layout.workspaceMinWidth,
+              maxHeight: layout.workspaceMaxHeight
+            },
+            layout.isCompact ? styles.workspaceCompact : undefined
+          ]}
+        >
           <View style={styles.workspaceHeader}>
             <View>
               <Text style={styles.sectionTitle}>{activeView?.label ?? "Home"}</Text>
@@ -229,7 +333,18 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
           )}
         </View>
 
-        <View testID={`windows-${appId}-side-panel`} style={[styles.evidenceRail, isCompact ? styles.evidenceRailCompact : undefined]}>
+        <View
+          testID={`windows-${appId}-side-panel`}
+          style={[
+            styles.evidenceRail,
+            {
+              flexBasis: layout.evidenceBasis,
+              maxHeight: layout.evidenceMaxHeight,
+              maxWidth: layout.evidenceMaxWidth
+            },
+            layout.isCompact ? styles.evidenceRailCompact : undefined
+          ]}
+        >
           <Text style={styles.columnHeader}>Evidence</Text>
           {activePage ? (
             <View testID={`windows-${appId}-evidence-${activePage.id}`} style={styles.railPanel}>
@@ -249,6 +364,8 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
           {appId === "hardware-tools" ? (
             <>
               <HardwareEvidencePanel appId={appId} entries={hardwareEvidence} />
+              <HardwareFirmwareCatalogPanel appId={appId} records={firmwareCatalog} />
+              <HardwareCommunicationAnalysisPanel appId={appId} records={communicationAnalysis} />
               <HardwareBridgePreviewPanel appId={appId} preview={hardwarePreview} />
               <HardwareClosedWorkMatrix appId={appId} rows={closedWorkRows} />
               <View testID="windows-hardware-tools-gate-panel" style={styles.railPanel}>
@@ -271,7 +388,7 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
         </View>
       </View>
 
-      <View testID={`windows-${appId}-transcript`} style={styles.transcript}>
+      <View testID={`windows-${appId}-transcript`} style={[styles.transcript, { maxHeight: layout.transcriptMaxHeight }]}>
         <View style={styles.transcriptHeader}>
           <Text style={styles.columnHeader}>Transcript</Text>
           <Text style={styles.modeText}>bounded</Text>
@@ -294,6 +411,77 @@ export function ProductWindowsShell({ appId, onIntent = () => undefined }: Produ
         ))}
       </View>
     </ScrollView>
+  );
+}
+
+function HardwareFirmwareCatalogPanel({
+  appId,
+  records
+}: {
+  appId: CbbsProductWindowsAppId;
+  records: readonly HardwareToolsFirmwareCatalogRecord[];
+}) {
+  return (
+    <View
+      testID={`windows-${appId}-firmware-catalog`}
+      accessibilityLabel="Firmware catalog"
+      accessibilityHint="Shows review-only image records without device operation"
+      style={styles.railPanel}
+    >
+      <Text style={styles.panelTitle}>Firmware Catalog</Text>
+      {records.map((record) => {
+        const preview = buildHardwareToolsFirmwareInstallPreview(record);
+        return (
+          <View
+            key={record.firmwareId}
+            testID={`windows-${appId}-firmware-record-${record.firmwareId}`}
+            accessibilityLabel={`${record.firmwareId} artifact review`}
+            accessibilityHint="Review-only record with no dispatch path"
+            style={styles.previewPanel}
+          >
+            <Text style={styles.panelBody}>{firmwareDisplayLabel(record)}</Text>
+            <Text style={styles.transcriptMeta}>status: {firmwareStatusLabel(record.acceptanceStatus)}</Text>
+            <Text style={styles.transcriptMeta}>hash: {preview.sha256Recorded ? "recorded" : "missing"}</Text>
+            <Text style={styles.transcriptMeta}>preview: {preview.blockedReason}</Text>
+            <Text style={styles.transcriptMeta}>dispatch: {preview.dispatchPath}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function HardwareCommunicationAnalysisPanel({
+  appId,
+  records
+}: {
+  appId: CbbsProductWindowsAppId;
+  records: readonly HardwareToolsCommunicationAnalysisRecord[];
+}) {
+  return (
+    <View
+      testID={`windows-${appId}-communications-analysis`}
+      accessibilityLabel="Communications analysis"
+      accessibilityHint="Shows saved analysis records only"
+      style={styles.railPanel}
+    >
+      <Text style={styles.panelTitle}>Communications Analysis</Text>
+      <View style={styles.analysisGrid}>
+        {records.map((record) => (
+          <View
+            key={record.viewId}
+            testID={`windows-${appId}-communications-view-${record.viewId}`}
+            accessibilityLabel={`${record.visibleLabel} analysis`}
+            accessibilityHint="Saved records only"
+            style={styles.analysisRow}
+          >
+            <Text style={styles.panelBody}>{record.visibleLabel}</Text>
+            <Text style={styles.transcriptMeta}>{record.summary}</Text>
+            <Text style={styles.panelState}>closed</Text>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -610,6 +798,21 @@ function labelForMenu(menuName: MenuName): string {
   }
 }
 
+function firmwareStatusLabel(status: HardwareToolsFirmwareCatalogRecord["acceptanceStatus"]): string {
+  switch (status) {
+    case "reviewOnly":
+      return "review only";
+    case "requiresManifest":
+      return "manifest needed";
+    case "untrusted":
+      return "untrusted";
+  }
+}
+
+function firmwareDisplayLabel(record: HardwareToolsFirmwareCatalogRecord): string {
+  return record.acceptanceStatus === "untrusted" ? "Imported Image" : record.firmwareId;
+}
+
 function roleForApp(appId: CbbsProductWindowsAppId): AppRole {
   if (appId === "client") {
     return "client";
@@ -628,6 +831,10 @@ function aliasForAction(value: string): string {
     .replace(/^-+|-+$/g, "")
     .toLowerCase()
     .slice(0, 48);
+}
+
+function normalizePositiveDimension(value: number, fallback: number): number {
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : fallback;
 }
 
 function lampStyleForState(state: ProductActionState) {
@@ -656,6 +863,18 @@ const styles = StyleSheet.create({
   },
   shellCompact: {
     padding: 8
+  },
+  shellWide: {
+    padding: 12
+  },
+  shellShort: {
+    padding: 6
+  },
+  hiddenMetadata: {
+    height: 0,
+    opacity: 0,
+    overflow: "hidden",
+    width: 0
   },
   titleBar: {
     alignItems: "center",
@@ -780,6 +999,9 @@ const styles = StyleSheet.create({
   },
   bodyCompact: {
     flexDirection: "column"
+  },
+  bodyWide: {
+    flexWrap: "nowrap"
   },
   pageList: {
     backgroundColor: "#0B1118",
@@ -981,6 +1203,21 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     borderWidth: 1,
     gap: 3,
+    padding: 6
+  },
+  analysisGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5
+  },
+  analysisRow: {
+    borderColor: "#263746",
+    borderRadius: 3,
+    borderWidth: 1,
+    flexBasis: 118,
+    flexGrow: 1,
+    gap: 3,
+    minHeight: 70,
     padding: 6
   },
   closedMatrix: {

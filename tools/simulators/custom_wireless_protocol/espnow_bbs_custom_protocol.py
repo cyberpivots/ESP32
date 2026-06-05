@@ -33,6 +33,7 @@ BRIDGE_STABLE_ERROR_REASONS = frozenset(
         "json_invalid",
         "payload_invalid",
         "field_type_invalid",
+        "field_unknown",
         "hex_invalid",
         "message_type_unknown",
         "state_changing_command_blocked",
@@ -115,6 +116,19 @@ BLOCKED_LIVE_REQUEST_TYPES = frozenset(
         "xbee_write",
     }
 )
+BRIDGE_ALLOWED_REQUEST_KEYS = {
+    "protocol_report": frozenset({"v", "type"}),
+    "state_get": frozenset({"v", "type"}),
+    "discovery_snapshot": frozenset({"v", "type", "limit"}),
+    "discovery_events": frozenset({"v", "type", "limit"}),
+    "service_catalog": frozenset({"v", "type", "limit"}),
+    "capability_report": frozenset({"v", "type"}),
+    "msg_post": frozenset({"v", "type", "from", "to", "body"}),
+    "download_queue": frozenset({"v", "type", "id", "peer", "content", "content_hex"}),
+    "telemetry_report": frozenset({"v", "type", "node", "class", "values", "sensor"}),
+    "node_status": frozenset({"v", "type", "node", "link", "rssi", "seen_ms"}),
+    "control_intent": frozenset({"v", "type", "peer", "action"}),
+}
 
 SERVICE_CODES = {
     "direct_message": 1,
@@ -737,6 +751,7 @@ def _process_bridge_request(
         raise ProtocolError("payload_invalid", "frame must be an object")
     _validate_bridge_version(frame, allow_legacy_unversioned)
     message_type = _require_str(frame, "type")
+    validate_bridge_frame_keys(frame, message_type)
     if message_type in {"protocol_report", "state_get"}:
         return simulator.reporting_frame()
     if message_type == "discovery_snapshot":
@@ -818,6 +833,15 @@ def _process_bridge_request(
     if message_type in BLOCKED_LIVE_REQUEST_TYPES:
         raise ProtocolError("state_changing_command_blocked", message_type)
     raise ProtocolError("message_type_unknown", message_type)
+
+
+def validate_bridge_frame_keys(frame: Mapping[str, Any], message_type: str) -> None:
+    allowed = BRIDGE_ALLOWED_REQUEST_KEYS.get(message_type)
+    if allowed is None:
+        return
+    extra = sorted(set(frame) - allowed)
+    if extra:
+        raise ProtocolError("field_unknown", extra[0])
 
 
 def compact_json_bytes(payload: Mapping[str, Any]) -> bytes:

@@ -11,10 +11,11 @@ transmit proof and the permanent ESP32 bridge retest. All other setting writes,
 closed.
 
 The current implementation includes host/tool inventory, inventory-delta
-comparison, offline profile comparison, a locked XCTU discovery checklist, and
-a blocked write-plan packet. The only command that can touch a serial port is
-`readonly`, which delegates to the existing fixed AT read-query probe and still
-requires `--confirm-sends-read-commands`.
+comparison, offline profile comparison, a locked XCTU discovery checklist, a
+blocked write-plan packet, and a host-only hub-spoke planning matrix. The only
+command that can touch a serial port is `readonly`, which delegates to the
+existing fixed AT read-query probe and still requires
+`--confirm-sends-read-commands`.
 
 ## Verified facts
 
@@ -33,6 +34,13 @@ requires `--confirm-sends-read-commands`.
 - Digi documents XBee Studio as a multi-platform GUI that can discover,
   configure, communicate with, and recover XBee devices. Source ID:
   `SRC-DIGI-XBEE-STUDIO-2026-05-29`.
+- Digi's 2026-06-05 900HP/XSC API refresh maps Transmit Request `0x10` status
+  to Extended Transmit Status `0x8B`; implementation-facing host-only fixtures
+  must not use a `0x89`-only status path. Source ID:
+  `SRC-DIGI-XBEE-900HP-USER-GUIDE-REFRESH-2026-06-05`.
+- Digi's 2026-06-05 `TO` refresh records the 10k product default as `0x40` and
+  says DigiMesh bits are not available on the 10k build. Source ID:
+  `SRC-DIGI-XBEE-900HP-TO-2026-06-05`.
 - Digi's `xbee-python` GitHub release API reports latest release `1.5.0`,
   published 2024-08-27, and PyPI reports `digi-xbee` version `1.5.0`. Source
   ID: `SRC-DIGI-XBEE-PYTHON-2026-05-29`.
@@ -108,6 +116,7 @@ requires `--confirm-sends-read-commands`.
 | `profile-diff --readback FILE --target FILE --json` | Compares readback JSON to target JSON offline and redacts `SH`, `SL`, and `KY` by default. | Does not open serial ports or write bytes. |
 | `write-plan --diff FILE --json` | Emits a blocked review packet with ordered prerequisites and no apply path. | Does not open serial ports or write bytes. |
 | `xctu-discovery-plan --ports COMx COMy --json` | Emits a locked GUI checklist for selected local-port discovery only. | Does not launch XCTU, discover devices, open serial ports, or write bytes. |
+| `hub-spoke-plan --json` | Emits a deterministic one-hub, at least 10-spoke use-case matrix with synthetic `0x90` receive and `0x8B` status metadata. | Does not open serial ports, launch Digi tools, generate live API transmit frames, transmit RF, write settings, mutate firmware, or touch relay/load/mains. |
 
 The CLI has no `apply` command.
 
@@ -121,6 +130,7 @@ The CLI has no `apply` command.
 | AT setting writes | Blocked. | `profile-diff` and `write-plan` identify review items but cannot apply them. |
 | API frame builder/interpreter | Offline reference only. | CLI gap: no API-frame builder; no transmit frame generation. |
 | API console/transmit | Blocked. | No CLI transmit command. |
+| Hub-spoke planning matrix | Host-only simulator only. | `hub-spoke-plan` emits redacted aliases, payload budget checks, and 12 use cases; it is not RF proof. |
 | Firmware explorer | Reference only. | No CLI firmware operation. |
 | Firmware update/recovery | Blocked. | No CLI firmware operation. |
 | Range test/throughput test | Blocked because it creates live RF behavior. | No CLI range or throughput command. |
@@ -231,6 +241,8 @@ The current validation target is:
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/xbee_read_only_probe.py self-test --json
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/xbee_read_only_probe.py list --json
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/xbee_radio_study.py hub-spoke-plan --json
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/xbee_hub_spoke -p 'test_*.py'
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests.scaffold_audits.test_xbee_radio_study
 PYTHONDONTWRITEBYTECODE=1 python3 tests/four_relay_safe_core/run_host_tests.py
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/scaffold_audits -p 'test_*.py'

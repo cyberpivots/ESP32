@@ -11,6 +11,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import scaffold_audit_react_native as rn_audit  # noqa: E402
+import scaffold_audit_pages as pages_audit  # noqa: E402
 import verify_scaffold  # noqa: E402
 
 
@@ -52,6 +53,12 @@ class ScaffoldAuditReportingTests(unittest.TestCase):
         )
         self.assertIn("FAIL: [react_native] rnw failure", lines)
         self.assertIn("FAIL: [skills] skill failure", lines)
+
+    def test_pages_workflow_preserves_hidden_nojekyll(self) -> None:
+        workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
+        self.assertIn("actions/upload-pages-artifact@v4", workflow)
+        self.assertIn("include-hidden-files: true", workflow)
+        self.assertEqual([], pages_audit.audit_pages_build(ROOT))
 
 
 if __name__ == "__main__":

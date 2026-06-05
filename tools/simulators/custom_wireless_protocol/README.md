@@ -33,8 +33,11 @@ The simulator covers:
   `relay_set`, `flash`, `erase`, and `radio_set`.
 - Draft stable bridge error reasons for Gate E owner review:
   `version_required`, `version_invalid`, `line_too_long`, `non_ascii`,
-  `json_invalid`, `payload_invalid`, `field_type_invalid`, `hex_invalid`,
+  `json_invalid`, `payload_invalid`, `field_type_invalid`, `field_unknown`,
+  `hex_invalid`,
   `message_type_unknown`, and `state_changing_command_blocked`.
+- Versioned simulator bridge request types reject unrecognized fields instead
+  of silently ignoring them.
 - Simulator-only Gate G analytics report generation for retained counters,
   custody rollups, file rollups, telemetry rollups, and fixture-only
   client/user summaries.

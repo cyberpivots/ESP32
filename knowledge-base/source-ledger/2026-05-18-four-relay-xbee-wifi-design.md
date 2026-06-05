@@ -40,9 +40,10 @@ Adapter PC dock, and a local Wi-Fi HTML control surface.
   API mode with escaped sequences. Source ID: `SRC-DIGI-XBEE-900HP-AP`.
 - Digi AO command documentation identifies standard receive output as API Rx
   Indicator `0x90` when AO is 0. Source ID: `SRC-DIGI-XBEE-900HP-AO`.
-- Digi's user guide covers Transmit Request `0x10`, Transmit Status `0x89`,
-  Receive Packet `0x90`, checksum behavior, and AES security commands. Source
-  ID: `SRC-DIGI-XBEE-900HP-USER-GUIDE`.
+- Digi's user guide covers Transmit Request `0x10`, Extended Transmit Status
+  `0x8B`, Receive Packet `0x90`, checksum behavior, and AES security commands.
+  Source IDs: `SRC-DIGI-XBEE-900HP-USER-GUIDE`,
+  `SRC-DIGI-XBEE-900HP-USER-GUIDE-REFRESH-2026-06-05`.
 - Current shell probe found Python 3.12.3 and Git 2.43.0; `idf.py`,
   `esptool.py`, CMake, Ninja, and XCTU were not found on PATH. Source ID:
   `SRC-LOCAL-TOOLCHAIN-PROBE-2026-05-18`.

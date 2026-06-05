@@ -23,6 +23,7 @@ from espnow_bbs_custom_protocol import (
     encode_bridge_frame,
     encode_packet,
     fragment_body,
+    validate_bridge_frame_keys,
 )
 
 
@@ -129,6 +130,7 @@ class RuntimeScheduler:
         try:
             self._validate_bridge_frame(frame)
             message_type = self._require_str(frame, "type")
+            validate_bridge_frame_keys(frame, message_type)
             if message_type in {"protocol_report", "state_get"}:
                 return self.protocol_report()
             if message_type in DISCOVERY_BRIDGE_REQUEST_TYPES:

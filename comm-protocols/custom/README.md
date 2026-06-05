@@ -31,8 +31,10 @@ Verified boundaries:
   and `radio_set` are rejected by the simulator adapter.
 - The Gate E draft stable error-reason set is `version_required`,
   `version_invalid`, `line_too_long`, `non_ascii`, `json_invalid`,
-  `payload_invalid`, `field_type_invalid`, `hex_invalid`,
+  `payload_invalid`, `field_type_invalid`, `field_unknown`, `hex_invalid`,
   `message_type_unknown`, and `state_changing_command_blocked`.
+- Versioned simulator bridge request types reject unrecognized fields instead
+  of silently accepting ignored extras.
 - Gate G analytics reports are simulator-only and now reference accepted
   ADR-0005 policy fields: `privacy_policy:
   adr-0005-redacted-local-operator-v1` and `retention: 7_days`.

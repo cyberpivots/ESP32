@@ -7,11 +7,15 @@
 - Digi documents AO API Options; AO value 0 selects API Rx Indicator `0x90` for
   standard data frames. Source ID: `SRC-DIGI-XBEE-900HP-AO`.
 - Digi's XBee-PRO 900HP/XSC user guide covers Transmit Request `0x10`,
-  Transmit Status `0x89`, Receive Packet `0x90`, and checksum behavior. Source
-  ID: `SRC-DIGI-XBEE-900HP-USER-GUIDE`.
+  Extended Transmit Status `0x8B`, Receive Packet `0x90`, and checksum
+  behavior. Source ID:
+  `SRC-DIGI-XBEE-900HP-USER-GUIDE-REFRESH-2026-06-05`.
 - Digi delivery-method documentation says the TxOptions field in API mode can
   override the TO command when non-zero. Source ID:
   `SRC-DIGI-XBEE-900HP-DELIVERY`.
+- Digi TO documentation records the 10k product default as `0x40` and says
+  DigiMesh bits are not available on the 10k build. Source ID:
+  `SRC-DIGI-XBEE-900HP-TO-2026-06-05`.
 - Digi NP documentation reads the maximum RF payload bytes and notes encryption
   can reduce maximum payload size. Source ID: `SRC-DIGI-XBEE-900HP-NP`.
 - The photo archive shows the exact radio label `XBP9B-DPUT-001 RevF` and a
@@ -48,12 +52,41 @@ passive discovery first, then explicitly confirmed AT reads for `VR`, `HV`,
 | `AO` | `0` | Standard receive packets use `0x90`. |
 | `EE` | `1` | AES encryption must be enabled before relay commands are accepted. |
 | `KY` | Provisioned out of band | Key material must not be committed to this repository. |
-| `TO` / TxOptions | Point-to-multipoint default unless a frame requires override | Matches requested part and initial topology. |
+| `TO` / TxOptions | Point-to-multipoint default unless a frame requires override | Matches requested 10k part and initial topology; DigiMesh remains blocked without variant proof. |
 
 Source IDs: `SRC-DIGI-XBEE-900HP-AP`, `SRC-DIGI-XBEE-900HP-AO`,
-`SRC-DIGI-XBEE-900HP-USER-GUIDE`, `SRC-DIGI-XBEE-900HP-DELIVERY`,
+`SRC-DIGI-XBEE-900HP-USER-GUIDE-REFRESH-2026-06-05`,
+`SRC-DIGI-XBEE-900HP-DELIVERY`, `SRC-DIGI-XBEE-900HP-TO-2026-06-05`,
 `SRC-DIGI-XBP9B-DPUT-001`, `SRC-LOCAL-ESP32PROJECT-PHOTOS-2026-05-18`,
 `SRC-WAVESHARE-XBEE-USB-ADAPTER`.
+
+## Hub-spoke host-only planning matrix
+
+The checked-in hub-spoke planning surface is host-only. It models one hub and
+at least 10 redacted spoke aliases using synthetic `0x90` receive and `0x8B`
+status metadata. It does not open serial ports, launch XCTU or XBee Studio,
+build live API transmit frames, transmit RF, write settings, flash firmware, or
+touch relay/load/mains paths.
+
+Additional use cases accepted for host-only planning:
+
+1. BBS custody acknowledgement backhaul.
+2. Remote node heartbeat/status rollup.
+3. Direct low-bandwidth BBS message exchange.
+4. Packetized bulletin or small-file queue metadata.
+5. Remote LCD field-console status feed.
+6. Service catalog and capability report sideband.
+7. Commissioning/link-probe and profile-readback evidence lane.
+8. Remote telemetry snapshots from field spokes.
+9. Hardware Tools saved-evidence analysis.
+10. Non-executing control-intent audit trail.
+11. Hub-spoke lock/safety-state broadcast.
+12. Remote solar-client health beacon.
+
+Source IDs: `SRC-DIGI-XBP9B-DPUT-001`,
+`SRC-DIGI-XBEE-900HP-USER-GUIDE-REFRESH-2026-06-05`,
+`SRC-DIGI-XBEE-900HP-TO-2026-06-05`,
+`SRC-LOCAL-XBEE-HUB-SPOKE-HOST-PLAN-2026-06-05`.
 
 ## Device status message
 
@@ -183,7 +216,8 @@ Reject payload:
 - Verify escaped `AP=2` delimiter, escape, XON, and XOFF handling.
 - Verify checksum failure rejects frame without state change.
 - Verify Receive Packet `0x90` source address extraction.
-- Verify Transmit Status `0x89` frame ID correlation.
+- Verify Extended Transmit Status `0x8B` frame ID correlation for `0x10`
+  transmit requests.
 - Verify sequence replay rejection.
 - Verify each reject reason maps to an acknowledgement payload.
 - Verify payload length remains under the current `NP` value after security

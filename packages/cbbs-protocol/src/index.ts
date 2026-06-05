@@ -162,6 +162,25 @@ const SECRET_KEY_PATTERNS = [
   /file[_-]?content/i
 ] as const;
 const NON_SECRET_PROOF_KEYS = new Set(["noSecretScan"]);
+const SECRET_VALUE_PATTERNS = [
+  /secret/i,
+  /token/i,
+  /\bpmk\b/i,
+  /\blmk\b/i,
+  /credential/i,
+  /password/i,
+  /signing/i,
+  /private[-_\s]?key/i,
+  /device[-_\s]?id/i,
+  /android[-_\s]?id/i,
+  /mac[-_\s]?address/i,
+  /message[-_\s]?body/i,
+  /file[-_\s]?content/i,
+  /precise[-_\s]?location/i,
+  /pairing[-_\s]?key/i,
+  /pairing[-_\s]?token/i
+] as const;
+const SECRET_VALUE_PATH_EXEMPTIONS = new Set(["requestId", "idempotencyKey"]);
 
 const FORBIDDEN_METADATA_KEY_PATTERNS = [
   /^url$/i,
@@ -583,7 +602,7 @@ export function createUnavailableHostCommandResult(
 
 export function findSecretFields(value: unknown): string[] {
   const paths: string[] = [];
-  visit(value, [], (path) => {
+  visit(value, [], (path, current) => {
     const key = path[path.length - 1] ?? "";
     if (
       path.length > 0 &&
@@ -591,6 +610,14 @@ export function findSecretFields(value: unknown): string[] {
       SECRET_KEY_PATTERNS.some((pattern) => pattern.test(key))
     ) {
       paths.push(`secret-like field ${path.join(".")}`);
+    }
+    if (
+      path.length > 0 &&
+      typeof current === "string" &&
+      !SECRET_VALUE_PATH_EXEMPTIONS.has(key) &&
+      SECRET_VALUE_PATTERNS.some((pattern) => pattern.test(current))
+    ) {
+      paths.push(`secret-like value ${path.join(".")}`);
     }
   });
   return paths;

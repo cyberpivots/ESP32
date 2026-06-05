@@ -146,6 +146,33 @@ describe("CBBS client protocol contract", () => {
     expect(result.errors.join(" ")).toContain("secret-like field deviceId");
   });
 
+  test("rejects secret-like values in neutral HostCommandBridge fields", () => {
+    for (const [label, override] of [
+      ["target", { targetRef: "pmk" }],
+      ["param", { params: { profile: "pairing-token" } }],
+      ["result", { artifactRefs: ["private-key"] }]
+    ] as const) {
+      const result =
+        label === "result"
+          ? validateHostCommandBridgeResult(
+              withExactBoundsProof({
+                ...createUnavailableHostCommandResult({ requestId: "request-neutral-value" }, "2026-06-03T00:00:00.000Z"),
+                ...override,
+                boundsProof: {
+                  ...createUnavailableHostCommandResult({ requestId: "request-neutral-value" }, "2026-06-03T00:00:00.000Z").boundsProof,
+                  actualBytes: 0
+                }
+              })
+            )
+          : validateHostCommandBridgeRequest({
+              ...validHostCommandRequest(),
+              ...override
+            });
+      expect(result.ok).toBe(false);
+      expect(result.errors.join(" ")).toMatch(/secret-like value/);
+    }
+  });
+
   test("rejects oversized intent payloads", () => {
     const result = validateUiIntent({
       ...localIntent("compose_draft", "client", "messages"),

@@ -1,5 +1,11 @@
 # Known Gaps
 
+Source precedence note: latest accepted ADRs, source-index rows, task records,
+source ledgers, handoffs, and bench records override older summary wording.
+Use [../docs/agentic-planning-guide.md](../docs/agentic-planning-guide.md)
+before continuing a lane so stale gap text is refreshed rather than copied
+forward.
+
 ## High priority
 
 - Use [development-status-ledger.md](development-status-ledger.md) as the

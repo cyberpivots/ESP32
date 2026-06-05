@@ -36,6 +36,7 @@ BLOCKED_SUFFIXES = {
 IMAGE_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
 URL_PATTERN = re.compile(r"url\((?:'|\")?([^'\"\)]+)(?:'|\")?\)")
 SOURCE_ID_PATTERN = re.compile(r"\bSRC-[A-Z0-9-]+\b")
+REQUIRED_HIDDEN_ARTIFACTS = {".nojekyll"}
 
 ALLOWED_IMAGE_SOURCES = {
     "site/github-pages/assets/blueprints/system-overview.webp",
@@ -256,6 +257,7 @@ def audit_manifest(manifest_path: Path) -> list[str]:
         return ["manifest missing files list"]
 
     artifact_root = manifest_path.parent
+    seen_artifact_paths: set[str] = set()
     seen_image_sources: set[str] = set()
     for item in files:
         if not isinstance(item, dict):
@@ -266,6 +268,7 @@ def audit_manifest(manifest_path: Path) -> list[str]:
         if not source or not artifact_path:
             failures.append(f"manifest entry missing source or path: {item!r}")
             continue
+        seen_artifact_paths.add(artifact_path)
 
         artifact_file = artifact_root / artifact_path
         if not artifact_file.exists():
@@ -302,6 +305,11 @@ def audit_manifest(manifest_path: Path) -> list[str]:
     missing_images = sorted(ALLOWED_IMAGE_SOURCES - seen_image_sources)
     for source in missing_images:
         failures.append(f"allowed image missing from manifest: {source}")
+    for required_artifact in sorted(REQUIRED_HIDDEN_ARTIFACTS - seen_artifact_paths):
+        failures.append(f"required hidden public artifact missing from manifest: {required_artifact}")
+    for required_artifact in sorted(REQUIRED_HIDDEN_ARTIFACTS):
+        if not (artifact_root / required_artifact).exists():
+            failures.append(f"required hidden public artifact missing on disk: {required_artifact}")
 
     failures.extend(audit_links_and_assets(artifact_root))
     failures.extend(audit_public_text(artifact_root))

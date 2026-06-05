@@ -1,5 +1,10 @@
 # Agent Coordination
 
+Start future process work with
+[Agentic planning guide](agentic-planning-guide.md). `AGENTS.md` remains
+canonical; the guide is the route map for source precedence, lane selection,
+packet shapes, subagent depth limits, and decision footers.
+
 ## Required sequence
 
 1. Read `AGENTS.md`.

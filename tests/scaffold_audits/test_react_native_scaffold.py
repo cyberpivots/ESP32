@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -103,6 +104,40 @@ class ReactNativeScaffoldAuditTests(unittest.TestCase):
         )
         for marker in ["@cbbs/ui", "expo", "expo-router", "react-native-web"]:
             self.assertFalse(rn_audit._has_package_reference(source, marker), marker)
+
+    def test_tracked_generated_rnw_evidence_is_pinned(self) -> None:
+        self.assertEqual([], rn_audit._audit_tracked_generated_evidence(ROOT))
+        self.assertEqual(
+            {
+                Path("research/bench-records/react-native-windows/cbbs-windows-index.bundle"),
+                Path("research/bench-records/react-native-windows/cbbs-windows-index.map"),
+                Path("research/bench-records/react-native-windows/live-index.bundle"),
+            },
+            set(rn_audit.TRACKED_GENERATED_EVIDENCE),
+        )
+
+    def test_rnw_native_bridge_surface_audit_blocks_dispatch_symbols(self) -> None:
+        self.assertEqual([], rn_audit._inspect_rnw_native_bridge_surfaces(ROOT))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            source_dir = temp_root / "apps/cbbs-hardware-tools-windows/windows/CbbsHardwareToolsWindows"
+            source_dir.mkdir(parents=True)
+            (source_dir / "HostCommandBridge.cpp").write_text(
+                """
+                REACT_MODULE(HostCommandBridge);
+                REACT_METHOD(OpenPort);
+                void Start() { CreateProcessW(nullptr, nullptr, nullptr, nullptr, false, 0, nullptr, nullptr, nullptr, nullptr); }
+                """,
+                encoding="utf-8",
+            )
+
+            failures = rn_audit._inspect_rnw_native_bridge_surfaces(temp_root)
+
+        self.assertTrue(any("HostCommandBridge native symbol" in failure for failure in failures), failures)
+        self.assertTrue(any("REACT_MODULE" in failure for failure in failures), failures)
+        self.assertTrue(any("REACT_METHOD" in failure for failure in failures), failures)
+        self.assertTrue(any("CreateProcess" in failure for failure in failures), failures)
 
 
 if __name__ == "__main__":
